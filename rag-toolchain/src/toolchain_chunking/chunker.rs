@@ -41,8 +41,8 @@ pub fn generate_chunks(raw_text: &str, window_size: usize, chunk_size: usize) ->
   return Ok(chunks);
 }
 
-// # get_tokens_iter
-// Helper function to generate a token array from raw text
+/// # get_tokens_iter
+/// Helper function to generate a token array from raw text
 fn get_tokens_iter(text: &str, bpe: &CoreBPE) -> Result<Vec<String>, ChunkingError> {
   let tokens = bpe.split_by_token_iter(text, true);
   let mut unwrapped_tokens: Vec<String> = Vec::new();
