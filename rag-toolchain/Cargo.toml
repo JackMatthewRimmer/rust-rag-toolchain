@@ -8,8 +8,10 @@ edition = "2021"
 [dev-dependencies]
 criterion = "0.5.1"
 
+# Add more of these per benchmarking file
 [[bench]]
 name = "generate_chunks"
+path = "benches/toolchain_chunking/chunking_benchmark.rs"
 harness = false
 
 [dependencies]
