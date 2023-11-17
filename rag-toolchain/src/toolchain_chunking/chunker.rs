@@ -8,6 +8,7 @@ use tiktoken_rs::{CoreBPE, cl100k_base};
 
 /// # ChunkingError
 /// Custom error type representing errors that can occur during chunking
+#[derive(Debug, PartialEq, Eq)]
 pub enum ChunkingError {
   WindowSizeTooLarge(String),
   TokenizationError(String),
