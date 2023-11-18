@@ -16,3 +16,4 @@ harness = false
 
 [dependencies]
 tiktoken-rs = "0.5.7"
+threadpool = "1.0"
