@@ -1,5 +1,5 @@
 use crate::toolchain_chunking::chunker::*;
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
 
@@ -12,8 +12,6 @@ pub enum OrchestratorError {
 
 /// # Orchestrator
 /// executes the tasks of the toolchain
-/// Should be built through a set of builder functions
-/// which define source and destination specific read and write functions
 pub struct Orchestrator {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
@@ -22,20 +20,32 @@ pub struct Orchestrator {
 }
 
 impl Orchestrator {
+    pub fn builder() -> BaseOrchestratorBuilder {
+        BaseOrchestratorBuilder::default()
+    }
+
     pub fn execute(&self) -> Result<(), OrchestratorError> {
         let raw_text = match (self.read_function)() {
             Ok(text) => text,
             Err(error) => return Err(OrchestratorError::ReadError(error)),
         };
+
         let chunks: Vec<Vec<String>> =
             Orchestrator::execute_chunk_task(raw_text, self.chunk_size, self.window_size);
 
-        let embeddings: Vec<(String, Vec<f32>)> = Orchestrator::execute_embeddings_task(chunks);
+        let embeddings: Vec<(String, Vec<f32>)> =
+            match Orchestrator::execute_embeddings_task(chunks) {
+                Ok(embeddings) => embeddings,
+                Err(error) => return Err(OrchestratorError::EmbeddingError(error.to_string())),
+            };
+
         match Orchestrator::execute_write_task(embeddings) {
             Ok(()) => return Ok(()),
             Err(error) => return Err(OrchestratorError::WriteError(error)),
         };
     }
+
+    // Lacking error handling here
     fn execute_chunk_task(
         raw_text: Vec<String>,
         chunk_size: usize,
@@ -60,7 +70,8 @@ impl Orchestrator {
         return receiver.iter().take(no_tasks).collect();
     }
 
-    fn execute_embeddings_task(chunks: Vec<Vec<String>>) -> Vec<(String, Vec<f32>)> {
+    // Error returned here will change to something from the OpenAI client
+    fn execute_embeddings_task(chunks: Vec<Vec<String>>) -> Result<Vec<(String, Vec<f32>)>, Error> {
         // This is where we would send each chunk to openAI
         !unimplemented!()
     }
@@ -69,4 +80,82 @@ impl Orchestrator {
         // this is where we write the embeddings to the destination
         !unimplemented!()
     }
+
+    fn new(
+        read_function: fn() -> Result<Vec<String>, Error>,
+        write_function: fn(String) -> Result<(), Error>,
+        chunk_size: usize,
+        window_size: usize,
+    ) -> Orchestrator {
+        assert!(chunk_size > 0);
+        assert!(window_size > 0);
+        Orchestrator {
+            read_function,
+            write_function,
+            chunk_size,
+            window_size,
+        }
+    }
+}
+
+/// # BaseOrchestratorBuilder
+/// This is the building blocks for all source and destination specific orchestrators.
+/// These extensions should be built on top of this base builder
+pub struct BaseOrchestratorBuilder {
+    read_function: fn() -> Result<Vec<String>, Error>,
+    write_function: fn(String) -> Result<(), Error>,
+    chunk_size: usize,
+    window_size: usize,
+}
+
+impl BaseOrchestratorBuilder {
+    pub fn read_function(mut self, read_function: fn() -> Result<Vec<String>, Error>) -> Self {
+        self.read_function = read_function;
+        self
+    }
+
+    pub fn write_function(mut self, write_function: fn(String) -> Result<(), Error>) -> Self {
+        self.write_function = write_function;
+        self
+    }
+
+    pub fn chunk_size(mut self, chunk_size: usize) -> Self {
+        self.chunk_size = chunk_size;
+        self
+    }
+
+    pub fn window_size(mut self, window_size: usize) -> Self {
+        self.window_size = window_size;
+        self
+    }
+
+    pub fn build(self) -> Orchestrator {
+        Orchestrator::new(
+            self.read_function,
+            self.write_function,
+            self.chunk_size,
+            self.window_size,
+        )
+    }
+}
+
+// Default values for the builder
+impl Default for BaseOrchestratorBuilder {
+    fn default() -> Self {
+        BaseOrchestratorBuilder {
+            read_function,
+            write_function,
+            chunk_size: 0,
+            window_size: 0,
+        }
+    }
+}
+
+// Default read and write functions. They are required fields
+fn read_function() -> Result<Vec<String>, Error> {
+    return Err(Error::new(ErrorKind::NotFound, "Read function not defined"));
+}
+
+fn write_function(_: String) -> Result<(), Error> {
+    return Err(Error::new(ErrorKind::NotFound, "Read function not defined"));
 }
