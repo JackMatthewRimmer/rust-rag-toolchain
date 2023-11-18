@@ -11,7 +11,7 @@ pub enum OrchestratorError {
 }
 
 /// # Orchestrator
-/// executes the tasks of the toolchain
+/// executes the tasks of the toolchain from source to destination.
 pub struct Orchestrator {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
@@ -72,7 +72,7 @@ impl Orchestrator {
 
     // Error returned here will change to something from the OpenAI client
     fn execute_embeddings_task(chunks: Vec<Vec<String>>) -> Result<Vec<(String, Vec<f32>)>, Error> {
-        // This is where we would send each chunk to openAI
+        // This is where we would send each chunk to openAI to get embeddings
         !unimplemented!()
     }
 
@@ -87,20 +87,22 @@ impl Orchestrator {
         chunk_size: usize,
         window_size: usize,
     ) -> Orchestrator {
+        // Constructor constraints
         assert!(chunk_size > 0);
         assert!(window_size > 0);
-        Orchestrator {
+        assert!(chunk_size > window_size);
+        return Orchestrator {
             read_function,
             write_function,
             chunk_size,
             window_size,
-        }
+        };
     }
 }
 
 /// # BaseOrchestratorBuilder
-/// This is the building blocks for all source and destination specific orchestrators.
-/// These extensions should be built on top of this base builder
+/// This is the base for all source and destination specific orchestrators.
+/// These extensions should be built on top of this base builder to preserve field constraints
 pub struct BaseOrchestratorBuilder {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
@@ -108,46 +110,49 @@ pub struct BaseOrchestratorBuilder {
     window_size: usize,
 }
 
+// Builder functions
 impl BaseOrchestratorBuilder {
     pub fn read_function(mut self, read_function: fn() -> Result<Vec<String>, Error>) -> Self {
         self.read_function = read_function;
-        self
+        return self;
     }
 
     pub fn write_function(mut self, write_function: fn(String) -> Result<(), Error>) -> Self {
         self.write_function = write_function;
-        self
+        return self;
     }
 
     pub fn chunk_size(mut self, chunk_size: usize) -> Self {
+        assert!(chunk_size > 0);
         self.chunk_size = chunk_size;
-        self
+        return self;
     }
 
     pub fn window_size(mut self, window_size: usize) -> Self {
+        assert!(window_size > 0);
         self.window_size = window_size;
-        self
+        return self;
     }
 
     pub fn build(self) -> Orchestrator {
-        Orchestrator::new(
+        return Orchestrator::new(
             self.read_function,
             self.write_function,
             self.chunk_size,
             self.window_size,
-        )
+        );
     }
 }
 
 // Default values for the builder
 impl Default for BaseOrchestratorBuilder {
     fn default() -> Self {
-        BaseOrchestratorBuilder {
+        return BaseOrchestratorBuilder {
             read_function,
             write_function,
             chunk_size: 0,
             window_size: 0,
-        }
+        };
     }
 }
 
