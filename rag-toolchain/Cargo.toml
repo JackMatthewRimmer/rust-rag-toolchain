@@ -14,6 +14,11 @@ name = "generate_chunks"
 path = "benches/toolchain_chunking/chunking_benchmark.rs"
 harness = false
 
+[[bench]]
+name = "generate_embeddings"
+path = "benches/toolchain_orchestrator/orchestrator_benchmark.rs"
+harness = false
+
 [dependencies]
 tiktoken-rs = "0.5.7"
 threadpool = "1.0"
