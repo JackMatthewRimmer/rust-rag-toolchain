@@ -81,7 +81,6 @@ impl Orchestrator {
         };
     }
 
-    // Lacking error handling here
     fn execute_chunk_task(
         raw_text: Vec<String>,
         chunk_size: usize,
@@ -139,8 +138,7 @@ impl Orchestrator {
 }
 
 /// # BaseOrchestratorBuilder
-/// This is the base for all source and destination specific orchestrators.
-/// These extensions should be built on top of this base builder to preserve field constraints
+/// Builder Struct used for creating an instance of [`Orchestrator`]
 pub struct BaseOrchestratorBuilder {
     source: Box<dyn Source>,
     destination: Box<dyn Destination>,
@@ -149,13 +147,16 @@ pub struct BaseOrchestratorBuilder {
     window_size: usize,
 }
 
-// Builder functions
 impl BaseOrchestratorBuilder {
+    /// # Arguments
+    /// * `source` - A struct with implements the [`Source`] trait
     pub fn source(mut self, source: Box<dyn Source>) -> Self {
         self.source = source;
         return self;
     }
 
+    /// # Arguments
+    /// * `destination` - A struct with implements the [`Destination`] trait
     pub fn destination(mut self, destination: Box<dyn Destination>) -> Self {
         self.destination = destination;
         return self;
@@ -166,18 +167,35 @@ impl BaseOrchestratorBuilder {
         return self;
     }
 
+    /// # Arguments
+    /// * `chunk_size` - The size of each chunk in tokens which must be greater than zero
+    /// and less than 8192
+    ///
+    /// # Panics
+    /// Panics if `chunk_size` is greater than 8192
+    /// Panics if `chunk_size` is less than 1
     pub fn chunk_size(mut self, chunk_size: usize) -> Self {
+        assert!(chunk_size < 8192); // Max tokens for text-embedding-ada-002
         assert!(chunk_size > 0);
         self.chunk_size = chunk_size;
         return self;
     }
 
+    /// # Arguments
+    /// * `window_size` - The size of the overlap between each chunk in tokens which must be
+    /// greater than zero and less than `chunk_size`
+    ///
+    /// # Panics
+    /// Panics if `window_size` is less than 1
     pub fn window_size(mut self, window_size: usize) -> Self {
         assert!(window_size > 0);
         self.window_size = window_size;
         return self;
     }
 
+    /// # Returns
+    /// An instance of [`Orchestrator`] with the given parameters.
+    /// All fields must be set
     pub fn build(self) -> Orchestrator {
         return Orchestrator::new(
             self.source,
