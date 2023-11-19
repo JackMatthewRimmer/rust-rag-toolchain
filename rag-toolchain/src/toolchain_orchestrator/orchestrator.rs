@@ -151,12 +151,12 @@ pub struct BaseOrchestratorBuilder {
 
 // Builder functions
 impl BaseOrchestratorBuilder {
-    pub fn read_function(mut self, source: Box<dyn Source>) -> Self {
+    pub fn source(mut self, source: Box<dyn Source>) -> Self {
         self.source = source;
         return self;
     }
 
-    pub fn write_function(mut self, destination: Box<dyn Destination>) -> Self {
+    pub fn destination(mut self, destination: Box<dyn Destination>) -> Self {
         self.destination = destination;
         return self;
     }
