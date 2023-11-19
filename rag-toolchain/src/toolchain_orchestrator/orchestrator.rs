@@ -1,4 +1,5 @@
 use crate::toolchain_chunking::chunker::*;
+use crate::toolchain_embeddings::client::OpenAIClient;
 use std::io::{Error, ErrorKind};
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
@@ -15,6 +16,7 @@ pub enum OrchestratorError {
 pub struct Orchestrator {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
+    openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
 }
@@ -84,6 +86,7 @@ impl Orchestrator {
     fn new(
         read_function: fn() -> Result<Vec<String>, Error>,
         write_function: fn(String) -> Result<(), Error>,
+        openai_client: OpenAIClient,
         chunk_size: usize,
         window_size: usize,
     ) -> Orchestrator {
@@ -94,6 +97,7 @@ impl Orchestrator {
         return Orchestrator {
             read_function,
             write_function,
+            openai_client,
             chunk_size,
             window_size,
         };
@@ -106,6 +110,7 @@ impl Orchestrator {
 pub struct BaseOrchestratorBuilder {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
+    openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
 }
@@ -119,6 +124,11 @@ impl BaseOrchestratorBuilder {
 
     pub fn write_function(mut self, write_function: fn(String) -> Result<(), Error>) -> Self {
         self.write_function = write_function;
+        return self;
+    }
+
+    pub fn openai_client(mut self, openai_client: OpenAIClient) -> Self {
+        self.openai_client = openai_client;
         return self;
     }
 
@@ -138,6 +148,7 @@ impl BaseOrchestratorBuilder {
         return Orchestrator::new(
             self.read_function,
             self.write_function,
+            self.openai_client,
             self.chunk_size,
             self.window_size,
         );
@@ -150,6 +161,7 @@ impl Default for BaseOrchestratorBuilder {
         return BaseOrchestratorBuilder {
             read_function,
             write_function,
+            openai_client: OpenAIClient::new(),
             chunk_size: 0,
             window_size: 0,
         };
