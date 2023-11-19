@@ -1,3 +1,4 @@
+pub mod external;
 /// # Toolchain Orchestrator
 /// Task List:
 /// from prompt generate a new prompt with embeddings in

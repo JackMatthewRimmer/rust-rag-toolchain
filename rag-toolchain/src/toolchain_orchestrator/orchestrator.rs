@@ -1,5 +1,6 @@
 use crate::toolchain_chunking::chunker::*;
 use crate::toolchain_embeddings::client::OpenAIClient;
+use crate::toolchain_orchestrator::external::*;
 use std::io::{Error, ErrorKind};
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
@@ -29,8 +30,8 @@ pub enum OrchestratorError {
 ///
 /// [`Orchestrator::execute`] executes the above steps
 pub struct Orchestrator {
-    read_function: fn() -> Result<Vec<String>, Error>,
-    write_function: fn(String) -> Result<(), Error>,
+    source: Box<dyn Source>,
+    destination: Box<dyn Destination>,
     openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
@@ -60,7 +61,7 @@ impl Orchestrator {
     /// # Returns
     /// A result containing either ```Ok(())``` or an error of type [`OrchestratorError`]
     pub fn execute(&self) -> Result<(), OrchestratorError> {
-        let raw_text = match (self.read_function)() {
+        let raw_text = match self.source.read_from_source() {
             Ok(text) => text,
             Err(error) => return Err(OrchestratorError::ReadError(error)),
         };
@@ -117,8 +118,8 @@ impl Orchestrator {
     }
 
     fn new(
-        read_function: fn() -> Result<Vec<String>, Error>,
-        write_function: fn(String) -> Result<(), Error>,
+        source: Box<dyn Source>,
+        destination: Box<dyn Destination>,
         openai_client: OpenAIClient,
         chunk_size: usize,
         window_size: usize,
@@ -128,8 +129,8 @@ impl Orchestrator {
         assert!(window_size > 0);
         assert!(chunk_size > window_size);
         return Orchestrator {
-            read_function,
-            write_function,
+            source,
+            destination,
             openai_client,
             chunk_size,
             window_size,
@@ -141,8 +142,8 @@ impl Orchestrator {
 /// This is the base for all source and destination specific orchestrators.
 /// These extensions should be built on top of this base builder to preserve field constraints
 pub struct BaseOrchestratorBuilder {
-    read_function: fn() -> Result<Vec<String>, Error>,
-    write_function: fn(String) -> Result<(), Error>,
+    source: Box<dyn Source>,
+    destination: Box<dyn Destination>,
     openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
@@ -150,13 +151,13 @@ pub struct BaseOrchestratorBuilder {
 
 // Builder functions
 impl BaseOrchestratorBuilder {
-    pub fn read_function(mut self, read_function: fn() -> Result<Vec<String>, Error>) -> Self {
-        self.read_function = read_function;
+    pub fn read_function(mut self, source: Box<dyn Source>) -> Self {
+        self.source = source;
         return self;
     }
 
-    pub fn write_function(mut self, write_function: fn(String) -> Result<(), Error>) -> Self {
-        self.write_function = write_function;
+    pub fn write_function(mut self, destination: Box<dyn Destination>) -> Self {
+        self.destination = destination;
         return self;
     }
 
@@ -179,8 +180,8 @@ impl BaseOrchestratorBuilder {
 
     pub fn build(self) -> Orchestrator {
         return Orchestrator::new(
-            self.read_function,
-            self.write_function,
+            self.source,
+            self.destination,
             self.openai_client,
             self.chunk_size,
             self.window_size,
@@ -192,8 +193,8 @@ impl BaseOrchestratorBuilder {
 impl Default for BaseOrchestratorBuilder {
     fn default() -> Self {
         return BaseOrchestratorBuilder {
-            read_function,
-            write_function,
+            source: Box::new(DefaultSource {}),
+            destination: Box::new(DefaultDestination {}),
             openai_client: OpenAIClient::new(),
             chunk_size: 0,
             window_size: 0,
@@ -201,11 +202,26 @@ impl Default for BaseOrchestratorBuilder {
     }
 }
 
-// Default read and write functions. They are required fields
-fn read_function() -> Result<Vec<String>, Error> {
-    return Err(Error::new(ErrorKind::NotFound, "Read function not defined"));
+/// Represents a default source.
+struct DefaultSource;
+
+impl Source for DefaultSource {
+    /// # Errors
+    ///
+    /// Returns an error of type `Error` as the source was not set.
+    fn read_from_source(&self) -> Result<Vec<String>, Error> {
+        return Err(Error::new(ErrorKind::NotFound, "source not set"));
+    }
 }
 
-fn write_function(_: String) -> Result<(), Error> {
-    return Err(Error::new(ErrorKind::NotFound, "Read function not defined"));
+/// Represents a default destination.
+struct DefaultDestination;
+
+impl Destination for DefaultDestination {
+    /// # Errors
+    ///
+    /// Returns an error of type `Error` as destination was not set.
+    fn write_to_dest(&self, _: String) -> Result<(), Error> {
+        return Err(Error::new(ErrorKind::NotFound, "destination not set"));
+    }
 }
