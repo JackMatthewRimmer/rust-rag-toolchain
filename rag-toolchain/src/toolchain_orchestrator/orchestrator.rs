@@ -4,15 +4,30 @@ use std::io::{Error, ErrorKind};
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
 
+/// # OrchestratorError
+/// Errors that can occur during the orchestration process
 pub enum OrchestratorError {
+    /// Error executing the read function
     ReadError(Error),
+    /// Error executing the write function
     WriteError(Error),
+    /// Error executing [`generate_chunks`]
     ChunkingError(ChunkingError),
+    /// Error generating the embeddings from OpenAI
     EmbeddingError(String), // will likely be something from the OpenAI client,
 }
 
 /// # Orchestrator
-/// executes the tasks of the toolchain from source to destination.
+/// Executes each task of the toolchain which are...
+///
+/// 1. Read from the source
+/// 2. Chunk the text
+/// 3. Get embeddings from OpenAI
+/// 4. Write to the destination
+/// # functions
+/// [`Orchestrator::builder`] returns a builder for the orchestrator
+///
+/// [`Orchestrator::execute`] executes the above steps
 pub struct Orchestrator {
     read_function: fn() -> Result<Vec<String>, Error>,
     write_function: fn(String) -> Result<(), Error>,
@@ -22,10 +37,28 @@ pub struct Orchestrator {
 }
 
 impl Orchestrator {
+    /// # Examples
+    /// ```
+    /// let orch: Orchestrator = Orchestrator::builder()
+    ///     .read_function(read_function)
+    ///     .write_function(write_function)
+    ///     .openai_client(OpenAIClient::new())
+    ///     .chunk_size(1024)
+    ///     .window_size(128)
+    ///     .build()
+    /// ```
+    /// # Returns
+    /// An [`Orchestrator`] with the given parameters
     pub fn builder() -> BaseOrchestratorBuilder {
         BaseOrchestratorBuilder::default()
     }
 
+    /// # Examples
+    /// ```
+    /// Orchestrator.execute().expect("Orchestration failed")
+    /// ```
+    /// # Returns
+    /// A result containing either ```Ok(())``` or an error of type [`OrchestratorError`]
     pub fn execute(&self) -> Result<(), OrchestratorError> {
         let raw_text = match (self.read_function)() {
             Ok(text) => text,
