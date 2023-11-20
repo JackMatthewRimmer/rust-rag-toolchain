@@ -1,1 +1,1 @@
-pub mod orchestrator_test;
+pub mod embedding_client_test;

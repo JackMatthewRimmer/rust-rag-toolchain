@@ -1,6 +1,6 @@
 use crate::toolchain_chunking::chunker::*;
 use crate::toolchain_embeddings::client::OpenAIClient;
-use crate::toolchain_orchestrator::external::*;
+use crate::toolchain_orchestrator::traits::*;
 use std::io::{Error, ErrorKind};
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
@@ -29,15 +29,15 @@ pub enum OrchestratorError {
 /// [`Orchestrator::builder`] returns a builder for the orchestrator
 ///
 /// [`Orchestrator::execute`] executes the above steps
-pub struct Orchestrator {
-    source: Box<dyn Source>,
-    destination: Box<dyn Destination>,
+pub struct EmbeddingClient {
+    source: Box<dyn EmbeddingDataSource>,
+    destination: Box<dyn EmbeddingDestination>,
     openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
 }
 
-impl Orchestrator {
+impl EmbeddingClient {
     /// # Examples
     /// ```
     /// let orch: Orchestrator = Orchestrator::builder()
@@ -50,8 +50,8 @@ impl Orchestrator {
     /// ```
     /// # Returns
     /// An [`Orchestrator`] with the given parameters
-    pub fn builder() -> BaseOrchestratorBuilder {
-        BaseOrchestratorBuilder::default()
+    pub fn builder() -> EmbeddingClientBuilder {
+        EmbeddingClientBuilder::default()
     }
 
     /// # Examples
@@ -61,21 +61,21 @@ impl Orchestrator {
     /// # Returns
     /// A result containing either ```Ok(())``` or an error of type [`OrchestratorError`]
     pub fn execute(&self) -> Result<(), OrchestratorError> {
-        let raw_text = match self.source.read_from_source() {
+        let raw_text = match self.source.read_source_data() {
             Ok(text) => text,
             Err(error) => return Err(OrchestratorError::ReadError(error)),
         };
 
         let chunks: Vec<Vec<String>> =
-            Orchestrator::execute_chunk_task(raw_text, self.chunk_size, self.window_size);
+            EmbeddingClient::execute_chunk_task(raw_text, self.chunk_size, self.window_size);
 
         let embeddings: Vec<(String, Vec<f32>)> =
-            match Orchestrator::execute_embeddings_task(chunks) {
+            match EmbeddingClient::execute_embeddings_task(chunks) {
                 Ok(embeddings) => embeddings,
                 Err(error) => return Err(OrchestratorError::EmbeddingError(error.to_string())),
             };
 
-        match Orchestrator::execute_write_task(embeddings) {
+        match EmbeddingClient::execute_write_task(embeddings) {
             Ok(()) => return Ok(()),
             Err(error) => return Err(OrchestratorError::WriteError(error)),
         };
@@ -117,17 +117,17 @@ impl Orchestrator {
     }
 
     fn new(
-        source: Box<dyn Source>,
-        destination: Box<dyn Destination>,
+        source: Box<dyn EmbeddingDataSource>,
+        destination: Box<dyn EmbeddingDestination>,
         openai_client: OpenAIClient,
         chunk_size: usize,
         window_size: usize,
-    ) -> Orchestrator {
+    ) -> EmbeddingClient {
         // Constructor constraints
         assert!(chunk_size > 0);
         assert!(window_size > 0);
         assert!(chunk_size > window_size);
-        return Orchestrator {
+        return EmbeddingClient {
             source,
             destination,
             openai_client,
@@ -139,25 +139,25 @@ impl Orchestrator {
 
 /// # BaseOrchestratorBuilder
 /// Builder Struct used for creating an instance of [`Orchestrator`]
-pub struct BaseOrchestratorBuilder {
-    source: Box<dyn Source>,
-    destination: Box<dyn Destination>,
+pub struct EmbeddingClientBuilder {
+    source: Box<dyn EmbeddingDataSource>,
+    destination: Box<dyn EmbeddingDestination>,
     openai_client: OpenAIClient,
     chunk_size: usize,
     window_size: usize,
 }
 
-impl BaseOrchestratorBuilder {
+impl EmbeddingClientBuilder {
     /// # Arguments
     /// * `source` - A struct with implements the [`Source`] trait
-    pub fn source(mut self, source: Box<dyn Source>) -> Self {
+    pub fn source(mut self, source: Box<dyn EmbeddingDataSource>) -> Self {
         self.source = source;
         return self;
     }
 
     /// # Arguments
     /// * `destination` - A struct with implements the [`Destination`] trait
-    pub fn destination(mut self, destination: Box<dyn Destination>) -> Self {
+    pub fn destination(mut self, destination: Box<dyn EmbeddingDestination>) -> Self {
         self.destination = destination;
         return self;
     }
@@ -196,8 +196,8 @@ impl BaseOrchestratorBuilder {
     /// # Returns
     /// An instance of [`Orchestrator`] with the given parameters.
     /// All fields must be set
-    pub fn build(self) -> Orchestrator {
-        return Orchestrator::new(
+    pub fn build(self) -> EmbeddingClient {
+        return EmbeddingClient::new(
             self.source,
             self.destination,
             self.openai_client,
@@ -208,9 +208,9 @@ impl BaseOrchestratorBuilder {
 }
 
 // Default values for the builder
-impl Default for BaseOrchestratorBuilder {
+impl Default for EmbeddingClientBuilder {
     fn default() -> Self {
-        return BaseOrchestratorBuilder {
+        return EmbeddingClientBuilder {
             source: Box::new(DefaultSource {}),
             destination: Box::new(DefaultDestination {}),
             openai_client: OpenAIClient::new(),
@@ -223,11 +223,11 @@ impl Default for BaseOrchestratorBuilder {
 /// Represents a default source.
 struct DefaultSource;
 
-impl Source for DefaultSource {
+impl EmbeddingDataSource for DefaultSource {
     /// # Errors
     ///
     /// Returns an error of type `Error` as the source was not set.
-    fn read_from_source(&self) -> Result<Vec<String>, Error> {
+    fn read_source_data(&self) -> Result<Vec<String>, Error> {
         return Err(Error::new(ErrorKind::NotFound, "source not set"));
     }
 }
@@ -235,11 +235,11 @@ impl Source for DefaultSource {
 /// Represents a default destination.
 struct DefaultDestination;
 
-impl Destination for DefaultDestination {
+impl EmbeddingDestination for DefaultDestination {
     /// # Errors
     ///
     /// Returns an error of type `Error` as destination was not set.
-    fn write_to_dest(&self, _: String) -> Result<(), Error> {
+    fn write_embedding(&self, _: (String, Vec<f32>)) -> Result<(), Error> {
         return Err(Error::new(ErrorKind::NotFound, "destination not set"));
     }
 }
