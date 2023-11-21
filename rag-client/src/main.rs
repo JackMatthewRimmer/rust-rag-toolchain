@@ -1,3 +1,4 @@
+use rag_toolchain::toolchain_orchestrator::destinations::PgVector;
 fn main() {
-    println!("Hello, world!");
+    let pg_vector = PgVector::new();
 }
