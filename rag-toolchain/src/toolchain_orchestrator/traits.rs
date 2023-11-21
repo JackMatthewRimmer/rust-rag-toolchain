@@ -21,3 +21,9 @@ pub trait VectorDBSource {
     need to do some digging on what the methods should look like here
      */
 }
+
+/// # EmbeddingClient
+/// Trait for struct that allows embeddings to be generated
+pub trait EmbeddingClient {
+    fn generate_embeddings(&self) -> Result<Vec<f32>, Error>;
+}

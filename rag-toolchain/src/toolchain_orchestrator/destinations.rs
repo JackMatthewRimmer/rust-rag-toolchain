@@ -7,6 +7,7 @@ pub struct PgVector {
     db_name: String,
 }
 
+// look at dotenv code gen crate for this
 impl PgVector {
     pub fn new() -> PgVector {
         dotenv().ok();
