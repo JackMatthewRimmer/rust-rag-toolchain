@@ -5,8 +5,6 @@ use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
 use typed_builder::TypedBuilder;
 
-// LOOK AT https://idanarye.github.io/rust-typed-builder/typed_builder/derive.TypedBuilder.html
-
 /// # EmbeddingTaskError
 /// Errors that can occur during the task execution
 pub enum EmbeddingTaskError {
@@ -37,7 +35,7 @@ pub enum EmbeddingTaskArgumentError {
 /// 2. `window_size` must be less than or equal to `chunk_size`
 ///
 /// # Functions
-/// [`Orchestrator::execute`] executes these steps
+/// [`GenerateEmbeddingTask::execute`] executes these steps
 /// 1. Read from the source
 /// 2. Chunks the text
 /// 3. Generates embeddings
@@ -63,7 +61,7 @@ impl GenerateEmbeddingTask {
     /// Orchestrator.execute().expect("Orchestration failed")
     /// ```
     /// # Returns
-    /// A result containing either ```Ok(())``` or an error of type [`OrchestratorError`]
+    /// A result containing either ```Ok(())``` or an error of type [`EmbeddingTaskError`]
     pub fn execute(&self) -> Result<(), EmbeddingTaskError> {
         let raw_text = match self.source.read_source_data() {
             Ok(text) => text,
@@ -163,6 +161,9 @@ impl
         (usize,),
     )>
 {
+    /// # Returns
+    /// `Result<GenerateEmbeddingTask, EmbeddingTaskArgumentError>` - Will return an error if the arguments passed to the builder
+    /// are invalid. See ['EmbeddingTaskArgumentError']
     pub fn build(self) -> Result<GenerateEmbeddingTask, EmbeddingTaskArgumentError> {
         let (source, destination, embedding_client, chunk_size, window_size) = self.fields;
         let source = source.0;
