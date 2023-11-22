@@ -83,6 +83,7 @@ impl GenerateEmbeddingTask {
         };
     }
 
+    /// # Execute Chunk Task
     fn execute_chunk_task(
         raw_text: Vec<String>,
         chunk_size: usize,
