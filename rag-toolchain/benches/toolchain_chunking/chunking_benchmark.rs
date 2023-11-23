@@ -1,7 +1,7 @@
 use std::fs;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rag_toolchain::toolchain_chunking::chunking::generate_chunks;
+use rag_toolchain::toolchain_indexing::chunking::generate_chunks;
 /*
 Benchmarking of 30,000 words
 */

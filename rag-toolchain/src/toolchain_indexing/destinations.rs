@@ -1,4 +1,8 @@
-use dotenv_codegen::dotenv;
+use std::env;
+
+use dotenv::dotenv;
+
+pub struct EnvVarError(String);
 
 /// # PgVector
 ///
@@ -14,15 +18,14 @@ use dotenv_codegen::dotenv;
 /// * POSTGRES_HOST: The host to connect to the database with
 ///
 /// Place these variables in a .env file in the root of your project.
-/// If these variables are not set you cannot compile ```PgVector::new("table_name")```
 ///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
 pub struct PgVector {
     db_name: String,
-    username: &'static str,
-    password: &'static str,
-    host: &'static str,
+    username: String,
+    password: String,
+    host: String,
 }
 
 impl PgVector {
@@ -35,18 +38,27 @@ impl PgVector {
     ///
     /// # Returns
     /// the constructed [`PgVector`] struct
-    pub fn new(db_name: impl Into<String>) -> PgVector {
-        // We verify that the environment variables are set at compile time
-        let username: &str = dotenv!("POSTGRES_USERNAME");
-        let password: &str = dotenv!("POSTGRES_PASSWORD");
-        let host: &str = dotenv!("POSTGRES_HOST");
+    pub fn new(db_name: impl Into<String>) -> Result<PgVector, EnvVarError> {
+        dotenv().ok();
+        let username: String = match env::var("POSTGRES_USERNAME") {
+            Ok(username) => username,
+            Err(_) => return Err(EnvVarError("Error: POSTGRES_USERNAME not set".into())),
+        };
+        let password: String = match env::var("POSTGRES_PASSWORD") {
+            Ok(password) => password,
+            Err(_) => return Err(EnvVarError("Error: POSTGRES_PASSWORD not set".into())),
+        };
+        let host: String = match env::var("POSTGRES_HOST") {
+            Ok(host) => host,
+            Err(_) => return Err(EnvVarError("Error: POSTGRES_HOST not set".into())),
+        };
         let db_name: String = db_name.into();
 
-        PgVector {
+        Ok(PgVector {
             db_name,
             username,
             password,
             host,
-        }
+        })
     }
 }
