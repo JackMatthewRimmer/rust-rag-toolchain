@@ -1,4 +1,4 @@
-use rag_toolchain::toolchain_chunking::chunker::*;
+use rag_toolchain::toolchain_indexing::chunking::*;
 
 #[cfg(test)]
 mod tests {

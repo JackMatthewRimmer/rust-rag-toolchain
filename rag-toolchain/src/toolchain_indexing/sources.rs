@@ -1,4 +1,4 @@
-use crate::toolchain_orchestrator::traits::EmbeddingDataSource;
+use crate::toolchain_indexing::traits::LoadSource;
 use std::fs::read_to_string;
 
 /// # SingleFileSource
@@ -14,7 +14,7 @@ impl SingleFileSource {
     }
 }
 
-impl EmbeddingDataSource for SingleFileSource {
+impl LoadSource for SingleFileSource {
     fn read_source_data(&self) -> Result<Vec<String>, std::io::Error> {
         let file_contents: String = read_to_string(&self.path)?;
         return Ok(vec![file_contents]);

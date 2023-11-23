@@ -1,17 +1,17 @@
-use rag_toolchain::toolchain_orchestrator::embedding_task::*;
-use rag_toolchain::toolchain_orchestrator::traits::*;
+use rag_toolchain::toolchain_indexing::embedding_task::*;
+use rag_toolchain::toolchain_indexing::traits::*;
 use std::io::Error;
 
 #[cfg(test)]
 mod tests {
 
     struct TestHelper {}
-    impl EmbeddingDataSource for TestHelper {
+    impl LoadSource for TestHelper {
         fn read_source_data(&self) -> Result<Vec<String>, Error> {
             Ok(vec!["test".to_string()])
         }
     }
-    impl EmbeddingDestination for TestHelper {
+    impl EmbeddingStore for TestHelper {
         fn write_embedding(&self, _text: (String, Vec<f32>)) -> Result<(), Error> {
             Ok(())
         }
@@ -34,7 +34,7 @@ mod tests {
             .destination(test_destination)
             .embedding_client(Box::new(TestHelper {}))
             .chunk_size(2)
-            .window_size(1)
+            .chunk_overlap(1)
             .build();
     }
 }

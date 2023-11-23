@@ -1,5 +1,5 @@
-use crate::toolchain_chunking::chunker::*;
-use crate::toolchain_orchestrator::traits::*;
+use crate::toolchain_indexing::chunking::*;
+use crate::toolchain_indexing::traits::*;
 use std::io::Error;
 use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
@@ -27,19 +27,20 @@ pub enum EmbeddingTaskArgumentError {
 }
 
 /// # GenerateEmbeddingTask
-/// Executes each task of the toolchain which are...
+///  Represents a task that reads from a source, chunks the text,
+///  generates embeddings, and writes the embeddings to a destination.
 ///
 /// # Builder Argument Constraints
 ///
 /// 1. `chunk_size` must be greater than 0
 /// 2. `window_size` must be less than or equal to `chunk_size`
 ///
-/// # Functions
-/// [`GenerateEmbeddingTask::execute`] executes these steps
-/// 1. Read from the source
-/// 2. Chunks the text
-/// 3. Generates embeddings
-/// 4. Writes embeddings to the destination
+/// /// # Fields
+/// * `source`: The source to read from.
+/// * `destination`: The destination to write the embeddings to.
+/// * `embedding_client`: The client used to generate the embeddings.
+/// * `chunk_size`: The size of the chunks to generate.
+/// * `chunk_overlap`: The size of the overlap between chunks.
 ///
 /// # Errors
 /// [`EmbeddingTaskError`] is returned if any of the above steps fail
@@ -48,14 +49,21 @@ pub enum EmbeddingTaskArgumentError {
 // set generated build method to private an under a different name so we can implement one with our own logic
 #[builder(build_method(vis="", name=__build))]
 pub struct GenerateEmbeddingTask {
-    source: Box<dyn EmbeddingDataSource>,
-    destination: Box<dyn EmbeddingDestination>,
+    source: Box<dyn LoadSource>,
+    destination: Box<dyn EmbeddingStore>,
     embedding_client: Box<dyn EmbeddingClient>,
     chunk_size: usize,
-    window_size: usize,
+    chunk_overlap: usize,
 }
 
 impl GenerateEmbeddingTask {
+    /// # Execute
+    /// Carries out the following steps:
+    /// 1. Reads the raw text from the source
+    /// 2. Generates chunks from the raw text
+    /// 3. Generates embeddings from the chunks
+    /// 4. Writes the embeddings to the destination
+    ///
     /// # Examples
     /// ```
     /// Orchestrator.execute().expect("Orchestration failed")
@@ -69,26 +77,30 @@ impl GenerateEmbeddingTask {
         };
 
         let chunks: Vec<Vec<String>> =
-            GenerateEmbeddingTask::execute_chunk_task(raw_text, self.chunk_size, self.window_size);
+            GenerateEmbeddingTask::chunk(raw_text, self.chunk_size, self.chunk_overlap);
 
-        let embeddings: Vec<(String, Vec<f32>)> =
-            match GenerateEmbeddingTask::execute_embeddings_task(chunks) {
-                Ok(embeddings) => embeddings,
-                Err(error) => return Err(EmbeddingTaskError::EmbeddingError(error.to_string())),
-            };
+        let embeddings: Vec<(String, Vec<f32>)> = match GenerateEmbeddingTask::embed(chunks) {
+            Ok(embeddings) => embeddings,
+            Err(error) => return Err(EmbeddingTaskError::EmbeddingError(error.to_string())),
+        };
 
-        match GenerateEmbeddingTask::execute_write_task(embeddings) {
+        match GenerateEmbeddingTask::store(embeddings) {
             Ok(()) => return Ok(()),
             Err(error) => return Err(EmbeddingTaskError::WriteError(error)),
         };
     }
 
-    /// # Execute Chunk Task
-    fn execute_chunk_task(
-        raw_text: Vec<String>,
-        chunk_size: usize,
-        window_size: usize,
-    ) -> Vec<Vec<String>> {
+    /// # Chunk
+    /// Generates chunks from the raw text in parallel
+    ///
+    /// # Arguments
+    /// * `raw_text`: The raw text loaded from the [`LoadSource`]
+    /// * `chunk_size`: The size of the chunks to generate
+    /// * `window_size`: The size of the overlap between chunks
+    ///
+    /// # Returns
+    /// A vector of chunks for each piece of input text
+    fn chunk(raw_text: Vec<String>, chunk_size: usize, window_size: usize) -> Vec<Vec<String>> {
         let no_tasks: usize = raw_text.len();
         let no_threads: usize = if no_tasks >= 10 { no_tasks / 10 } else { 1 }; // potentially not most efficient way to do this
         let thread_pool: ThreadPool = ThreadPool::new(no_threads);
@@ -109,43 +121,23 @@ impl GenerateEmbeddingTask {
     }
 
     // Error returned here will change to something from the OpenAI client
-    fn execute_embeddings_task(chunks: Vec<Vec<String>>) -> Result<Vec<(String, Vec<f32>)>, Error> {
+    fn embed(chunks: Vec<Vec<String>>) -> Result<Vec<(String, Vec<f32>)>, Error> {
         // This is where we would send each chunk to openAI to get embeddings
         !unimplemented!()
     }
 
-    fn execute_write_task(embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Error> {
+    /// # Store
+    /// Writes the embeddings to the ['EmbeddingStore']
+    ///
+    /// # Arguments
+    /// * `embeddings`: The embeddings to write to the destination along side the original chunk text
+    ///
+    /// # Returns
+    /// [`Ok(Vec<(String, Vec<f32>))`] if the embeddings were successfully written to the destination
+    /// [`Err(Error)`] if there was an error writing the embeddings to the destination
+    fn store(embeddings: Vec<(String, Vec<f32>)>) -> Result<Vec<(String, Vec<f32>)>, Error> {
         // this is where we write the embeddings to the destination
         !unimplemented!()
-    }
-
-    fn new(
-        source: Box<dyn EmbeddingDataSource>,
-        destination: Box<dyn EmbeddingDestination>,
-        embedding_client: Box<dyn EmbeddingClient>,
-        chunk_size: usize,
-        window_size: usize,
-    ) -> Result<GenerateEmbeddingTask, EmbeddingTaskArgumentError> {
-        // Constructor constraints
-        if chunk_size == 0 {
-            return Err(EmbeddingTaskArgumentError::ChunkSizeIsZero(
-                "Chunk size must be greater than 0".to_string(),
-            ));
-        }
-
-        if window_size > chunk_size {
-            return Err(EmbeddingTaskArgumentError::WindowSizeIsLargerThanChunkSize(
-                "Window size must be less than or equal to chunk size".to_string(),
-            ));
-        }
-
-        return Ok(GenerateEmbeddingTask {
-            source,
-            destination,
-            embedding_client,
-            chunk_size,
-            window_size,
-        });
     }
 }
 
@@ -155,8 +147,8 @@ impl GenerateEmbeddingTask {
 /// to check the arguments passed to the builder and return an error if they are invalid
 impl
     GenerateEmbeddingTaskBuilder<(
-        (Box<dyn EmbeddingDataSource>,),
-        (Box<dyn EmbeddingDestination>,),
+        (Box<dyn LoadSource>,),
+        (Box<dyn EmbeddingStore>,),
         (Box<dyn EmbeddingClient>,),
         (usize,),
         (usize,),
@@ -166,12 +158,12 @@ impl
     /// `Result<GenerateEmbeddingTask, EmbeddingTaskArgumentError>` - Will return an error if the arguments passed to the builder
     /// are invalid. See ['EmbeddingTaskArgumentError']
     pub fn build(self) -> Result<GenerateEmbeddingTask, EmbeddingTaskArgumentError> {
-        let (source, destination, embedding_client, chunk_size, window_size) = self.fields;
+        let (source, destination, embedding_client, chunk_size, chunk_overlap) = self.fields;
         let source = source.0;
         let destination = destination.0;
         let embedding_client = embedding_client.0;
         let chunk_size = chunk_size.0;
-        let window_size = window_size.0;
+        let chunk_overlap = chunk_overlap.0;
 
         // Constructor constraints
         if chunk_size == 0 {
@@ -180,7 +172,7 @@ impl
             ));
         }
 
-        if window_size > chunk_size {
+        if chunk_overlap > chunk_size {
             return Err(EmbeddingTaskArgumentError::WindowSizeIsLargerThanChunkSize(
                 "Window size must be less than or equal to chunk size".to_string(),
             ));
@@ -191,7 +183,7 @@ impl
             destination,
             embedding_client,
             chunk_size,
-            window_size,
+            chunk_overlap,
         })
     }
 }
