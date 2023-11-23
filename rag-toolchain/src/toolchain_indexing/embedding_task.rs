@@ -70,7 +70,7 @@ impl GenerateEmbeddingTask {
     /// ```
     /// # Returns
     /// A result containing either ```Ok(())``` or an error of type [`EmbeddingTaskError`]
-    pub fn execute(&self) -> Result<(), EmbeddingTaskError> {
+    pub fn execute(&self) -> Result<Vec<(String, Vec<f32>)>, EmbeddingTaskError> {
         let raw_text = match self.source.read_source_data() {
             Ok(text) => text,
             Err(error) => return Err(EmbeddingTaskError::ReadError(error)),
@@ -85,7 +85,7 @@ impl GenerateEmbeddingTask {
         };
 
         match GenerateEmbeddingTask::store(embeddings) {
-            Ok(()) => return Ok(()),
+            Ok(embeddings) => return Ok(embeddings),
             Err(error) => return Err(EmbeddingTaskError::WriteError(error)),
         };
     }
