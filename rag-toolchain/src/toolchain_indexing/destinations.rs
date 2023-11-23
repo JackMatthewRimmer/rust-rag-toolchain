@@ -2,6 +2,7 @@ use std::env;
 
 use dotenv::dotenv;
 
+#[derive(Debug)]
 pub struct EnvVarError(String);
 
 /// # PgVector
