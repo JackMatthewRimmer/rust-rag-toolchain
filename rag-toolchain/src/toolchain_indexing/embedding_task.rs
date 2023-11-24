@@ -6,6 +6,10 @@ use std::sync::mpsc::channel;
 use threadpool::ThreadPool;
 use typed_builder::TypedBuilder;
 
+/* Notes:
+This task is probably impossible to make generic or at least should be bound to openAI embeddings
+*/
+
 /// # EmbeddingTaskError
 /// Errors that can occur during the task execution
 #[derive(Debug)]
@@ -108,15 +112,15 @@ impl GenerateEmbeddingTask {
             Err(error) => return Err(EmbeddingTaskError::ReadError(error)),
         };
 
-        let chunks: Vec<Vec<String>> =
-            GenerateEmbeddingTask::chunk(raw_text, self.chunk_size, self.chunk_overlap);
+        let chunks: Vec<String> =
+            GenerateEmbeddingTask::chunk(raw_text, self.chunk_size, self.chunk_overlap).concat();
 
-        let embeddings: Vec<(String, Vec<f32>)> = match GenerateEmbeddingTask::embed(chunks) {
+        let embeddings: Vec<(String, Vec<f32>)> = match self.embed(chunks) {
             Ok(embeddings) => embeddings,
             Err(error) => return Err(EmbeddingTaskError::EmbeddingError(error.to_string())),
         };
 
-        match GenerateEmbeddingTask::store(embeddings) {
+        match self.store(embeddings) {
             Ok(embeddings) => return Ok(embeddings),
             Err(error) => return Err(EmbeddingTaskError::WriteError(error)),
         };
@@ -153,9 +157,20 @@ impl GenerateEmbeddingTask {
     }
 
     // Error returned here will change to something from the OpenAI client
-    fn embed(chunks: Vec<Vec<String>>) -> Result<Vec<(String, Vec<f32>)>, Error> {
+    fn embed(&self, chunks: Vec<String>) -> Result<Vec<(String, Vec<f32>)>, Error> {
         // This is where we would send each chunk to openAI to get embeddings
-        !unimplemented!()
+
+        let mut embeddings: Vec<(String, Vec<f32>)> = Vec::new();
+
+        // This should leverage batches if possible
+        for chunk in chunks {
+            match self.embedding_client.generate_embeddings(vec![chunk.clone()]) {
+                Ok(embedding) => embeddings.push((chunk, embedding)),
+                Err(error) => return Err(error),
+            };
+        }
+
+        return Ok(embeddings)
     }
 
     /// # Store
@@ -167,9 +182,12 @@ impl GenerateEmbeddingTask {
     /// # Returns
     /// [`Ok(Vec<(String, Vec<f32>))`] if the embeddings were successfully written to the destination
     /// [`Err(Error)`] if there was an error writing the embeddings to the destination
-    fn store(embeddings: Vec<(String, Vec<f32>)>) -> Result<Vec<(String, Vec<f32>)>, Error> {
-        // this is where we write the embeddings to the destination
-        !unimplemented!()
+    fn store(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<Vec<(String, Vec<f32>)>, Error> {
+        // Probably need some retry mechanism here maybe ?
+        for embedding in &embeddings {
+            self.destination.store(embedding.clone())?;
+        }
+        return Ok(embeddings);
     }
 }
 
@@ -235,7 +253,7 @@ mod tests {
         }
     }
     impl EmbeddingClient for TestHelper {
-        fn generate_embeddings(&self) -> Result<Vec<f32>, Error> {
+        fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, Error> {
             Ok(vec![0.0])
         }
     }
