@@ -30,4 +30,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dotenv = "0.15.0"
 typed-builder = "0.18.0"
-dotenv_codegen = "0.15.0"
+tokio = { version = "1.0", features = ["full"] }
+sqlx = { version = "0.7.3", features = ["chrono", "postgres", "runtime-tokio-rustls"]}

@@ -9,13 +9,13 @@ pub struct SingleFileSource {
 }
 
 impl SingleFileSource {
-    pub fn new(path: String) -> SingleFileSource {
-        SingleFileSource { path }
+    pub fn new(path: impl Into<String>) -> SingleFileSource {
+        SingleFileSource { path: path.into() }
     }
 }
 
 impl LoadSource for SingleFileSource {
-    fn read_source_data(&self) -> Result<Vec<String>, std::io::Error> {
+    fn load(&self) -> Result<Vec<String>, std::io::Error> {
         let file_contents: String = read_to_string(&self.path)?;
         return Ok(vec![file_contents]);
     }

@@ -4,11 +4,23 @@ use serde::{Deserialize, Serialize};
 // We want to include exponential backoff and retries for reliability
 // also research methods on how not to get rate limited
 
+/// # EmbeddingClient
+/// Trait for struct that allows embeddings to be generated
+pub trait EmbeddingClient {
+    fn generate_embeddings(&self) -> Result<Vec<f32>, std::io::Error>;
+}
+
 pub struct OpenAIClient;
 
 impl OpenAIClient {
     pub fn new() -> Self {
         return OpenAIClient;
+    }
+}
+
+impl EmbeddingClient for OpenAIClient {
+    fn generate_embeddings(&self) -> Result<Vec<f32>, std::io::Error> {
+        Ok(vec![0.0])
     }
 }
 

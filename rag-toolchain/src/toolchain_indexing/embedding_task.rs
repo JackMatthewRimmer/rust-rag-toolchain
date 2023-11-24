@@ -1,3 +1,4 @@
+use crate::toolchain_embeddings::client::EmbeddingClient;
 use crate::toolchain_indexing::chunking::*;
 use crate::toolchain_indexing::traits::*;
 use std::io::Error;
@@ -7,6 +8,7 @@ use typed_builder::TypedBuilder;
 
 /// # EmbeddingTaskError
 /// Errors that can occur during the task execution
+#[derive(Debug)]
 pub enum EmbeddingTaskError {
     /// Error executing the read function
     ReadError(Error),
@@ -20,6 +22,7 @@ pub enum EmbeddingTaskError {
 
 /// # EmbeddingTaskArgumentError
 /// Errors that Occur when bad arguments are passed when constructing the task
+#[derive(Debug)]
 pub enum EmbeddingTaskArgumentError {
     /// Error when the chunk size is 0 as we cannot embed 0 tokens
     ChunkSizeIsZero(String),
@@ -35,7 +38,7 @@ pub enum EmbeddingTaskArgumentError {
 /// 1. `chunk_size` must be greater than 0
 /// 2. `window_size` must be less than or equal to `chunk_size`
 ///
-/// /// # Fields
+/// # Fields
 /// * `source`: The source to read from.
 /// * `destination`: The destination to write the embeddings to.
 /// * `embedding_client`: The client used to generate the embeddings.
@@ -66,12 +69,41 @@ impl GenerateEmbeddingTask {
     ///
     /// # Examples
     /// ```
-    /// Orchestrator.execute().expect("Orchestration failed")
+    /// use crate::rag_toolchain::toolchain_indexing::destinations::PgVector;
+    /// use crate::rag_toolchain::toolchain_indexing::sources::SingleFileSource;
+    /// use crate::rag_toolchain::toolchain_indexing::embedding_task::GenerateEmbeddingTask;
+    /// use crate::rag_toolchain::toolchain_embeddings::client::OpenAIClient;
+    /// use crate::rag_toolchain::toolchain_embeddings::client::EmbeddingClient;
+    ///
+    /// // This should be set in a .env file in the root of the project
+    /// std::env::set_var("POSTGRES_USERNAME", "postgres");
+    /// std::env::set_var("POSTGRES_PASSWORD", "password");
+    /// std::env::set_var("POSTGRES_HOST", "localhost");
+    /// std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+    ///
+    /// let source = SingleFileSource::new("path"); // create a source
+    /// let destination = PgVector::new("table_name").unwrap(); // create a destination
+    /// let embedding_client = OpenAIClient::new(); // create an embedding client
+    /// let chunk_size = 8192; // specify a chunk size
+    /// let chunk_overlap = 1000; // specify a chunk overlap
+    ///
+    /// let task = GenerateEmbeddingTask::builder()
+    ///     .source(Box::new(source))
+    ///     .destination(Box::new(destination))
+    ///     .embedding_client(Box::new(embedding_client))
+    ///     .chunk_size(chunk_size)
+    ///     .chunk_overlap(chunk_overlap)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// // Uncomment this when its implemented
+    /// // task.execute()
+    ///     //.expect("failed to generate and persist embeddings");
     /// ```
     /// # Returns
-    /// A result containing either ```Ok(())``` or an error of type [`EmbeddingTaskError`]
+    /// A result containing either ```Ok(Vec<(String, Vec<f32>)>)``` or an error of type [`EmbeddingTaskError`]
     pub fn execute(&self) -> Result<Vec<(String, Vec<f32>)>, EmbeddingTaskError> {
-        let raw_text = match self.source.read_source_data() {
+        let raw_text = match self.source.load() {
             Ok(text) => text,
             Err(error) => return Err(EmbeddingTaskError::ReadError(error)),
         };
@@ -185,5 +217,42 @@ impl
             chunk_size,
             chunk_overlap,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    struct TestHelper {}
+    impl LoadSource for TestHelper {
+        fn load(&self) -> Result<Vec<String>, Error> {
+            Ok(vec!["test".to_string()])
+        }
+    }
+    impl EmbeddingStore for TestHelper {
+        fn store(&self, _text: (String, Vec<f32>)) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+    impl EmbeddingClient for TestHelper {
+        fn generate_embeddings(&self) -> Result<Vec<f32>, Error> {
+            Ok(vec![0.0])
+        }
+    }
+
+    // Might be able to fully test this with a mock OpenAI client
+    use super::*;
+
+    #[test]
+    fn test_builder_with_valid_inputs_builds_orchestrator() {
+        let test_source = Box::new(TestHelper {});
+        let test_destination = Box::new(TestHelper {});
+        let _orchestrator = GenerateEmbeddingTask::builder()
+            .source(test_source)
+            .destination(test_destination)
+            .embedding_client(Box::new(TestHelper {}))
+            .chunk_size(2)
+            .chunk_overlap(1)
+            .build();
     }
 }

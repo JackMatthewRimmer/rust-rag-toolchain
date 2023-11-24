@@ -1,3 +1,6 @@
+use crate::toolchain_indexing::traits::EmbeddingStore;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Error, Pool, Postgres};
 use std::env;
 
 use dotenv::dotenv;
@@ -23,6 +26,7 @@ pub struct EnvVarError(String);
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
 pub struct PgVector {
+    table_name: String,
     db_name: String,
     username: String,
     password: String,
@@ -39,7 +43,7 @@ impl PgVector {
     ///
     /// # Returns
     /// the constructed [`PgVector`] struct
-    pub fn new(db_name: impl Into<String>) -> Result<PgVector, EnvVarError> {
+    pub fn new(table_name: impl Into<String>) -> Result<PgVector, EnvVarError> {
         dotenv().ok();
         let username: String = match env::var("POSTGRES_USERNAME") {
             Ok(username) => username,
@@ -53,13 +57,33 @@ impl PgVector {
             Ok(host) => host,
             Err(_) => return Err(EnvVarError("Error: POSTGRES_HOST not set".into())),
         };
-        let db_name: String = db_name.into();
+        let db_name: String = match env::var("POSTGRES_HOST") {
+            Ok(host) => host,
+            Err(_) => return Err(EnvVarError("Error: POSTGRES_DATABASE not set".into())),
+        };
+        let table_name: String = table_name.into();
 
         Ok(PgVector {
+            table_name,
             db_name,
             username,
             password,
             host,
         })
+    }
+
+    async fn connect(&self) -> Result<Pool<Postgres>, Error> {
+        let pool: Pool<Postgres> = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&self.host)
+            .await
+            .expect("Error: Could not create pool to database");
+        Ok(pool)
+    }
+}
+
+impl EmbeddingStore for PgVector {
+    fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), std::io::Error> {
+        Ok(())
     }
 }
