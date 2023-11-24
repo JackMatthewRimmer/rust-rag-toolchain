@@ -1,4 +1,4 @@
-use crate::toolchain_embeddings::client::EmbeddingClient;
+use crate::toolchain_embeddings::openai_embeddings::OpenAIEmbeddingClient;
 use crate::toolchain_indexing::chunking::*;
 use crate::toolchain_indexing::traits::*;
 use std::io::Error;
@@ -58,7 +58,7 @@ pub enum EmbeddingTaskArgumentError {
 pub struct GenerateEmbeddingTask {
     source: Box<dyn LoadSource>,
     destination: Box<dyn EmbeddingStore>,
-    embedding_client: Box<dyn EmbeddingClient>,
+    embedding_client: Box<dyn OpenAIEmbeddingClient>,
     chunk_size: usize,
     chunk_overlap: usize,
 }
@@ -76,8 +76,7 @@ impl GenerateEmbeddingTask {
     /// use crate::rag_toolchain::toolchain_indexing::destinations::PgVector;
     /// use crate::rag_toolchain::toolchain_indexing::sources::SingleFileSource;
     /// use crate::rag_toolchain::toolchain_indexing::embedding_task::GenerateEmbeddingTask;
-    /// use crate::rag_toolchain::toolchain_embeddings::client::OpenAIClient;
-    /// use crate::rag_toolchain::toolchain_embeddings::client::EmbeddingClient;
+    /// use crate::rag_toolchain::toolchain_embeddings::openai_embeddings::OpenAIClient;
     ///
     /// // This should be set in a .env file in the root of the project
     /// std::env::set_var("POSTGRES_USERNAME", "postgres");
@@ -199,7 +198,7 @@ impl
     GenerateEmbeddingTaskBuilder<(
         (Box<dyn LoadSource>,),
         (Box<dyn EmbeddingStore>,),
-        (Box<dyn EmbeddingClient>,),
+        (Box<dyn OpenAIEmbeddingClient>,),
         (usize,),
         (usize,),
     )>
@@ -252,7 +251,7 @@ mod tests {
             Ok(())
         }
     }
-    impl EmbeddingClient for TestHelper {
+    impl OpenAIEmbeddingClient for TestHelper {
         fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, Error> {
             Ok(vec![0.0])
         }

@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
-// This can just implement embeddings endpoint
-// We want to include exponential backoff and retries for reliability
-// also research methods on how not to get rate limited
-
-/// # EmbeddingClient
-/// Trait for struct that allows embeddings to be generated
-pub trait EmbeddingClient {
+/// # OpenAIEmbeddingClient 
+/// Allows for interacting with the OpenAI API to generate embeddings
+/// Can either embed a single string or a batch of strings
+pub trait OpenAIEmbeddingClient {
     // Used a Vec here in case we want to do batch embeddings like for OpenAI
     fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error>;
 }
@@ -19,51 +17,55 @@ impl OpenAIClient {
     }
 }
 
-impl EmbeddingClient for OpenAIClient {
+impl OpenAIEmbeddingClient for OpenAIClient {
     fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error> {
         Ok(vec![0.0])
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+// Add docs for all the below
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
 pub struct BatchEmbeddingRequest {
     pub input: Vec<String>,
     pub model: OpenAIEmbeddingModel,
     #[serde(rename = "encoding_format", skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
     pub encoding_format: Option<EncodingFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
     pub user: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
 pub struct EmbeddingRequest {
     pub input: String,
     pub model: OpenAIEmbeddingModel,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
     pub encoding_format: Option<EncodingFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(default, setter(strip_option))]
     pub user: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct EmbeddingResponse {
-    pub object: String,
     pub data: Vec<EmbeddingObject>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub usage: Option<Usage>,
+    pub model: OpenAIEmbeddingModel,
+    pub object: String,
+    pub usage: Usage,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub struct EmbeddingObject {
-    pub object: String,
     pub embedding: Vec<f32>,
     pub index: usize,
+    pub object: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -88,7 +90,10 @@ pub enum EncodingFormat {
 }
 
 #[cfg(test)]
-mod tests {
+mod request_model_tests {
+
+    // Tests for the EmbeddingRequest and BatchEmbeddingRequest, as well as the EmbeddingResponse models 
+
     use super::*;
 
     const EMBEDDING_REQUEST: &'static str = r#"{"input":"Your text string goes here","model":"text-embedding-ada-002"}"#; 
@@ -105,12 +110,10 @@ mod tests {
 
     #[test]
     fn test_embedding_request_without_optional_fields_serializes() {
-        let embedding_request: EmbeddingRequest = EmbeddingRequest {  
-            input: "Your text string goes here".to_string(),
-            model: OpenAIEmbeddingModel::TextEmbeddingAda002,
-            encoding_format: None,
-            user: None,
-        };
+        let embedding_request: EmbeddingRequest = EmbeddingRequest::builder()
+            .input("Your text string goes here".to_string())
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
 
         let serialized_embedding_request = serde_json::to_string(&embedding_request).unwrap();
         assert_eq!(serialized_embedding_request, EMBEDDING_REQUEST);
@@ -127,12 +130,12 @@ mod tests {
 
     #[test]
     fn test_embedding_request_with_optional_fields_serializes() {
-        let embedding_request: EmbeddingRequest = EmbeddingRequest {
-            input: "Your text string goes here".to_string(),
-            model: OpenAIEmbeddingModel::TextEmbeddingAda002,
-            encoding_format: Some(EncodingFormat::Float),
-            user: Some("some_user".to_string()),
-        };
+        let embedding_request: EmbeddingRequest = EmbeddingRequest::builder()
+            .input("Your text string goes here".to_string())
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .encoding_format(EncodingFormat::Float)
+            .user("some_user".to_string())
+            .build();
 
         let serialized_embedding_request = serde_json::to_string(&embedding_request).unwrap();
         assert_eq!(serialized_embedding_request, EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS);
@@ -150,20 +153,32 @@ mod tests {
 
     #[test]
     fn test_batch_embedding_request_serializes() {
-        let batch_embedding_request: BatchEmbeddingRequest = BatchEmbeddingRequest {
-            input: vec![
+        let batch_embedding_request: BatchEmbeddingRequest = BatchEmbeddingRequest::builder()
+            .input(vec![
                 "Your text string goes here".to_string(),
                 "Second item".to_string(),
-            ],
-            model: OpenAIEmbeddingModel::TextEmbeddingAda002,
-            encoding_format: None, 
-            user: None,
-
-        };
+            ])
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
 
         let serialized_batch_embedding_request = serde_json::to_string(&batch_embedding_request).unwrap();
         assert_eq!(serialized_batch_embedding_request, BATCH_EMBEDDING_REQUEST);
         println!("Serialized JSON: {}", serialized_batch_embedding_request);
+    }
+
+    const EMBEDDING_RESPONSE: &'static str = r#"{"data":[{"embedding":[-0.006929283495992422,-0.005336422007530928,-0.009327292,-0.024047505110502243],"index":0,"object":"embedding"}],"model":"text-embedding-ada-002","object":"list","usage":{"prompt_tokens":5,"total_tokens":5}}"#;
+
+    #[test]
+    fn test_embedding_response_deserializes() {
+        let embedding_response: EmbeddingResponse = serde_json::from_str(EMBEDDING_RESPONSE).unwrap();
+        assert_eq!(embedding_response.data.len(), 1);
+        assert_eq!(embedding_response.data[0].embedding.len(), 4);
+        assert_eq!(embedding_response.data[0].index, 0);
+        assert_eq!(embedding_response.data[0].object, "embedding");
+        assert_eq!(embedding_response.model, OpenAIEmbeddingModel::TextEmbeddingAda002);
+        assert_eq!(embedding_response.object, "list");
+        assert_eq!(embedding_response.usage.prompt_tokens, 5);
+        assert_eq!(embedding_response.usage.total_tokens, 5);
     }
 }
  
