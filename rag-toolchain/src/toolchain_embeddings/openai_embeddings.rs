@@ -9,19 +9,26 @@ use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings";
 
+// Maybe try deserialize the errors into a custom error type
+pub enum OpenAIError {
+    /// # Invalid Authentication or Incorrect API Key provided
+    CODE401(OpenAIErrorBody),
+    /// # Rate limit reached or Monthly quota exceeded
+    CODE429(OpenAIErrorBody),
+    /// # Server Error
+    CODE500(OpenAIErrorBody),
+    /// # The engine is currently overloaded
+    CODE503(OpenAIErrorBody),
+    /// # Missed cases for error codes, includes Status Code and Error Body as a string
+    UNDEFINED(u32, String),
+}
+
 /// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings
 /// Can either embed a single string or a batch of strings
 ///
 /// # Required Environment Variables
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
-pub trait OpenAIEmbeddingClient {
-    // Used a Vec here in case we want to do batch embeddings like for OpenAI
-    fn generate_embeddings(
-        &self,
-        text: Vec<String>,
-    ) -> Result<Vec<(String, Vec<f32>)>, std::io::Error>;
-}
 
 pub struct OpenAIClient {
     api_key: String,
@@ -65,10 +72,8 @@ impl OpenAIClient {
         // Map response objects into string embedding pairs
         return vec![(String::from("test"), vec![1.0; 1536])];
     }
-}
 
-impl OpenAIEmbeddingClient for OpenAIClient {
-    fn generate_embeddings(
+    pub fn generate_embeddings(
         &self,
         text: Vec<String>,
     ) -> Result<Vec<(String, Vec<f32>)>, std::io::Error> {
@@ -86,8 +91,6 @@ impl OpenAIEmbeddingClient for OpenAIClient {
         };
     }
 }
-
-// Add docs for all the below
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
@@ -151,6 +154,15 @@ pub enum OpenAIEmbeddingModel {
 pub enum EncodingFormat {
     Float,
     Base64,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct OpenAIErrorBody {
+    message: String,
+    #[serde(rename = "type")]
+    error_type: String,
+    param: String,
+    code: String,
 }
 
 #[cfg(test)]
