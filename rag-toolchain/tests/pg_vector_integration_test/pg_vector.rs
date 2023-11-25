@@ -1,4 +1,4 @@
-use rag_toolchain::toolchain_indexing::destinations::PgVector;
+use rag_toolchain::toolchain_indexing::stores::PgVector;
 use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
 use std::process::Command;
 
