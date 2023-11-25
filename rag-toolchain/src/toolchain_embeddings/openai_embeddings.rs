@@ -1,4 +1,5 @@
 use dotenv::dotenv;
+use dotenv::Error;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
@@ -20,7 +21,10 @@ pub enum OpenAIError {
     /// # The engine is currently overloaded
     CODE503(OpenAIErrorBody),
     /// # Missed cases for error codes, includes Status Code and Error Body as a string
-    UNDEFINED(u32, String),
+    UNDEFINED(u16, String),
+    ErrorSendingRequest(String),
+    ErrorGettingResponseBody(String),
+    ErrorDeserializingResponseBody(String),
 }
 
 /// # OpenAIEmbeddingClient
@@ -36,6 +40,9 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
+    /// # new
+    /// Create a new OpenAIClient
+    /// Must have the OPENAI_API_KEY environment variable set
     pub fn new() -> Result<OpenAIClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
@@ -47,6 +54,9 @@ impl OpenAIClient {
         Ok(OpenAIClient { api_key, client })
     }
 
+    /// # build_request
+    /// Simple method for building the request to send to OpenAI
+    /// just have to call .send() on the request to send it
     fn build_request(&self, text: Vec<String>) -> reqwest::blocking::RequestBuilder {
         let request_body = BatchEmbeddingRequest::builder()
             .input(text)
@@ -63,31 +73,83 @@ impl OpenAIClient {
         return request;
     }
 
-    fn handle_error_response() -> std::io::Error {
+    /// # handle_error_response
+    /// Explicit error mapping between response codes and error types
+    fn handle_error_response(response: Response) -> OpenAIError {
         // Map response objects into some form of enum error
-        return std::io::Error::new(std::io::ErrorKind::Other, "Error");
+        let status_code = response.status().as_u16();
+        let body_text = match response.text() {
+            Ok(text) => text,
+            Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
+        };
+        let error_body: OpenAIErrorBody = match serde_json::from_str(&body_text) {
+            Ok(error_body) => error_body,
+            Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
+        };
+        match status_code {
+            401 => {
+                return OpenAIError::CODE401(error_body);
+            }
+            429 => {
+                return OpenAIError::CODE429(error_body);
+            }
+            500 => {
+                return OpenAIError::CODE500(error_body);
+            }
+            503 => {
+                return OpenAIError::CODE503(error_body);
+            }
+            undefined => {
+                return OpenAIError::UNDEFINED(undefined, body_text);
+            }
+        }
     }
 
-    fn handle_success_response(response: Response) -> Vec<(String, Vec<f32>)> {
+    fn handle_success_response(
+        input_text: Vec<String>,
+        response: EmbeddingResponse,
+    ) -> Vec<(String, Vec<f32>)> {
         // Map response objects into string embedding pairs
+
         return vec![(String::from("test"), vec![1.0; 1536])];
     }
 
     pub fn generate_embeddings(
         &self,
         text: Vec<String>,
-    ) -> Result<Vec<(String, Vec<f32>)>, std::io::Error> {
+    ) -> Result<Vec<(String, Vec<f32>)>, OpenAIError> {
         // Build the request to send to OpenAI
-        let request = self.build_request(text);
+        let request = self.build_request(text.clone());
         // Send the request to OpenAI
         let response: Response = match request.send() {
             Ok(response) => response,
-            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
         };
 
+        //  Handle response based on if it was successful or not
         match response.status().is_success() {
-            true => return Ok(OpenAIClient::handle_success_response(response)),
-            false => return Err(OpenAIClient::handle_error_response()),
+            true => {
+                let response_body = match response.text() {
+                    // Safely unwrap the response body
+                    Ok(response_body) => response_body,
+                    // This should never happen
+                    Err(e) => return Err(OpenAIError::ErrorGettingResponseBody(e.to_string())),
+                };
+                // Deserialize the response into an EmbeddingResponse
+                let embedding_response: EmbeddingResponse =
+                    match serde_json::from_str(&response_body) {
+                        Ok(embedding_response) => embedding_response,
+                        // This should never happen
+                        Err(e) => {
+                            return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))
+                        }
+                    };
+                return Ok(OpenAIClient::handle_success_response(
+                    text,
+                    embedding_response,
+                ));
+            }
+            false => return Err(OpenAIClient::handle_error_response(response)),
         };
     }
 }
