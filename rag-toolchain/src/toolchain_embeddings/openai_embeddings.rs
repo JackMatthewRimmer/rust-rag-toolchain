@@ -363,15 +363,4 @@ mod request_model_tests {
         assert_eq!(embedding_response.usage.prompt_tokens, 5);
         assert_eq!(embedding_response.usage.total_tokens, 5);
     }
-
-    #[test]
-    fn test_request() {
-        let client = OpenAIClient::new().unwrap();
-        let result = client
-            .generate_embeddings(vec![
-                "This is a test string".to_string(),
-                "This is another test string".to_string(),
-            ])
-            .unwrap();
-    }
 }

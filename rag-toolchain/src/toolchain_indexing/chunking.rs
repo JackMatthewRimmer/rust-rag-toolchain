@@ -1,11 +1,6 @@
 use tiktoken_rs::{cl100k_base, CoreBPE};
 
 const OPEN_AI_MAX_EMBEDDING_TOKENS: usize = 8192;
-/*
-  IMPORTANT NOTE:
-  Will Currently only work with the cl100k_base model
-  as will be using text-embedding-ada-002
-*/
 
 /// # ChunkingError
 /// Custom error type representing errors that can occur during chunking

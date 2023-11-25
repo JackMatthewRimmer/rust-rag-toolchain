@@ -34,7 +34,6 @@ pub enum PgVectorError {
 /// Columns: | id (int) | content (text) | embedding (vector) |
 pub struct PgVector {
     table_name: String,
-    connection_string: String,
     pub pool: Pool<Postgres>,
     rt: Runtime,
 }
@@ -73,7 +72,6 @@ impl PgVector {
 
         Ok(PgVector {
             table_name,
-            connection_string,
             pool,
             rt,
         })
