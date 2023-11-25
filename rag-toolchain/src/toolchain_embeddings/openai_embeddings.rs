@@ -1,25 +1,68 @@
+use dotenv::dotenv;
+use reqwest::blocking::Client;
+use reqwest::header::{self, HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+use std::env;
+use std::env::VarError;
 use typed_builder::TypedBuilder;
 
-/// # OpenAIEmbeddingClient 
+const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings";
+
+/// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings
 /// Can either embed a single string or a batch of strings
+///
+/// # Required Environment Variables
+/// OPENAI_API_KEY: The API key to use for the OpenAI API
 pub trait OpenAIEmbeddingClient {
     // Used a Vec here in case we want to do batch embeddings like for OpenAI
     fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error>;
 }
 
-pub struct OpenAIClient;
+pub struct OpenAIClient {
+    api_key: String,
+    client: Client,
+}
 
 impl OpenAIClient {
-    pub fn new() -> Self {
-        return OpenAIClient;
+    pub fn new() -> Result<OpenAIClient, VarError> {
+        dotenv().ok();
+        let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
+            Ok(api_key) => api_key,
+            Err(e) => return Err(e),
+        };
+        let client = Client::new();
+
+        Ok(OpenAIClient { api_key, client })
     }
 }
 
 impl OpenAIEmbeddingClient for OpenAIClient {
     fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error> {
-        Ok(vec![0.0])
+        let request_body = BatchEmbeddingRequest::builder()
+            .input(text)
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
+
+        let content_type = HeaderValue::from_static("application/json");
+
+        let request = self
+            .client
+            .post(OPENAI_EMBEDDING_URL)
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
+
+        let response = request.send().expect("Add status code error handling here");
+        if response.status().is_success() {
+            let embedding_response: EmbeddingResponse =
+                serde_json::from_str(&response.text().expect("Add error handling here"))
+                    .expect("Failed to deserialize request");
+
+            return Ok(embedding_response.data[0].embedding.clone());
+        } else {
+            panic!("Add error handling here");
+        }
     }
 }
 
@@ -55,7 +98,7 @@ pub struct EmbeddingRequest {
 #[serde(rename_all = "snake_case")]
 pub struct EmbeddingResponse {
     pub data: Vec<EmbeddingObject>,
-    pub model: OpenAIEmbeddingModel,
+    pub model: String,
     pub object: String,
     pub usage: Usage,
 }
@@ -86,25 +129,32 @@ pub enum OpenAIEmbeddingModel {
 #[serde(rename_all = "snake_case")]
 pub enum EncodingFormat {
     Float,
-    Base64
+    Base64,
 }
 
 #[cfg(test)]
 mod request_model_tests {
 
-    // Tests for the EmbeddingRequest and BatchEmbeddingRequest, as well as the EmbeddingResponse models 
+    // Tests for the EmbeddingRequest and BatchEmbeddingRequest, as well as the EmbeddingResponse models
 
     use super::*;
 
-    const EMBEDDING_REQUEST: &'static str = r#"{"input":"Your text string goes here","model":"text-embedding-ada-002"}"#; 
-    const EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS: &'static str = r#"{"input":"Your text string goes here","model":"text-embedding-ada-002","encoding_format":"float","user":"some_user"}"#; 
-    const BATCH_EMBEDDING_REQUEST: &'static str = r#"{"input":["Your text string goes here","Second item"],"model":"text-embedding-ada-002"}"#; 
+    const EMBEDDING_REQUEST: &'static str =
+        r#"{"input":"Your text string goes here","model":"text-embedding-ada-002"}"#;
+    const EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS: &'static str = r#"{"input":"Your text string goes here","model":"text-embedding-ada-002","encoding_format":"float","user":"some_user"}"#;
+    const BATCH_EMBEDDING_REQUEST: &'static str = r#"{"input":["Your text string goes here","Second item"],"model":"text-embedding-ada-002"}"#;
 
     #[test]
     fn test_embedding_request_without_optional_fields_deserializes() {
         let embedding_request: EmbeddingRequest = serde_json::from_str(EMBEDDING_REQUEST).unwrap();
-        assert_eq!(embedding_request.input, "Your text string goes here".to_string());
-        assert_eq!(embedding_request.model, OpenAIEmbeddingModel::TextEmbeddingAda002);
+        assert_eq!(
+            embedding_request.input,
+            "Your text string goes here".to_string()
+        );
+        assert_eq!(
+            embedding_request.model,
+            OpenAIEmbeddingModel::TextEmbeddingAda002
+        );
         assert_eq!(embedding_request.encoding_format, None);
     }
 
@@ -121,10 +171,20 @@ mod request_model_tests {
 
     #[test]
     fn test_embedding_request_with_optional_fields_deserializes() {
-        let embedding_request: EmbeddingRequest = serde_json::from_str(EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS).unwrap();
-        assert_eq!(embedding_request.input, "Your text string goes here".to_string());
-        assert_eq!(embedding_request.model, OpenAIEmbeddingModel::TextEmbeddingAda002);
-        assert_eq!(embedding_request.encoding_format, EncodingFormat::Float.into());
+        let embedding_request: EmbeddingRequest =
+            serde_json::from_str(EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS).unwrap();
+        assert_eq!(
+            embedding_request.input,
+            "Your text string goes here".to_string()
+        );
+        assert_eq!(
+            embedding_request.model,
+            OpenAIEmbeddingModel::TextEmbeddingAda002
+        );
+        assert_eq!(
+            embedding_request.encoding_format,
+            EncodingFormat::Float.into()
+        );
         assert_eq!(embedding_request.user, "some_user".to_string().into());
     }
 
@@ -138,17 +198,27 @@ mod request_model_tests {
             .build();
 
         let serialized_embedding_request = serde_json::to_string(&embedding_request).unwrap();
-        assert_eq!(serialized_embedding_request, EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS);
+        assert_eq!(
+            serialized_embedding_request,
+            EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS
+        );
         println!("Serialized JSON: {}", serialized_embedding_request);
     }
 
     #[test]
     fn test_batch_embedding_request_deserializes() {
-        let batch_embedding_request: BatchEmbeddingRequest = serde_json::from_str(BATCH_EMBEDDING_REQUEST).unwrap();
+        let batch_embedding_request: BatchEmbeddingRequest =
+            serde_json::from_str(BATCH_EMBEDDING_REQUEST).unwrap();
         assert_eq!(batch_embedding_request.input.len(), 2);
-        assert_eq!(batch_embedding_request.input[0], "Your text string goes here".to_string());
+        assert_eq!(
+            batch_embedding_request.input[0],
+            "Your text string goes here".to_string()
+        );
         assert_eq!(batch_embedding_request.input[1], "Second item".to_string());
-        assert_eq!(batch_embedding_request.model, OpenAIEmbeddingModel::TextEmbeddingAda002);
+        assert_eq!(
+            batch_embedding_request.model,
+            OpenAIEmbeddingModel::TextEmbeddingAda002
+        );
     }
 
     #[test]
@@ -161,7 +231,8 @@ mod request_model_tests {
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
 
-        let serialized_batch_embedding_request = serde_json::to_string(&batch_embedding_request).unwrap();
+        let serialized_batch_embedding_request =
+            serde_json::to_string(&batch_embedding_request).unwrap();
         assert_eq!(serialized_batch_embedding_request, BATCH_EMBEDDING_REQUEST);
         println!("Serialized JSON: {}", serialized_batch_embedding_request);
     }
@@ -170,15 +241,28 @@ mod request_model_tests {
 
     #[test]
     fn test_embedding_response_deserializes() {
-        let embedding_response: EmbeddingResponse = serde_json::from_str(EMBEDDING_RESPONSE).unwrap();
+        let embedding_response: EmbeddingResponse =
+            serde_json::from_str(EMBEDDING_RESPONSE).unwrap();
         assert_eq!(embedding_response.data.len(), 1);
         assert_eq!(embedding_response.data[0].embedding.len(), 4);
         assert_eq!(embedding_response.data[0].index, 0);
         assert_eq!(embedding_response.data[0].object, "embedding");
-        assert_eq!(embedding_response.model, OpenAIEmbeddingModel::TextEmbeddingAda002);
+        assert_eq!(
+            embedding_response.model,
+            "text-embedding-ada-002".to_string()
+        );
         assert_eq!(embedding_response.object, "list");
         assert_eq!(embedding_response.usage.prompt_tokens, 5);
         assert_eq!(embedding_response.usage.total_tokens, 5);
     }
+
+    #[test]
+    fn test_request() {
+        let client = OpenAIClient::new().unwrap();
+        let result = client.generate_embeddings(vec![
+            "This is a test string".to_string(),
+            "This is another test string".to_string(),
+        ]);
+        println!("{:?}", result);
+    }
 }
- 
