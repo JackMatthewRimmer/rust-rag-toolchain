@@ -11,6 +11,7 @@ use typed_builder::TypedBuilder;
 const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings";
 
 // Maybe try deserialize the errors into a custom error type
+#[derive(Debug, PartialEq)]
 pub enum OpenAIError {
     /// # Invalid Authentication or Incorrect API Key provided
     CODE401(OpenAIErrorBody),
@@ -82,6 +83,7 @@ impl OpenAIClient {
             Ok(text) => text,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
+        println!("Error Body: {}", body_text);
         let error_body: OpenAIErrorBody = match serde_json::from_str(&body_text) {
             Ok(error_body) => error_body,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
@@ -110,8 +112,12 @@ impl OpenAIClient {
         response: EmbeddingResponse,
     ) -> Vec<(String, Vec<f32>)> {
         // Map response objects into string embedding pairs
-
-        return vec![(String::from("test"), vec![1.0; 1536])];
+        let embeddings: Vec<EmbeddingObject> = response.data;
+        let pairs: Vec<(String, Vec<f32>)> = input_text
+            .into_iter()
+            .zip(embeddings.into_iter().map(|embedding| embedding.embedding))
+            .collect();
+        return pairs;
     }
 
     pub fn generate_embeddings(
@@ -144,6 +150,7 @@ impl OpenAIClient {
                             return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))
                         }
                     };
+                println!("Response: {:?}", embedding_response);
                 return Ok(OpenAIClient::handle_success_response(
                     text,
                     embedding_response,
@@ -207,6 +214,7 @@ pub struct Usage {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenAIEmbeddingModel {
+    // For some reason this comes back as text-embedding-ada-002-v2
     #[serde(rename = "text-embedding-ada-002")]
     TextEmbeddingAda002,
 }
@@ -220,11 +228,16 @@ pub enum EncodingFormat {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct OpenAIErrorBody {
-    message: String,
+    pub error: OpenAIErrorData,
+}
+
+#[derive(Debug, Deserialize, PartialEq)]
+pub struct OpenAIErrorData {
+    pub message: String,
     #[serde(rename = "type")]
-    error_type: String,
-    param: String,
-    code: String,
+    pub error_type: String,
+    pub param: Option<String>,
+    pub code: String,
 }
 
 #[cfg(test)]
@@ -354,10 +367,11 @@ mod request_model_tests {
     #[test]
     fn test_request() {
         let client = OpenAIClient::new().unwrap();
-        let result = client.generate_embeddings(vec![
-            "This is a test string".to_string(),
-            "This is another test string".to_string(),
-        ]);
-        println!("{:?}", result);
+        let result = client
+            .generate_embeddings(vec![
+                "This is a test string".to_string(),
+                "This is another test string".to_string(),
+            ])
+            .unwrap();
     }
 }
