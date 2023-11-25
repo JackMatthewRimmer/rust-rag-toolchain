@@ -1,6 +1,7 @@
 use dotenv::dotenv;
 use reqwest::blocking::Client;
-use reqwest::header::{self, HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::blocking::Response;
+use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
@@ -16,7 +17,10 @@ const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
 pub trait OpenAIEmbeddingClient {
     // Used a Vec here in case we want to do batch embeddings like for OpenAI
-    fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error>;
+    fn generate_embeddings(
+        &self,
+        text: Vec<String>,
+    ) -> Result<Vec<(String, Vec<f32>)>, std::io::Error>;
 }
 
 pub struct OpenAIClient {
@@ -35,17 +39,13 @@ impl OpenAIClient {
 
         Ok(OpenAIClient { api_key, client })
     }
-}
 
-impl OpenAIEmbeddingClient for OpenAIClient {
-    fn generate_embeddings(&self, text: Vec<String>) -> Result<Vec<f32>, std::io::Error> {
+    fn build_request(&self, text: Vec<String>) -> reqwest::blocking::RequestBuilder {
         let request_body = BatchEmbeddingRequest::builder()
             .input(text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
-
         let content_type = HeaderValue::from_static("application/json");
-
         let request = self
             .client
             .post(OPENAI_EMBEDDING_URL)
@@ -53,16 +53,37 @@ impl OpenAIEmbeddingClient for OpenAIClient {
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
 
-        let response = request.send().expect("Add status code error handling here");
-        if response.status().is_success() {
-            let embedding_response: EmbeddingResponse =
-                serde_json::from_str(&response.text().expect("Add error handling here"))
-                    .expect("Failed to deserialize request");
+        return request;
+    }
 
-            return Ok(embedding_response.data[0].embedding.clone());
-        } else {
-            panic!("Add error handling here");
-        }
+    fn handle_error_response() -> std::io::Error {
+        // Map response objects into some form of enum error
+        return std::io::Error::new(std::io::ErrorKind::Other, "Error");
+    }
+
+    fn handle_success_response(response: Response) -> Vec<(String, Vec<f32>)> {
+        // Map response objects into string embedding pairs
+        return vec![(String::from("test"), vec![1.0; 1536])];
+    }
+}
+
+impl OpenAIEmbeddingClient for OpenAIClient {
+    fn generate_embeddings(
+        &self,
+        text: Vec<String>,
+    ) -> Result<Vec<(String, Vec<f32>)>, std::io::Error> {
+        // Build the request to send to OpenAI
+        let request = self.build_request(text);
+        // Send the request to OpenAI
+        let response: Response = match request.send() {
+            Ok(response) => response,
+            Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+        };
+
+        match response.status().is_success() {
+            true => return Ok(OpenAIClient::handle_success_response(response)),
+            false => return Err(OpenAIClient::handle_error_response()),
+        };
     }
 }
 
