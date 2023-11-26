@@ -16,7 +16,7 @@ pub fn benchmark_chunking(c: &mut Criterion) {
             let raw_text = fs::read_to_string("benches/raw.txt").unwrap();
             let window_size = 1200;
             let chunk_size = NonZeroUsize::new(8000).unwrap();
-            let model: EmbeddingModels = OpenAIEmbeddingModel::new(TextEmbeddingAda002);
+            let model: EmbeddingModels = TextEmbeddingAda002.into();
             let chunker: TokenChunker = TokenChunker::new(
                 black_box(chunk_size),
                 black_box(window_size),
