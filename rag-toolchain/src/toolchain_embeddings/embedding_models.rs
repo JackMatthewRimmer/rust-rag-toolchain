@@ -11,10 +11,6 @@ pub enum OpenAIEmbeddingModel {
 }
 
 impl OpenAIEmbeddingModel {
-    pub fn new(model: OpenAIEmbeddingModel) -> EmbeddingModels {
-        EmbeddingModels::OpenAI(model)
-    }
-
     pub fn metadata(&self) -> OpenAIEmbeddingMetadata {
         match self {
             OpenAIEmbeddingModel::TextEmbeddingAda002 => OpenAIEmbeddingMetadata {
@@ -25,6 +21,21 @@ impl OpenAIEmbeddingModel {
         }
     }
 }
+
+impl From<OpenAIEmbeddingModel> for EmbeddingModels {
+    fn from(model: OpenAIEmbeddingModel) -> Self {
+        EmbeddingModels::OpenAI(model)
+    }
+}
+
+impl From<EmbeddingModels> for OpenAIEmbeddingModel {
+    fn from(model: EmbeddingModels) -> Self {
+        match model {
+            EmbeddingModels::OpenAI(model) => model,
+        }
+    }
+}
+
 pub struct OpenAIEmbeddingMetadata {
     pub dimensions: usize,
     pub max_tokens: usize,

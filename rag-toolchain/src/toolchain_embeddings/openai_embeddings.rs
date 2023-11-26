@@ -1,5 +1,4 @@
 use dotenv::dotenv;
-use dotenv::Error;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};

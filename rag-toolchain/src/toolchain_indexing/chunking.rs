@@ -1,4 +1,4 @@
-use crate::toolchain_embeddings::embedding_models::EmbeddingModels;
+use crate::toolchain_embeddings::embedding_models::{EmbeddingModels, OpenAIEmbeddingMetadata};
 use std::num::NonZeroUsize;
 use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
@@ -90,7 +90,7 @@ impl TokenChunker {
     fn static_metadata(embedding_model: &EmbeddingModels) -> (usize, impl TokenizerWrapper) {
         match embedding_model {
             EmbeddingModels::OpenAI(model) => {
-                let metadata = model.metadata();
+                let metadata: OpenAIEmbeddingMetadata = model.metadata();
                 return (
                     metadata.max_tokens,
                     OpenAITokenizer::new(metadata.tokenizer),
@@ -121,16 +121,14 @@ impl TokenChunker {
 mod tests {
 
     use super::*;
-    use crate::toolchain_embeddings::embedding_models::{
-        OpenAIEmbeddingModel, OpenAIEmbeddingModel::TextEmbeddingAda002,
-    };
+    use crate::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[test]
     fn test_generate_chunks_with_valid_input() {
         let raw_text: &str = "This is a test string";
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModels = OpenAIEmbeddingModel::new(TextEmbeddingAda002);
+        let model: EmbeddingModels = TextEmbeddingAda002.into();
         let chunker: TokenChunker = TokenChunker::new(chunk_size, window_size, model).unwrap();
         let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
         assert_eq!(chunks.len(), 5);
@@ -145,7 +143,7 @@ mod tests {
         let raw_text: &str = "";
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModels = OpenAIEmbeddingModel::new(TextEmbeddingAda002);
+        let model: EmbeddingModels = TextEmbeddingAda002.into();
         let chunker: TokenChunker = TokenChunker::new(chunk_size, window_size, model).unwrap();
         let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
         assert_eq!(chunks.len(), 0);
@@ -154,16 +152,16 @@ mod tests {
 
     #[test]
     fn test_generate_chunks_with_invalid_arguments() {
-        let raw_text: &str = "This is a test string";
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModels = OpenAIEmbeddingModel::new(TextEmbeddingAda002);
-        let chunker: TokenChunker = TokenChunker::new(chunk_size, window_size, model).unwrap();
-        let chunks: ChunkingError = chunker
-            .generate_chunks(raw_text)
-            .expect_err("Failed to generate chunks");
+        let model: EmbeddingModels = TextEmbeddingAda002.into();
+        let chunker: ChunkingError = match TokenChunker::new(chunk_size, window_size, model) {
+            Ok(_) => panic!("Expected error"),
+            Err(e) => e,
+        };
+
         assert_eq!(
-            chunks,
+            chunker,
             ChunkingError::WindowSizeTooLarge(
                 "Window size must be smaller than chunk size".to_string()
             )

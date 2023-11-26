@@ -1,7 +1,11 @@
 use std::fs;
+use std::num::NonZeroUsize;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rag_toolchain::toolchain_indexing::chunking::generate_chunks;
+use rag_toolchain::toolchain_embeddings::embedding_models::{
+    EmbeddingModels, OpenAIEmbeddingModel, OpenAIEmbeddingModel::TextEmbeddingAda002,
+};
+use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
 /*
 Benchmarking of 30,000 words
 */
@@ -11,12 +15,15 @@ pub fn benchmark_chunking(c: &mut Criterion) {
             // i need to load the raw.txt file here
             let raw_text = fs::read_to_string("benches/raw.txt").unwrap();
             let window_size = 1200;
-            let chunk_size = 8000;
-            let chunks = generate_chunks(
-                black_box(raw_text.as_str()),
-                black_box(window_size),
+            let chunk_size = NonZeroUsize::new(8000).unwrap();
+            let model: EmbeddingModels = OpenAIEmbeddingModel::new(TextEmbeddingAda002);
+            let chunker: TokenChunker = TokenChunker::new(
                 black_box(chunk_size),
-            );
+                black_box(window_size),
+                black_box(model),
+            )
+            .unwrap();
+            let chunks = chunker.generate_chunks(&raw_text);
             assert!(chunks.is_ok());
         })
     });

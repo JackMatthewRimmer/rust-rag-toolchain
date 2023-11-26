@@ -1,6 +1,5 @@
 use crate::toolchain_indexing::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
-use sqlx::types::Json;
 use sqlx::{Error, Pool, Postgres};
 use std::env;
 use tokio::runtime::Runtime;
