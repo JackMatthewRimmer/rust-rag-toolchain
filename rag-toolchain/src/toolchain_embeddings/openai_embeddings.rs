@@ -39,8 +39,7 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
-    /// # new
-    /// Create a new OpenAIClient
+    /// Create a new OpenAIClient.
     /// Must have the OPENAI_API_KEY environment variable set
     pub fn new() -> Result<OpenAIClient, VarError> {
         dotenv().ok();
@@ -72,8 +71,13 @@ impl OpenAIClient {
         return request;
     }
 
-    /// # handle_error_response
     /// Explicit error mapping between response codes and error types
+    ///
+    /// # Arguments
+    /// `response` - The reqwest response from OpenAI
+    ///
+    /// # Returns
+    /// `OpenAIError` - The error type that maps to the response code
     fn handle_error_response(response: Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
@@ -105,6 +109,14 @@ impl OpenAIClient {
         }
     }
 
+    /// Takes a successful response and maps it into a vector of string embedding pairs
+    ///
+    /// # Arguments
+    /// `input_text` - The input text that was sent to OpenAI
+    /// `response` - The deserialized response from OpenAI
+    ///
+    /// # Returns
+    /// `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
     fn handle_success_response(
         input_text: Vec<String>,
         response: EmbeddingResponse,
@@ -118,6 +130,8 @@ impl OpenAIClient {
         return pairs;
     }
 
+    // This function needs changing to handle the batch size limit of 200
+    // If we get a vector of 400 strings we need to split it into two requests
     pub fn generate_embeddings(
         &self,
         text: Vec<String>,
