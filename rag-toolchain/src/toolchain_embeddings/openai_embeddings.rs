@@ -10,7 +10,6 @@ use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings";
 
-// Maybe try deserialize the errors into a custom error type
 #[derive(Debug, PartialEq)]
 pub enum OpenAIError {
     /// # Invalid Authentication or Incorrect API Key provided
