@@ -33,6 +33,7 @@ pub enum PgVectorError {
 ///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
+#[derive(Debug)]
 pub struct PgVectorDB {
     table_name: String,
     pub pool: Pool<Postgres>,
@@ -52,15 +53,11 @@ impl PgVectorDB {
     /// the constructed [`PgVector`] struct
     pub fn new(table_name: &str) -> Result<Self, PgVectorError> {
         dotenv().ok();
-        let username: String =
-            env::var("POSTGRES_USER").map_err(|error| PgVectorError::EnvVarError(error))?;
-        let password: String =
-            env::var("POSTGRES_PASSWORD").map_err(|error| PgVectorError::EnvVarError(error))?;
-        let host: String =
-            env::var("POSTGRES_HOST").map_err(|error| PgVectorError::EnvVarError(error))?;
-        let db_name: String =
-            env::var("POSTGRES_DATABASE").map_err(|error| PgVectorError::EnvVarError(error))?;
-        let table_name: &str = table_name.into();
+        let username: String = env::var("POSTGRES_USER").map_err(PgVectorError::EnvVarError)?;
+        let password: String = env::var("POSTGRES_PASSWORD").map_err(PgVectorError::EnvVarError)?;
+        let host: String = env::var("POSTGRES_HOST").map_err(PgVectorError::EnvVarError)?;
+        let db_name: String = env::var("POSTGRES_DATABASE").map_err(PgVectorError::EnvVarError)?;
+        let table_name: &str = table_name;
 
         let connection_string =
             format!("postgres://{}:{}@{}/{}", username, password, host, db_name);
@@ -69,12 +66,12 @@ impl PgVectorDB {
             .map_err(|error| PgVectorError::RuntimeCreationError(error.to_string()))?;
 
         // Connect to the database
-        let pool = PgVectorDB::connect(&connection_string, &rt)
-            .map_err(|error| PgVectorError::ConnectionError(error))?;
+        let pool =
+            PgVectorDB::connect(&connection_string, &rt).map_err(PgVectorError::ConnectionError)?;
 
         // Create the table
         PgVectorDB::create_table(&rt, pool.clone(), table_name)
-            .map_err(|error| PgVectorError::TableCreationError(error))?;
+            .map_err(PgVectorError::TableCreationError)?;
 
         Ok(PgVectorDB {
             table_name: table_name.into(),
@@ -96,10 +93,10 @@ impl PgVectorDB {
         let pool = rt.block_on(async {
             let pool: Pool<Postgres> = PgPoolOptions::new()
                 .max_connections(5)
-                .connect(&connection_string)
+                .connect(connection_string)
                 .await
                 .expect("Error: Could not create pool to database");
-            return pool;
+            pool
         });
         Ok(pool)
     }
@@ -114,7 +111,7 @@ impl PgVectorDB {
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
     /// * [`Error`] if the table could not be created
-    pub fn create_table(
+    fn create_table(
         rt: &Runtime,
         pool: Pool<Postgres>,
         table_name: &str,
@@ -128,9 +125,7 @@ impl PgVectorDB {
             )",
             table_name
         );
-        return rt.block_on(async {
-            return sqlx::query(&query).execute(&pool).await;
-        });
+        rt.block_on(async { sqlx::query(&query).execute(&pool).await })
     }
 }
 
@@ -144,11 +139,11 @@ impl EmbeddingStore for PgVectorDB {
         );
 
         let result = self.rt.block_on(async {
-            return sqlx::query(&query)
+            sqlx::query(&query)
                 .bind(&content)
                 .bind(&embedding)
                 .execute(&self.pool)
-                .await;
+                .await
         });
 
         match result {
@@ -158,5 +153,44 @@ impl EmbeddingStore for PgVectorDB {
                 "Error: Could not store embedding",
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_throws_env_var_error_user() {
+        let result = PgVectorDB::new("test");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+    }
+
+    #[test]
+    fn test_throws_env_var_error_password() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        let result = PgVectorDB::new("test");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+    }
+
+    #[test]
+    fn test_throws_env_var_error_host() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        let result = PgVectorDB::new("test");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+    }
+
+    #[test]
+    fn test_throws_env_var_error_database() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", "localhost");
+        let result = PgVectorDB::new("test");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
     }
 }
