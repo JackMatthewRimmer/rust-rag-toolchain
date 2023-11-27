@@ -1,12 +1,12 @@
-use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVector;
+use pgvector::Vector;
+use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
 use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+use sqlx::{postgres::PgRow, Row};
 use sqlx::{Pool, Postgres};
+use tokio::runtime::Runtime;
 
 #[cfg(test)]
 mod pg_vector {
-
-    use sqlx::{postgres::PgRow, Row};
-    use tokio::runtime::Runtime;
 
     use super::*;
 
@@ -16,7 +16,7 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PgVector::new("embeddings").unwrap();
+        let pg_vector = PgVectorDB::new("embeddings").unwrap();
         let _result = pg_vector.create_table().unwrap();
         let _result = pg_vector.store(("test".into(), vec![1.0; 1536])).unwrap();
         assert_row(pg_vector.pool, 1, "test".into(), vec![1.0; 1536])
@@ -34,5 +34,6 @@ mod pg_vector {
         });
 
         assert_eq!(row.get::<String, _>("content"), "test");
+        assert_eq!(row.get::<Vector, _>("embedding").to_vec(), embeddings);
     }
 }

@@ -34,13 +34,13 @@ pub enum PgVectorError {
 ///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
-pub struct PgVector {
+pub struct PgVectorDB {
     table_name: String,
     pub pool: Pool<Postgres>,
     rt: Runtime,
 }
 
-impl PgVector {
+impl PgVectorDB {
     /// # Note
     /// [`PgVector::new`] will not compile if the required environment
     /// variables are not set
@@ -68,11 +68,11 @@ impl PgVector {
         // Better error handling here
         let rt = tokio::runtime::Runtime::new().unwrap();
 
-        let pool = PgVector::connect(&connection_string, &rt).map_err(|_| {
+        let pool = PgVectorDB::connect(&connection_string, &rt).map_err(|_| {
             PgVectorError::ConnectionError("Error: Could not connect to database".into())
         })?;
 
-        Ok(PgVector {
+        Ok(PgVectorDB {
             table_name,
             pool,
             rt,
@@ -110,7 +110,7 @@ impl PgVector {
     }
 }
 
-impl EmbeddingStore for PgVector {
+impl EmbeddingStore for PgVectorDB {
     fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), std::io::Error> {
         let (content, embedding) = embeddings;
         let query = format!(
