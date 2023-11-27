@@ -17,7 +17,6 @@ mod pg_vector {
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
         let pg_vector = PgVectorDB::new("embeddings").unwrap();
-        let _result = pg_vector.create_table().unwrap();
         let _result = pg_vector.store(("test".into(), vec![1.0; 1536])).unwrap();
         assert_row(pg_vector.pool, 1, "test".into(), vec![1.0; 1536])
     }
