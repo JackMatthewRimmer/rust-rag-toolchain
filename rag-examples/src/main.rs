@@ -2,7 +2,7 @@ use rag_toolchain::toolchain_embeddings::{
     embedding_models::OpenAIEmbeddingModel, openai_embeddings::OpenAIClient,
 };
 use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
-use rag_toolchain::toolchain_indexing::stores::pg_vector_store::PgVector;
+use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVector;
 use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
 
 fn main() {

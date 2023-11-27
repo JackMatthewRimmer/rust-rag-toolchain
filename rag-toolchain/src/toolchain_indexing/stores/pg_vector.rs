@@ -6,6 +6,9 @@ use tokio::runtime::Runtime;
 
 use dotenv::dotenv;
 
+// https://github.com/pgvector/pgvector-rust/blob/master/src/postgres_ext.rs#L59
+// Going to need to use this library just for the vector type
+
 #[derive(Debug)]
 pub enum PgVectorError {
     EnvVarError(String),

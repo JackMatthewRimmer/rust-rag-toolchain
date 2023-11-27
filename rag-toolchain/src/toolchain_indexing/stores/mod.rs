@@ -1,1 +1,1 @@
-pub mod pg_vector_store;
+pub mod pg_vector;
