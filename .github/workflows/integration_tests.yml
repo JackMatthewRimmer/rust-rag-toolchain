@@ -12,7 +12,6 @@ jobs:
   docker:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    defaults:
 
     steps:
     - name: Checkout
