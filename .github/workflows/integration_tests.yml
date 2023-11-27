@@ -23,7 +23,7 @@ jobs:
       working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
 
     - name: Run integration test
-      run: cargo test --test pg_vector -- --nocapture
+      run: cargo test --test mod -- --nocapture
       working-directory: rag-toolchain/tests/pg_vector_integration_test
 
     - name: Stop containers
