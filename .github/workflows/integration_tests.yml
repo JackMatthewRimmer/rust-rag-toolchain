@@ -22,7 +22,7 @@ jobs:
 
     - name: Start containers
       run: docker-compose -f "docker-compose.yml" up -d --build
-      working-directory: docker 
+      working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
 
     - name: Run integration test
       run: cargo test --test pg_vector_integration_test -- --nocapture
@@ -30,4 +30,4 @@ jobs:
     - name: Stop containers
       if: always()
       run: docker-compose -f "docker-compose.yml" down
-      working-directory: docker
+      working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
