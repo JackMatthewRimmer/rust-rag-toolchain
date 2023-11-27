@@ -18,7 +18,7 @@ jobs:
       uses: actions/checkout@v1
 
     - name: Start containers
-      run: docker-compose -f "docker-compose.yml" up -d --build
+      run: docker-compose up -d --build
       working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
 
     - name: Run integration test
@@ -27,5 +27,5 @@ jobs:
 
     - name: Stop containers
       if: always()
-      run: docker-compose -f "docker-compose.yml" down
+      run: docker-compose down
       working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
