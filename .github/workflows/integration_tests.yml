@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  docker:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain/tests/pg_vector_integration_test
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+
+    - name: Start containers
+      run: docker-compose -f "docker-compose.yml" up -d --build
+      working-directory: ./docker 
+
+    - name: Run integration test
+      run: cargo test --test pg_vector_integration_test -- --nocapture
+
+    - name: Stop containers
+      if: always()
+      run: docker-compose -f "docker-compose.yml" down
+      working-directory: ./docker
