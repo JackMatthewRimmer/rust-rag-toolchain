@@ -13,8 +13,6 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     defaults:
-      run:
-        working-directory: rag-toolchain/tests/pg_vector_integration_test
 
     steps:
     - name: Checkout
@@ -25,7 +23,8 @@ jobs:
       working-directory: rag-toolchain/tests/pg_vector_integration_test/docker 
 
     - name: Run integration test
-      run: cargo test --test pg_vector_integration_test -- --nocapture
+      run: cargo test --test pg_vector -- --nocapture
+      working-directory: rag-toolchain/tests/pg_vector_integration_test
 
     - name: Stop containers
       if: always()
