@@ -1,0 +1,35 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: stable
+
+    - name: Build project
+      run: |
+        cd rag-toolchain
+        cargo build --verbose
+
+    - name: Run tests
+      run: |
+        cd rag-toolchain
+        cargo test --lib
+
+    - name: Run linter
+      run: |
+        cd rag-toolchain
+        cargo fmt -- --check
+        cargo clippy -- -D warnings
