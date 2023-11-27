@@ -14,9 +14,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up Rust
-      uses: actions/setup-rust@v1
+      uses: actions-rs/setup-rust@v1
       with:
-        rust-version: stable
+        toolchain: stable
 
     - name: Build project
       run: |
