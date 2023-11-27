@@ -1,19 +1,18 @@
 use crate::toolchain_indexing::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
+use sqlx::Error as SqlxError;
 use sqlx::{Error, Pool, Postgres};
-use std::env;
+use std::env::{self, VarError};
 use tokio::runtime::Runtime;
 
 use dotenv::dotenv;
 
-// https://github.com/pgvector/pgvector-rust/blob/master/src/postgres_ext.rs#L59
-// Going to need to use this library just for the vector type
-
 #[derive(Debug)]
 pub enum PgVectorError {
-    EnvVarError(String),
-    ConnectionError(String),
-    TableCreationError(String),
+    EnvVarError(VarError),
+    ConnectionError(SqlxError),
+    TableCreationError(SqlxError),
+    RuntimeCreationError(String),
 }
 
 /// # PgVector
@@ -41,44 +40,58 @@ pub struct PgVectorDB {
 }
 
 impl PgVectorDB {
-    /// # Note
-    /// [`PgVector::new`] will not compile if the required environment
-    /// variables are not set
-    ///
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
+    ///
+    /// # Errors
+    /// * [`PgVectorError::EnvVarError`] if the required environment variables are not set
+    /// * [`PgVectorError::ConnectionError`] if the connection to the database could not be established
+    /// * [`PgVectorError::TableCreationError`] if the table could not be created
     ///
     /// # Returns
     /// the constructed [`PgVector`] struct
     pub fn new(table_name: &str) -> Result<Self, PgVectorError> {
         dotenv().ok();
-        let username = env::var("POSTGRES_USER")
-            .map_err(|_| PgVectorError::EnvVarError("Error: POSTGRES_USER not set".into()))?;
-        let password = env::var("POSTGRES_PASSWORD")
-            .map_err(|_| PgVectorError::EnvVarError("Error: POSTGRES_PASSWORD not set".into()))?;
-        let host = env::var("POSTGRES_HOST")
-            .map_err(|_| PgVectorError::EnvVarError("Error: POSTGRES_HOST not set".into()))?;
-        let db_name = env::var("POSTGRES_DATABASE")
-            .map_err(|_| PgVectorError::EnvVarError("Error: POSTGRES_DATABASE not set".into()))?;
-        let table_name = table_name.into();
+        let username: String =
+            env::var("POSTGRES_USER").map_err(|error| PgVectorError::EnvVarError(error))?;
+        let password: String =
+            env::var("POSTGRES_PASSWORD").map_err(|error| PgVectorError::EnvVarError(error))?;
+        let host: String =
+            env::var("POSTGRES_HOST").map_err(|error| PgVectorError::EnvVarError(error))?;
+        let db_name: String =
+            env::var("POSTGRES_DATABASE").map_err(|error| PgVectorError::EnvVarError(error))?;
+        let table_name: &str = table_name.into();
 
         let connection_string =
             format!("postgres://{}:{}@{}/{}", username, password, host, db_name);
 
-        // Better error handling here
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|error| PgVectorError::RuntimeCreationError(error.to_string()))?;
 
-        let pool = PgVectorDB::connect(&connection_string, &rt).map_err(|_| {
-            PgVectorError::ConnectionError("Error: Could not connect to database".into())
-        })?;
+        // Connect to the database
+        let pool = PgVectorDB::connect(&connection_string, &rt)
+            .map_err(|error| PgVectorError::ConnectionError(error))?;
+
+        // Create the table
+        PgVectorDB::create_table(&rt, pool.clone(), table_name)
+            .map_err(|error| PgVectorError::TableCreationError(error))?;
 
         Ok(PgVectorDB {
-            table_name,
+            table_name: table_name.into(),
             pool,
             rt,
         })
     }
 
+    /// Allows us to check the connection to a database and store the connection pool
+    ///
+    /// # Arguments
+    /// * `connection_string` - The connection string to use to connect to the database
+    /// * `rt` - The runtime to use to connect to the database
+    ///
+    /// # Returns
+    /// * [`Pool<Postgres>`] which can be used to query the database
+    /// * [`Error`] if the connection could not be established
     fn connect(connection_string: &str, rt: &Runtime) -> Result<Pool<Postgres>, Error> {
         let pool = rt.block_on(async {
             let pool: Pool<Postgres> = PgPoolOptions::new()
@@ -91,10 +104,21 @@ impl PgVectorDB {
         Ok(pool)
     }
 
-    /// # Create Table
-    /// This operation should be called if your table does not already exist.
-    /// Will fail if the table already exists.
-    pub fn create_table(&self) -> Result<PgQueryResult, Error> {
+    /// We call the create table automatically when the struct is created
+    ///
+    /// # Arguments
+    /// * `table_name` - The name of the table to create
+    /// * `pool` - The connection pool to use to create the table
+    /// * `rt` - The runtime to use to create the table
+    ///
+    /// # Returns
+    /// * [`PgQueryResult`] which can be used to check if the table was created successfully
+    /// * [`Error`] if the table could not be created
+    pub fn create_table(
+        rt: &Runtime,
+        pool: Pool<Postgres>,
+        table_name: &str,
+    ) -> Result<PgQueryResult, Error> {
         let query = format!(
             "
             CREATE TABLE IF NOT EXISTS {} (
@@ -102,10 +126,10 @@ impl PgVectorDB {
                 content TEXT NOT NULL,
                 embedding vector(1536) 
             )",
-            &self.table_name
+            table_name
         );
-        return self.rt.block_on(async {
-            return sqlx::query(&query).execute(&self.pool).await;
+        return rt.block_on(async {
+            return sqlx::query(&query).execute(&pool).await;
         });
     }
 }

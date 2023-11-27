@@ -33,7 +33,7 @@ mod pg_vector {
             return query.unwrap();
         });
 
-        assert_eq!(row.get::<String, _>("content"), "test");
+        assert_eq!(row.get::<String, _>("content"), text);
         assert_eq!(row.get::<Vector, _>("embedding").to_vec(), embeddings);
     }
 }
