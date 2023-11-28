@@ -23,3 +23,9 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --lib --lcov --output-path lcov.info
         working-directory: rag-toolchain
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: lcov.info
+          path: rag-toolchain/lcov.info
