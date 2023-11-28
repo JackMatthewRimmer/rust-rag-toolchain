@@ -24,8 +24,14 @@ jobs:
         run: cargo llvm-cov --all-features --lib --lcov --output-path lcov.info
         working-directory: rag-toolchain
 
+      - name: Install grcov
+        run: cargo install grcov
+
+      - name: Generate coverage report
+        run: grcov rag-toolchain/lcov.info -t html --ignore-not-existing -o coverage_report.html
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v2
         with:
-          name: lcov.info
-          path: rag-toolchain/lcov.info
+          name: coverage_report.html
+          path: coverage_report.html 
