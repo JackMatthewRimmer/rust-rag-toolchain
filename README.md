@@ -21,12 +21,7 @@ enriched information efficiently.
 
 ### Installation
 
-Add `rust-rag-toolchain` to your `Cargo.toml` file:
-
-```toml
-[dependencies]
-rust-rag-toolchain = "0.1.0"
-```
+Not released yet
 
 ## Contributing
 
