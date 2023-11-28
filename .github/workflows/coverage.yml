@@ -23,7 +23,3 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --all-features --lib --lcov --output-path lcov.info
         working-directory: rag-toolchain
-
-        with:
-          files: lcov.info
-          fail_ci_if_error: true
