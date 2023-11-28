@@ -1,9 +1,9 @@
 use crate::toolchain_indexing::traits::{EmbeddingStore, StoreError};
+use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
 use sqlx::{Error, Pool, Postgres};
 use std::env::{self, VarError};
-use async_trait::async_trait;
 
 use dotenv::dotenv;
 
@@ -98,9 +98,9 @@ impl PgVectorDB {
     /// * [`Error`] if the connection could not be established
     async fn connect(connection_string: &str) -> Result<Pool<Postgres>, Error> {
         let pool: Pool<Postgres> = PgPoolOptions::new()
-                .max_connections(5)
-                .connect(connection_string)
-                .await?;
+            .max_connections(5)
+            .connect(connection_string)
+            .await?;
         Ok(pool)
     }
 
@@ -114,10 +114,7 @@ impl PgVectorDB {
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
     /// * [`Error`] if the table could not be created
-    async fn create_table(
-        pool: Pool<Postgres>,
-        table_name: &str,
-    ) -> Result<PgQueryResult, Error> {
+    async fn create_table(pool: Pool<Postgres>, table_name: &str) -> Result<PgQueryResult, Error> {
         let query = format!(
             "
             CREATE TABLE IF NOT EXISTS {} (
@@ -127,7 +124,7 @@ impl PgVectorDB {
             )",
             table_name
         );
-        sqlx::query(&query).execute(&pool).await 
+        sqlx::query(&query).execute(&pool).await
     }
 }
 
@@ -150,16 +147,21 @@ impl EmbeddingStore for PgVectorDB {
         Ok(())
     }
 
-    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn StoreError>> {
+    async fn store_batch(
+        &self,
+        embeddings: Vec<(String, Vec<f32>)>,
+    ) -> Result<(), Box<dyn StoreError>> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
             &self.table_name
         );
 
-        let mut transaction = 
-            self.pool.begin().await.map_err(PgVectorError::TransactionError)?;
-
+        let mut transaction = self
+            .pool
+            .begin()
+            .await
+            .map_err(PgVectorError::TransactionError)?;
 
         for (content, embedding) in embeddings {
             sqlx::query(&query)
@@ -169,7 +171,10 @@ impl EmbeddingStore for PgVectorDB {
                 .await
                 .map_err(PgVectorError::UpsertError)?;
         }
-        transaction.commit().await.map_err(PgVectorError::TransactionError)?;
+        transaction
+            .commit()
+            .await
+            .map_err(PgVectorError::TransactionError)?;
         Ok(())
     }
 }
