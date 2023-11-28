@@ -1,0 +1,24 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@v1
+      with:
+        name: cargo-llvm-cov
+
+    - name: Run tests with coverage
+      run: |
+        cargo llvm-cov --version
+        cargo llvm-cov test
