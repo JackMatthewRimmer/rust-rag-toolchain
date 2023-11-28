@@ -7,8 +7,6 @@ use sqlx::{Pool, Postgres};
 #[cfg(test)]
 mod pg_vector {
 
-    use sqlx::query;
-
     use super::*;
 
     #[tokio::test]
