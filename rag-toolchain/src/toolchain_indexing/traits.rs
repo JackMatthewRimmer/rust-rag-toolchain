@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::io::Error;
 
 /// # Source
@@ -9,9 +10,24 @@ pub trait LoadSource {
 
 /// # Destination
 /// Trait for struct that allows embeddings to be wrote to an external destination
+#[async_trait]
 pub trait EmbeddingStore {
     /// Takes an embedding and writes it to an external source
-    fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Error>;
+    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Box<dyn StoreError>>;
+    async fn store_batch(
+        &self,
+        embeddings: Vec<(String, Vec<f32>)>,
+    ) -> Result<(), Box<dyn StoreError>>;
+}
+
+pub trait StoreError {}
+impl<T> From<T> for Box<dyn StoreError>
+where
+    T: StoreError + 'static,
+{
+    fn from(error: T) -> Self {
+        Box::new(error)
+    }
 }
 
 /// # VectorDBSource
