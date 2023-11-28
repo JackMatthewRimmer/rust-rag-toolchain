@@ -70,16 +70,16 @@ impl TokenChunker {
         max_chunk_size: usize,
     ) -> Result<(), ChunkingError> {
         if chunk_size > max_chunk_size {
-            return Err(ChunkingError::InvalidChunkSize(format!(
+            Err(ChunkingError::InvalidChunkSize(format!(
                 "Chunk size must be smaller than {}",
                 max_chunk_size
-            )));
+            )))?
         }
 
         if chunk_overlap >= chunk_size {
-            return (Err(ChunkingError::WindowSizeTooLarge(
+            Err(ChunkingError::WindowSizeTooLarge(
                 "Window size must be smaller than chunk size".to_string(),
-            )));
+            ))?
         }
         Ok(())
     }
