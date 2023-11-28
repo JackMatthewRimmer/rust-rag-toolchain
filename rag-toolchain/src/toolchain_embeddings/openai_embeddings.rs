@@ -7,7 +7,7 @@ use std::env;
 use std::env::VarError;
 use typed_builder::TypedBuilder;
 
-const OPENAI_EMBEDDING_URL: &'static str = "https://api.openai.com/v1/embeddings";
+const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 
 #[derive(Debug, PartialEq)]
 pub enum OpenAIError {
@@ -138,25 +138,22 @@ impl OpenAIClient {
                     // Safely unwrap the response body
                     Ok(response_body) => response_body,
                     // This should never happen
-                    Err(e) => return Err(OpenAIError::ErrorGettingResponseBody(e.to_string())),
+                    Err(e) => Err(OpenAIError::ErrorGettingResponseBody(e.to_string()))?,
                 };
                 // Deserialize the response into an EmbeddingResponse
                 let embedding_response: EmbeddingResponse =
                     match serde_json::from_str(&response_body) {
                         Ok(embedding_response) => embedding_response,
                         // This should never happen
-                        Err(e) => {
-                            return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))
-                        }
+                        Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
                     };
-                println!("Response: {:?}", embedding_response);
-                return Ok(OpenAIClient::handle_success_response(
+                Ok(OpenAIClient::handle_success_response(
                     text,
                     embedding_response,
-                ));
+                ))
             }
-            false => return Err(OpenAIClient::handle_error_response(response)),
-        };
+            false => Err(OpenAIClient::handle_error_response(response)),
+        }
     }
 }
 
