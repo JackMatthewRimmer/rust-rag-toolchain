@@ -61,14 +61,11 @@ impl OpenAIClient {
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
-        let request = self
-            .client
+        self.client
             .post(OPENAI_EMBEDDING_URL)
             .bearer_auth(self.api_key.clone())
             .header(CONTENT_TYPE, content_type)
-            .json(&request_body);
-
-        return request;
+            .json(&request_body)
     }
 
     /// Explicit error mapping between response codes and error types
@@ -91,21 +88,11 @@ impl OpenAIClient {
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
         match status_code {
-            401 => {
-                return OpenAIError::CODE401(error_body);
-            }
-            429 => {
-                return OpenAIError::CODE429(error_body);
-            }
-            500 => {
-                return OpenAIError::CODE500(error_body);
-            }
-            503 => {
-                return OpenAIError::CODE503(error_body);
-            }
-            undefined => {
-                return OpenAIError::UNDEFINED(undefined, body_text);
-            }
+            401 => OpenAIError::CODE401(error_body),
+            429 => OpenAIError::CODE429(error_body),
+            500 => OpenAIError::CODE500(error_body),
+            503 => OpenAIError::CODE503(error_body),
+            undefined => OpenAIError::UNDEFINED(undefined, body_text),
         }
     }
 
@@ -127,7 +114,7 @@ impl OpenAIClient {
             .into_iter()
             .zip(embeddings.into_iter().map(|embedding| embedding.embedding))
             .collect();
-        return pairs;
+        pairs
     }
 
     // This function needs changing to handle the batch size limit of 200

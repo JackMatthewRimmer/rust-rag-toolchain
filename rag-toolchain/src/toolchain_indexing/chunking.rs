@@ -35,7 +35,7 @@ impl TokenizerWrapper for OpenAITokenizer {
             .bpe
             .split_by_token(text, true)
             .map_err(|_| ChunkingError::TokenizationError("Failed to tokenize text".to_string()))?;
-        return Ok(tokens);
+        Ok(tokens)
     }
 }
 
@@ -77,11 +77,11 @@ impl TokenChunker {
         }
 
         if chunk_overlap >= chunk_size {
-            return Err(ChunkingError::WindowSizeTooLarge(
+            return (Err(ChunkingError::WindowSizeTooLarge(
                 "Window size must be smaller than chunk size".to_string(),
-            ));
+            )));
         }
-        return Ok(());
+        Ok(())
     }
 
     /// # static_metadata
@@ -91,10 +91,10 @@ impl TokenChunker {
         match embedding_model {
             EmbeddingModels::OpenAI(model) => {
                 let metadata: OpenAIEmbeddingMetadata = model.metadata();
-                return (
+                (
                     metadata.max_tokens,
                     OpenAITokenizer::new(metadata.tokenizer),
-                );
+                )
             }
         }
     }
@@ -113,7 +113,7 @@ impl TokenChunker {
             chunks.push(chunk);
             i += chunk_size - self.chunk_overlap;
         }
-        return Ok(chunks);
+        Ok(chunks)
     }
 }
 

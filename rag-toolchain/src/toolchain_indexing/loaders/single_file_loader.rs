@@ -17,6 +17,6 @@ impl SingleFileSource {
 impl LoadSource for SingleFileSource {
     fn load(&self) -> Result<Vec<String>, std::io::Error> {
         let file_contents: String = read_to_string(&self.path)?;
-        return Ok(vec![file_contents]);
+        Ok(vec![file_contents])
     }
 }
