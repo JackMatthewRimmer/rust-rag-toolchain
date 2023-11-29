@@ -1,4 +1,4 @@
-use crate::toolchain_indexing::traits::{EmbeddingStore, StoreError};
+use crate::toolchain_indexing::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;

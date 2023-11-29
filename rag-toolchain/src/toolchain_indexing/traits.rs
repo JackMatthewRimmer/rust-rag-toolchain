@@ -18,16 +18,6 @@ pub trait EmbeddingStore {
     async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>>;
 }
 
-pub trait StoreError {}
-impl<T> From<T> for Box<dyn StoreError>
-where
-    T: StoreError + 'static,
-{
-    fn from(error: T) -> Self {
-        Box::new(error)
-    }
-}
-
 /// # VectorDBSource
 /// Trait to query a vector database for similar entries
 pub trait EmbeddingSource {
