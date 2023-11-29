@@ -1,3 +1,6 @@
+use crate::toolchain_embeddings::embedding_models::{
+    EmbeddingModels, OpenAIEmbeddingModel::TextEmbeddingAda002,
+};
 use crate::toolchain_indexing::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -29,10 +32,10 @@ use dotenv::dotenv;
 /// Columns: | id (int) | content (text) | embedding (vector) |
 #[derive(Debug)]
 pub struct PgVectorDB {
-    table_name: String,
     /// We make the pool public incase users want to
     /// do extra operations on the database
     pub pool: Pool<Postgres>,
+    table_name: String,
 }
 
 impl PgVectorDB {
@@ -47,7 +50,10 @@ impl PgVectorDB {
     ///
     /// # Returns
     /// the constructed [`PgVector`] struct
-    pub async fn new(table_name: &str) -> Result<Self, PgVectorError> {
+    pub async fn new(
+        table_name: &str,
+        embedding_model: EmbeddingModels,
+    ) -> Result<Self, PgVectorError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
         let password: String = env::var("POSTGRES_PASSWORD")?;
@@ -55,6 +61,7 @@ impl PgVectorDB {
         let db_name: String = env::var("POSTGRES_DATABASE")?;
         let table_name: &str = table_name;
 
+        let embedding_diminsions = embedding_model.dimensions();
         let connection_string =
             format!("postgres://{}:{}@{}/{}", username, password, host, db_name);
 
@@ -64,13 +71,13 @@ impl PgVectorDB {
             .map_err(PgVectorError::ConnectionError)?;
 
         // Create the table
-        PgVectorDB::create_table(pool.clone(), table_name)
+        PgVectorDB::create_table(pool.clone(), table_name, embedding_diminsions)
             .await
             .map_err(PgVectorError::TableCreationError)?;
 
         Ok(PgVectorDB {
-            table_name: table_name.into(),
             pool,
+            table_name: table_name.into(),
         })
     }
 
@@ -112,15 +119,16 @@ impl PgVectorDB {
     async fn create_table(
         pool: Pool<Postgres>,
         table_name: &str,
+        vector_dimension: usize,
     ) -> Result<PgQueryResult, SqlxError> {
         let query = format!(
             "
             CREATE TABLE IF NOT EXISTS {} (
                 id SERIAL PRIMARY KEY,
                 content TEXT NOT NULL,
-                embedding vector(1536) 
+                embedding vector({}) 
             )",
-            table_name
+            table_name, vector_dimension
         );
         sqlx::query(&query).execute(&pool).await
     }
@@ -247,14 +255,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_throws_env_var_error_user() {
-        let result = PgVectorDB::new("test").await.unwrap_err();
+        let result = PgVectorDB::new("test", TextEmbeddingAda002.into())
+            .await
+            .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
     #[tokio::test]
     async fn test_throws_env_var_error_password() {
         std::env::set_var("POSTGRES_USER", "postgres");
-        let result = PgVectorDB::new("test").await.unwrap_err();
+        let result = PgVectorDB::new("test", TextEmbeddingAda002.into())
+            .await
+            .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
@@ -262,7 +274,9 @@ mod tests {
     async fn test_throws_env_var_error_host() {
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        let result = PgVectorDB::new("test").await.unwrap_err();
+        let result = PgVectorDB::new("test", TextEmbeddingAda002.into())
+            .await
+            .unwrap_err();
 
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
@@ -272,7 +286,9 @@ mod tests {
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
-        let result = PgVectorDB::new("test").await.unwrap_err();
+        let result = PgVectorDB::new("test", TextEmbeddingAda002.into())
+            .await
+            .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
@@ -282,7 +298,9 @@ mod tests {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "postgres");
-        let result = PgVectorDB::new("test").await.unwrap_err();
+        let result = PgVectorDB::new("test", TextEmbeddingAda002.into())
+            .await
+            .unwrap_err();
         assert!(matches!(result, PgVectorError::ConnectionError(_)));
     }
 }

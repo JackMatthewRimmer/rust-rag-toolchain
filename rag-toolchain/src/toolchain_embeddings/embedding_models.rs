@@ -5,6 +5,14 @@ pub enum EmbeddingModels {
     OpenAI(OpenAIEmbeddingModel),
 }
 
+impl EmbeddingModels {
+    pub fn dimensions(&self) -> usize {
+        match self {
+            EmbeddingModels::OpenAI(model) => model.metadata().dimensions,
+        }
+    }
+}
+
 // Enum to hold all OpenAI embedding models and there metadata
 pub enum OpenAIEmbeddingModel {
     TextEmbeddingAda002,
