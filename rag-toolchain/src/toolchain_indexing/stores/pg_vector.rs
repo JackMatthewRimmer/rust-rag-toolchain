@@ -9,47 +9,6 @@ use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
 
-#[derive(Debug)]
-pub enum PgVectorError {
-    EnvVarError(VarError),
-    ConnectionError(SqlxError),
-    TableCreationError(SqlxError),
-    RuntimeCreationError(String),
-    UpsertError(SqlxError),
-    TransactionError(SqlxError),
-}
-impl std::error::Error for PgVectorError {}
-impl From<VarError> for PgVectorError {
-    fn from(error: VarError) -> Self {
-        PgVectorError::EnvVarError(error)
-    }
-}
-
-impl Display for PgVectorError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PgVectorError::EnvVarError(error) => {
-                write!(f, "Environment variable error: {}", error)
-            }
-            PgVectorError::ConnectionError(error) => {
-                write!(f, "Connection error: {}", error)
-            }
-            PgVectorError::TableCreationError(error) => {
-                write!(f, "Table creation error: {}", error)
-            }
-            PgVectorError::RuntimeCreationError(error) => {
-                write!(f, "Runtime creation error: {}", error)
-            }
-            PgVectorError::UpsertError(error) => {
-                write!(f, "Upsert error: {}", error)
-            }
-            PgVectorError::TransactionError(error) => {
-                write!(f, "Transaction error: {}", error)
-            }
-        }
-    }
-}
-
 /// # PgVector
 ///
 /// This struct is used to store and retriever information needed to connect to a Postgres database
@@ -71,10 +30,13 @@ impl Display for PgVectorError {
 #[derive(Debug)]
 pub struct PgVectorDB {
     table_name: String,
+    /// We make the pool public incase users want to
+    /// do extra operations on the database
     pub pool: Pool<Postgres>,
 }
 
 impl PgVectorDB {
+    /// # new
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
     ///
@@ -112,11 +74,15 @@ impl PgVectorDB {
         })
     }
 
+    /// # connect
     /// Allows us to check the connection to a database and store the connection pool
     ///
     /// # Arguments
     /// * `connection_string` - The connection string to use to connect to the database
     /// * `rt` - The runtime to use to connect to the database
+    ///
+    /// # Errors
+    /// * [`Error`] if the connection could not be established
     ///
     /// # Returns
     /// * [`Pool<Postgres>`] which can be used to query the database
@@ -129,12 +95,16 @@ impl PgVectorDB {
         Ok(pool)
     }
 
+    /// # create_table
     /// We call the create table automatically when the struct is created
     ///
     /// # Arguments
     /// * `table_name` - The name of the table to create
     /// * `pool` - The connection pool to use to create the table
     /// * `rt` - The runtime to use to create the table
+    ///
+    /// # Errors
+    /// * [`Error`] if the table could not be created
     ///
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
@@ -158,6 +128,17 @@ impl PgVectorDB {
 
 #[async_trait]
 impl EmbeddingStore for PgVectorDB {
+    /// # store
+    ///
+    /// # Arguments
+    /// * `embeddings` - A tuple containing the content and the embedding to store
+    ///
+    /// # Errors
+    /// * [`PgVectorError::InsertError`] if the insert fails
+    ///
+    /// # Returns
+    /// * [`Ok(())`] if the insert succeeds
+    /// * [`PgVectorError::InsertError`] if the insert fails
     async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), Box<dyn Error>> {
         let (content, embedding) = embeddings;
         let query = format!(
@@ -171,10 +152,21 @@ impl EmbeddingStore for PgVectorDB {
             .bind(&embedding)
             .execute(&self.pool)
             .await
-            .map_err(PgVectorError::UpsertError)?;
+            .map_err(PgVectorError::InsertError)?;
         Ok(())
     }
 
+    /// # store_batch
+    ///
+    /// # Arguments
+    /// * `embeddings` - A vector of tuples containing the content and the embedding to store
+    ///
+    /// # Errors
+    /// * [`PgVectorError::TransactionError`] if the transaction fails
+    ///
+    /// # Returns
+    /// * [`Ok(())`] if the transaction succeeds
+    /// * [`PgVectorError::TransactionError`] if the transaction fails
     async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>> {
         let query = format!(
             "
@@ -194,13 +186,58 @@ impl EmbeddingStore for PgVectorDB {
                 .bind(&embedding)
                 .execute(&mut *transaction)
                 .await
-                .map_err(PgVectorError::UpsertError)?;
+                .map_err(PgVectorError::InsertError)?;
         }
         transaction
             .commit()
             .await
             .map_err(PgVectorError::TransactionError)?;
         Ok(())
+    }
+}
+
+/// # PgVectorError
+/// This Error enum wraps all the errors that can occur when using
+/// the PgVector struct with contextual meaning
+#[derive(Debug)]
+pub enum PgVectorError {
+    /// Error when an environment variable is not set
+    EnvVarError(VarError),
+    /// Error when the connection to the database could not be established
+    ConnectionError(SqlxError),
+    /// Error when the table could not be created
+    TableCreationError(SqlxError),
+    /// Error when calling [`PgVector::store()`] fails
+    InsertError(SqlxError),
+    /// Error when calling [`PgVector::store_batch()`] fails
+    TransactionError(SqlxError),
+}
+impl std::error::Error for PgVectorError {}
+impl From<VarError> for PgVectorError {
+    fn from(error: VarError) -> Self {
+        PgVectorError::EnvVarError(error)
+    }
+}
+
+impl Display for PgVectorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PgVectorError::EnvVarError(error) => {
+                write!(f, "Environment variable error: {}", error)
+            }
+            PgVectorError::ConnectionError(error) => {
+                write!(f, "Connection error: {}", error)
+            }
+            PgVectorError::TableCreationError(error) => {
+                write!(f, "Table creation error: {}", error)
+            }
+            PgVectorError::InsertError(error) => {
+                write!(f, "Upsert error: {}", error)
+            }
+            PgVectorError::TransactionError(error) => {
+                write!(f, "Transaction error: {}", error)
+            }
+        }
     }
 }
 
