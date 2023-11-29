@@ -1,8 +1,16 @@
 use tiktoken_rs::tokenizer::Tokenizer;
 
 /// This enum is used to hold all embedding models and their metadata
-pub enum EmbeddingModels {
+pub enum EmbeddingModel {
     OpenAI(OpenAIEmbeddingModel),
+}
+
+impl EmbeddingModel {
+    pub fn dimensions(&self) -> usize {
+        match self {
+            EmbeddingModel::OpenAI(model) => model.metadata().dimensions,
+        }
+    }
 }
 
 // Enum to hold all OpenAI embedding models and there metadata
@@ -24,17 +32,17 @@ impl OpenAIEmbeddingModel {
 }
 
 /// This method converts the EmbeddingModels enum into the OpenAIEmbeddingModel enum
-impl From<OpenAIEmbeddingModel> for EmbeddingModels {
+impl From<OpenAIEmbeddingModel> for EmbeddingModel {
     fn from(model: OpenAIEmbeddingModel) -> Self {
-        EmbeddingModels::OpenAI(model)
+        EmbeddingModel::OpenAI(model)
     }
 }
 
 /// This method converts the EmbeddingModels enum into the OpenAIEmbeddingModel enum
-impl From<EmbeddingModels> for OpenAIEmbeddingModel {
-    fn from(model: EmbeddingModels) -> Self {
+impl From<EmbeddingModel> for OpenAIEmbeddingModel {
+    fn from(model: EmbeddingModel) -> Self {
         match model {
-            EmbeddingModels::OpenAI(model) => model,
+            EmbeddingModel::OpenAI(model) => model,
         }
     }
 }
