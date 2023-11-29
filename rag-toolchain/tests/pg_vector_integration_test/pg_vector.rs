@@ -1,4 +1,5 @@
 use pgvector::Vector;
+use rag_toolchain::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
 use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
 use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
 use sqlx::{postgres::PgRow, Row};
@@ -16,7 +17,9 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PgVectorDB::new(TABLE_NAME).await.unwrap();
+        let pg_vector = PgVectorDB::new(TABLE_NAME, TextEmbeddingAda002.into())
+            .await
+            .unwrap();
         let _result = pg_vector
             .store(("test".into(), vec![1.0; 1536]))
             .await
@@ -38,7 +41,9 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PgVectorDB::new(TABLE_NAME).await.unwrap();
+        let pg_vector = PgVectorDB::new(TABLE_NAME, TextEmbeddingAda002.into())
+            .await
+            .unwrap();
         let input: Vec<(String, Vec<f32>)> = vec![
             ("test1".into(), vec![1.0; 1536]),
             ("test2".into(), vec![2.0; 1536]),

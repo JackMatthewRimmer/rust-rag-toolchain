@@ -1,6 +1,4 @@
-use crate::toolchain_embeddings::embedding_models::{
-    EmbeddingModels, OpenAIEmbeddingModel::TextEmbeddingAda002,
-};
+use crate::toolchain_embeddings::embedding_models::EmbeddingModel;
 use crate::toolchain_indexing::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -52,7 +50,7 @@ impl PgVectorDB {
     /// the constructed [`PgVector`] struct
     pub async fn new(
         table_name: &str,
-        embedding_model: EmbeddingModels,
+        embedding_model: EmbeddingModel,
     ) -> Result<Self, PgVectorError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
@@ -252,6 +250,7 @@ impl Display for PgVectorError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[tokio::test]
     async fn test_throws_env_var_error_user() {
