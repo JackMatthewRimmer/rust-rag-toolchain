@@ -2,8 +2,10 @@ use crate::toolchain_indexing::traits::{EmbeddingStore, StoreError};
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
-use sqlx::{Error, Pool, Postgres};
+use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
 
@@ -16,14 +18,37 @@ pub enum PgVectorError {
     UpsertError(SqlxError),
     TransactionError(SqlxError),
 }
-
+impl std::error::Error for PgVectorError {}
 impl From<VarError> for PgVectorError {
     fn from(error: VarError) -> Self {
         PgVectorError::EnvVarError(error)
     }
 }
 
-impl StoreError for PgVectorError {}
+impl Display for PgVectorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PgVectorError::EnvVarError(error) => {
+                write!(f, "Environment variable error: {}", error)
+            }
+            PgVectorError::ConnectionError(error) => {
+                write!(f, "Connection error: {}", error)
+            }
+            PgVectorError::TableCreationError(error) => {
+                write!(f, "Table creation error: {}", error)
+            }
+            PgVectorError::RuntimeCreationError(error) => {
+                write!(f, "Runtime creation error: {}", error)
+            }
+            PgVectorError::UpsertError(error) => {
+                write!(f, "Upsert error: {}", error)
+            }
+            PgVectorError::TransactionError(error) => {
+                write!(f, "Transaction error: {}", error)
+            }
+        }
+    }
+}
 
 /// # PgVector
 ///
@@ -96,7 +121,7 @@ impl PgVectorDB {
     /// # Returns
     /// * [`Pool<Postgres>`] which can be used to query the database
     /// * [`Error`] if the connection could not be established
-    async fn connect(connection_string: &str) -> Result<Pool<Postgres>, Error> {
+    async fn connect(connection_string: &str) -> Result<Pool<Postgres>, SqlxError> {
         let pool: Pool<Postgres> = PgPoolOptions::new()
             .max_connections(5)
             .connect(connection_string)
@@ -114,7 +139,10 @@ impl PgVectorDB {
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
     /// * [`Error`] if the table could not be created
-    async fn create_table(pool: Pool<Postgres>, table_name: &str) -> Result<PgQueryResult, Error> {
+    async fn create_table(
+        pool: Pool<Postgres>,
+        table_name: &str,
+    ) -> Result<PgQueryResult, SqlxError> {
         let query = format!(
             "
             CREATE TABLE IF NOT EXISTS {} (
@@ -130,7 +158,7 @@ impl PgVectorDB {
 
 #[async_trait]
 impl EmbeddingStore for PgVectorDB {
-    async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), Box<dyn StoreError>> {
+    async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), Box<dyn Error>> {
         let (content, embedding) = embeddings;
         let query = format!(
             "
@@ -147,10 +175,7 @@ impl EmbeddingStore for PgVectorDB {
         Ok(())
     }
 
-    async fn store_batch(
-        &self,
-        embeddings: Vec<(String, Vec<f32>)>,
-    ) -> Result<(), Box<dyn StoreError>> {
+    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -185,26 +210,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_throws_env_var_error_user() {
-        let result = PgVectorDB::new("test").await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+        let result = PgVectorDB::new("test").await.unwrap_err();
+        assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
     #[tokio::test]
     async fn test_throws_env_var_error_password() {
         std::env::set_var("POSTGRES_USER", "postgres");
-        let result = PgVectorDB::new("test").await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+        let result = PgVectorDB::new("test").await.unwrap_err();
+        assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
     #[tokio::test]
     async fn test_throws_env_var_error_host() {
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        let result = PgVectorDB::new("test").await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+        let result = PgVectorDB::new("test").await.unwrap_err();
+
+        assert!(matches!(result, PgVectorError::EnvVarError(_)));
     }
 
     #[tokio::test]
@@ -212,8 +235,17 @@ mod tests {
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
-        let result = PgVectorDB::new("test").await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), PgVectorError::EnvVarError(_)));
+        let result = PgVectorDB::new("test").await.unwrap_err();
+        assert!(matches!(result, PgVectorError::EnvVarError(_)));
+    }
+
+    #[tokio::test]
+    async fn test_throws_error_when_cant_connect() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", "localhost");
+        std::env::set_var("POSTGRES_DATABASE", "postgres");
+        let result = PgVectorDB::new("test").await.unwrap_err();
+        assert!(matches!(result, PgVectorError::ConnectionError(_)));
     }
 }

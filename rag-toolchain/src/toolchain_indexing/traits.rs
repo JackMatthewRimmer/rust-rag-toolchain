@@ -1,11 +1,12 @@
 use async_trait::async_trait;
-use std::io::Error;
+use std::error::Error;
+use std::io::Error as StdError;
 
 /// # Source
 /// Trait for struct that allows reading the raw text for an external source
 pub trait LoadSource {
     /// Called an returns a vector of raw text to generate embeddings for
-    fn load(&self) -> Result<Vec<String>, Error>;
+    fn load(&self) -> Result<Vec<String>, StdError>;
 }
 
 /// # Destination
@@ -13,11 +14,8 @@ pub trait LoadSource {
 #[async_trait]
 pub trait EmbeddingStore {
     /// Takes an embedding and writes it to an external source
-    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Box<dyn StoreError>>;
-    async fn store_batch(
-        &self,
-        embeddings: Vec<(String, Vec<f32>)>,
-    ) -> Result<(), Box<dyn StoreError>>;
+    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Box<dyn Error>>;
+    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>>;
 }
 
 pub trait StoreError {}
