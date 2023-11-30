@@ -66,9 +66,9 @@ impl OpenAITokenizer {
 impl TokenizerWrapper for OpenAITokenizer {
     fn tokenize(&self, text: &str) -> Option<Vec<String>> {
         if let Ok(tokens) = self.bpe.split_by_token(text, true) {
-            return Some(tokens);
+            Some(tokens)
         } else {
-            return None;
+            None
         }
     }
 }
