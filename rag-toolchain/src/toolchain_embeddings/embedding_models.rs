@@ -1,55 +1,75 @@
 use tiktoken_rs::tokenizer::Tokenizer;
+use tiktoken_rs::CoreBPE;
 
-/// This enum is used to hold all embedding models and their metadata
-pub enum EmbeddingModel {
-    OpenAI(OpenAIEmbeddingModel),
+// ---------------------- Embedding Models ----------------------
+/// # HasMetadata
+/// This trait is used for methods to understand the requirements
+/// set out by which embedding model is being used such as embedding
+/// dimensions and max tokens
+pub trait HasMetadata {
+    fn metadata(&self) -> EmbeddingModelMetadata;
 }
 
-impl EmbeddingModel {
-    pub fn dimensions(&self) -> usize {
-        match self {
-            EmbeddingModel::OpenAI(model) => model.metadata().dimensions,
-        }
-    }
+/// # EmbeddingModelMetadata
+/// Struct to contain all of the relevant metadata for an embedding model
+pub struct EmbeddingModelMetadata {
+    pub dimensions: usize,
+    pub max_tokens: usize,
+    pub tokenizer: Box<dyn TokenizerWrapper>,
 }
 
-// Enum to hold all OpenAI embedding models and there metadata
+/// # TokenizerWrapper
+/// We wrap the tokenizer for a specific embedding model to allow
+/// for a common interface for tokenization
+pub trait TokenizerWrapper {
+    // This should potentially go back to a Result
+    fn tokenize(&self, text: &str) -> Option<Vec<String>>;
+}
+// -------------------------------------------------------------
+
+// ------------------ OpenAI Embedding Models ------------------
+/// # OpenAIEmbeddingModel
+/// Top level enum to hold all OpenAI embedding model variants
 pub enum OpenAIEmbeddingModel {
     TextEmbeddingAda002,
 }
 
-/// This method returns the static metadata for the embedding model
-impl OpenAIEmbeddingModel {
-    pub fn metadata(&self) -> OpenAIEmbeddingMetadata {
+// Match the embedding model to the metadata
+impl HasMetadata for OpenAIEmbeddingModel {
+    fn metadata(&self) -> EmbeddingModelMetadata {
         match self {
-            OpenAIEmbeddingModel::TextEmbeddingAda002 => OpenAIEmbeddingMetadata {
+            OpenAIEmbeddingModel::TextEmbeddingAda002 => EmbeddingModelMetadata {
                 dimensions: 1536,
                 max_tokens: 8192,
-                tokenizer: Tokenizer::Cl100kBase,
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
             },
         }
     }
 }
 
-/// This method converts the EmbeddingModels enum into the OpenAIEmbeddingModel enum
-impl From<OpenAIEmbeddingModel> for EmbeddingModel {
-    fn from(model: OpenAIEmbeddingModel) -> Self {
-        EmbeddingModel::OpenAI(model)
-    }
+// Wrap tiktoken_rs tokenizer for OpenAI
+struct OpenAITokenizer {
+    bpe: CoreBPE,
 }
 
-/// This method converts the EmbeddingModels enum into the OpenAIEmbeddingModel enum
-impl From<EmbeddingModel> for OpenAIEmbeddingModel {
-    fn from(model: EmbeddingModel) -> Self {
-        match model {
-            EmbeddingModel::OpenAI(model) => model,
+// Added new function to hide the unwrap
+// The panic here should be fine as this shouldn't fail as we use an enum variant
+impl OpenAITokenizer {
+    pub fn new(model: Tokenizer) -> Self {
+        OpenAITokenizer {
+            bpe: tiktoken_rs::get_bpe_from_tokenizer(model).unwrap(),
         }
     }
 }
 
-/// Struct to contain static metadata for OpenAI embedding models
-pub struct OpenAIEmbeddingMetadata {
-    pub dimensions: usize,
-    pub max_tokens: usize,
-    pub tokenizer: Tokenizer,
+// Implement the tokenize function for OpenAITokenizer
+impl TokenizerWrapper for OpenAITokenizer {
+    fn tokenize(&self, text: &str) -> Option<Vec<String>> {
+        if let Ok(tokens) = self.bpe.split_by_token(text, true) {
+            Some(tokens)
+        } else {
+            None
+        }
+    }
 }
+// ------------------ OpenAI Embedding Models ------------------

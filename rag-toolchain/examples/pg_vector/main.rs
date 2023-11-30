@@ -19,19 +19,17 @@ async fn main() {
     let chunker = TokenChunker::new(
         std::num::NonZeroUsize::new(50).unwrap(),
         25,
-        OpenAIEmbeddingModel::TextEmbeddingAda002.into(),
+        OpenAIEmbeddingModel::TextEmbeddingAda002,
     )
     .unwrap();
     let chunks: Vec<String> = chunker.generate_chunks(&text).unwrap();
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai
-    let store: PgVectorDB = PgVectorDB::new(
-        "embeddings",
-        OpenAIEmbeddingModel::TextEmbeddingAda002.into(),
-    )
-    .await
-    .unwrap();
+    let store: PgVectorDB =
+        PgVectorDB::new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .await
+            .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
     let client: OpenAIClient = OpenAIClient::new().unwrap();
