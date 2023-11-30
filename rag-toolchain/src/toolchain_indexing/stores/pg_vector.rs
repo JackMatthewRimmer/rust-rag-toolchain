@@ -134,6 +134,7 @@ impl PgVectorDB {
 
 #[async_trait]
 impl EmbeddingStore for PgVectorDB {
+    type ErrorType = PgVectorError;
     /// # store
     ///
     /// # Arguments
@@ -145,7 +146,7 @@ impl EmbeddingStore for PgVectorDB {
     /// # Returns
     /// * [`Ok(())`] if the insert succeeds
     /// * [`PgVectorError::InsertError`] if the insert fails
-    async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), Box<dyn Error>> {
+    async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), PgVectorError> {
         let (content, embedding) = embeddings;
         let query = format!(
             "
@@ -173,7 +174,7 @@ impl EmbeddingStore for PgVectorDB {
     /// # Returns
     /// * [`Ok(())`] if the transaction succeeds
     /// * [`PgVectorError::TransactionError`] if the transaction fails
-    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>> {
+    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), PgVectorError> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
