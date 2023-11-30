@@ -1,7 +1,7 @@
-use crate::toolchain_embeddings::embedding_models::{EmbeddingModel, OpenAIEmbeddingMetadata};
+use crate::toolchain_embeddings::embedding_models::{
+    EmbeddingModelMetadata, HasMetadata, TokenizerWrapper,
+};
 use std::num::NonZeroUsize;
-use tiktoken_rs::tokenizer::Tokenizer;
-use tiktoken_rs::CoreBPE;
 
 /// # ChunkingError
 /// Custom error type representing errors that can occur during chunking
@@ -10,33 +10,6 @@ pub enum ChunkingError {
     WindowSizeTooLarge(String),
     TokenizationError(String),
     InvalidChunkSize(String),
-}
-
-trait TokenizerWrapper {
-    fn tokenize(&self, text: &str) -> Result<Vec<String>, ChunkingError>;
-}
-
-struct OpenAITokenizer {
-    bpe: CoreBPE,
-}
-
-impl OpenAITokenizer {
-    pub fn new(model: Tokenizer) -> Self {
-        OpenAITokenizer {
-            bpe: tiktoken_rs::get_bpe_from_tokenizer(model).unwrap(),
-        }
-    }
-}
-
-impl TokenizerWrapper for OpenAITokenizer {
-    fn tokenize(&self, text: &str) -> Result<Vec<String>, ChunkingError> {
-        // Generate token array from raw text
-        let tokens = self
-            .bpe
-            .split_by_token(text, true)
-            .map_err(|_| ChunkingError::TokenizationError("Failed to tokenize text".to_string()))?;
-        Ok(tokens)
-    }
 }
 
 pub struct TokenChunker {
@@ -49,15 +22,14 @@ impl TokenChunker {
     pub fn new(
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
-        embedding_model: EmbeddingModel,
+        embedding_model: impl HasMetadata,
     ) -> Result<Self, ChunkingError> {
-        let (max_chunk_size, tokenizer) = Self::static_metadata(&embedding_model);
-        Self::validate_arguments(chunk_size.into(), chunk_overlap, max_chunk_size)?;
-        let dyn_tokenizer: Box<dyn TokenizerWrapper> = Box::new(tokenizer);
+        let metadata: EmbeddingModelMetadata = embedding_model.metadata();
+        Self::validate_arguments(chunk_size.into(), chunk_overlap, metadata.max_tokens)?;
         let chunker = TokenChunker {
             chunk_size,
             chunk_overlap,
-            tokenizer: dyn_tokenizer,
+            tokenizer: metadata.tokenizer,
         };
         Ok(chunker)
     }
@@ -84,27 +56,15 @@ impl TokenChunker {
         Ok(())
     }
 
-    /// # static_metadata
-    /// Helper function to resolve the needed metadata for the given embedding model
-    /// Returns an impl of TokenizerWrapper and the max chunk size
-    fn static_metadata(embedding_model: &EmbeddingModel) -> (usize, impl TokenizerWrapper) {
-        match embedding_model {
-            EmbeddingModel::OpenAI(model) => {
-                let metadata: OpenAIEmbeddingMetadata = model.metadata();
-                (
-                    metadata.max_tokens,
-                    OpenAITokenizer::new(metadata.tokenizer),
-                )
-            }
-        }
-    }
     /// # generate_chunks
     /// function to generate chunks from raw text
     pub fn generate_chunks(&self, raw_text: &str) -> Result<Vec<String>, ChunkingError> {
         // Generate token array from raw text
-        let tokens: Vec<String> = self.tokenizer.tokenize(raw_text)?;
-        let chunk_size: usize = self.chunk_size.into();
+        let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
+            ChunkingError::TokenizationError("Unable to tokenize text".to_string())
+        })?;
 
+        let chunk_size: usize = self.chunk_size.into();
         let mut chunks = Vec::new();
         let mut i = 0;
         while i < tokens.len() {
@@ -128,8 +88,8 @@ mod tests {
         let raw_text: &str = "This is a test string";
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModel = TextEmbeddingAda002.into();
-        let chunker: TokenChunker = TokenChunker::new(chunk_size, window_size, model).unwrap();
+        let chunker: TokenChunker =
+            TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
         assert_eq!(chunks.len(), 5);
         assert_eq!(
@@ -143,8 +103,8 @@ mod tests {
         let raw_text: &str = "";
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModel = TextEmbeddingAda002.into();
-        let chunker: TokenChunker = TokenChunker::new(chunk_size, window_size, model).unwrap();
+        let chunker: TokenChunker =
+            TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
         assert_eq!(chunks.len(), 0);
         assert_eq!(chunks, Vec::<String>::new());
@@ -154,11 +114,11 @@ mod tests {
     fn test_generate_chunks_with_invalid_arguments() {
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let model: EmbeddingModel = TextEmbeddingAda002.into();
-        let chunker: ChunkingError = match TokenChunker::new(chunk_size, window_size, model) {
-            Ok(_) => panic!("Expected error"),
-            Err(e) => e,
-        };
+        let chunker: ChunkingError =
+            match TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002) {
+                Ok(_) => panic!("Expected error"),
+                Err(e) => e,
+            };
 
         assert_eq!(
             chunker,
