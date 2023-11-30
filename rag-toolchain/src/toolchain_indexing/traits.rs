@@ -13,9 +13,12 @@ pub trait LoadSource {
 /// Trait for struct that allows embeddings to be wrote to an external destination
 #[async_trait]
 pub trait EmbeddingStore {
+    // The custom error type for the store
+    type ErrorType: Error;
     /// Takes an embedding and writes it to an external source
-    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Box<dyn Error>>;
-    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), Box<dyn Error>>;
+    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Self::ErrorType>;
+    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>)
+        -> Result<(), Self::ErrorType>;
 }
 
 /// # VectorDBSource
