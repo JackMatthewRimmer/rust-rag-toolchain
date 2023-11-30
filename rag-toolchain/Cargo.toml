@@ -3,7 +3,8 @@ name = "rag-toolchain"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[examples]
+pg_vector = "examples/pg_vector/main.rs"
 
 # For integration tests
 # cargo test --test *
