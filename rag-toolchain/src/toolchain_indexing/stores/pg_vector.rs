@@ -5,7 +5,6 @@ use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
