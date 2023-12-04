@@ -247,7 +247,7 @@ impl Display for PgVectorError {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "pg_vector"))]
 mod tests {
     use super::*;
     use crate::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
