@@ -1,12 +1,12 @@
-use pgvector::Vector;
-use rag_toolchain::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
-use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
-use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
-use sqlx::{postgres::PgRow, Row};
-use sqlx::{Pool, Postgres};
-
 #[cfg(test)]
+#[cfg(feature = "pg_vector")]
 mod pg_vector {
+    use pgvector::Vector;
+    use rag_toolchain::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
+    use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
+    use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+    use sqlx::{postgres::PgRow, Row};
+    use sqlx::{Pool, Postgres};
 
     use super::*;
 
