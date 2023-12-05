@@ -18,6 +18,14 @@ required-features = ["pg_vector"]
 default = ["pg_vector"]
 pg_vector = ["dep:pgvector"]
 
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "generate_chunks"
+path = "benches/chunking_benchmark.rs"
+harness = false
+
 [lib]
 name = "rag_toolchain"
 crate-type = ["lib"]
