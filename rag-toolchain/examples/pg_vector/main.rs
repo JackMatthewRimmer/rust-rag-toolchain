@@ -3,7 +3,7 @@ use rag_toolchain::toolchain_embeddings::{
 };
 use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
 use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
-use rag_toolchain::toolchain_indexing::traits::{Chunks, EmbeddingStore};
+use rag_toolchain::toolchain_indexing::traits::{Chunk, Chunks, Embedding, EmbeddingStore};
 
 #[tokio::main]
 async fn main() {
@@ -33,7 +33,7 @@ async fn main() {
 
     // Create a new client and generate the embeddings for the chunks
     let client: OpenAIClient = OpenAIClient::new().unwrap();
-    let embeddings: Vec<(String, Vec<f32>)> = client.generate_embeddings(chunks).unwrap();
+    let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).unwrap();
     println!("Embeddings: {:?}", embeddings);
 
     // Insert the embeddings into the store this will be a better interface in the future
