@@ -1,6 +1,11 @@
 use async_trait::async_trait;
 use std::error::Error;
 use std::io::Error as StdError;
+use std::rc::Rc;
+
+pub type Embedding = Rc<[f32]>;
+pub type Chunk = Rc<str>;
+pub type Chunks<'a> = Rc<[Chunk]>;
 
 /// # Source
 /// Trait for struct that allows reading the raw text for an external source
