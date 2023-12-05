@@ -3,7 +3,7 @@ use rag_toolchain::toolchain_embeddings::{
 };
 use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
 use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
-use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+use rag_toolchain::toolchain_indexing::traits::{Chunks, EmbeddingStore};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +22,7 @@ async fn main() {
         OpenAIEmbeddingModel::TextEmbeddingAda002,
     )
     .unwrap();
-    let chunks: Vec<String> = chunker.generate_chunks(&text).unwrap();
+    let chunks: Chunks = chunker.generate_chunks(&text).unwrap();
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai

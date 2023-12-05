@@ -4,8 +4,10 @@ use std::io::Error as StdError;
 use std::rc::Rc;
 
 pub type Embedding = Rc<[f32]>;
+// Once a chunk is made is should be immutable
 pub type Chunk = Rc<str>;
-pub type Chunks<'a> = Rc<[Chunk]>;
+// Chunks should be immutable
+pub type Chunks = Rc<[Chunk]>;
 
 /// # Source
 /// Trait for struct that allows reading the raw text for an external source

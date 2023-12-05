@@ -1,3 +1,4 @@
+use crate::toolchain_indexing::traits::{Chunk, Chunks, Embedding};
 use dotenv::dotenv;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -5,6 +6,7 @@ use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
+use std::rc::Rc;
 use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
@@ -55,9 +57,13 @@ impl OpenAIClient {
     /// # build_request
     /// Simple method for building the request to send to OpenAI
     /// just have to call .send() on the request to send it
-    fn build_request(&self, text: Vec<String>) -> reqwest::blocking::RequestBuilder {
+    fn build_request(&self, text: &Chunks) -> reqwest::blocking::RequestBuilder {
+        let input_text: Vec<String> = text
+            .iter()
+            .map(|chunk| chunk.to_string())
+            .collect::<Vec<String>>();
         let request_body = BatchEmbeddingRequest::builder()
-            .input(text)
+            .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
@@ -105,14 +111,18 @@ impl OpenAIClient {
     /// # Returns
     /// `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
     fn handle_success_response(
-        input_text: Vec<String>,
+        input_text: &Chunks,
         response: EmbeddingResponse,
-    ) -> Vec<(String, Vec<f32>)> {
+    ) -> Vec<(Chunk, Embedding)> {
         // Map response objects into string embedding pairs
         let embeddings: Vec<EmbeddingObject> = response.data;
-        let pairs: Vec<(String, Vec<f32>)> = input_text
-            .into_iter()
-            .zip(embeddings.into_iter().map(|embedding| embedding.embedding))
+        let pairs: Vec<(Chunk, Embedding)> = input_text
+            .iter()
+            .zip(embeddings)
+            .map(|(chunk, embedding)| {
+                let embedding: Embedding = Rc::from(embedding.embedding.as_slice());
+                (chunk.clone(), embedding)
+            })
             .collect();
         pairs
     }
@@ -121,10 +131,10 @@ impl OpenAIClient {
     // If we get a vector of 400 strings we need to split it into two requests
     pub fn generate_embeddings(
         &self,
-        text: Vec<String>,
-    ) -> Result<Vec<(String, Vec<f32>)>, OpenAIError> {
+        text: Chunks,
+    ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
         // Build the request to send to OpenAI
-        let request = self.build_request(text.clone());
+        let request = self.build_request(&text);
         // Send the request to OpenAI
         let response: Response = match request.send() {
             Ok(response) => response,
@@ -148,7 +158,7 @@ impl OpenAIClient {
                         Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
                     };
                 Ok(OpenAIClient::handle_success_response(
-                    text,
+                    &text,
                     embedding_response,
                 ))
             }
