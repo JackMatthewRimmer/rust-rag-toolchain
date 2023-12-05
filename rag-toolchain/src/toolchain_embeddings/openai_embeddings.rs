@@ -1,4 +1,4 @@
-use crate::toolchain_indexing::traits::{Chunk, Chunks, Embedding};
+use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
 use dotenv::dotenv;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -6,7 +6,6 @@ use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
-use std::rc::Rc;
 use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
@@ -58,10 +57,7 @@ impl OpenAIClient {
     /// Simple method for building the request to send to OpenAI
     /// just have to call .send() on the request to send it
     fn build_request(&self, text: &Chunks) -> reqwest::blocking::RequestBuilder {
-        let input_text: Vec<String> = text
-            .iter()
-            .map(|chunk| chunk.to_string())
-            .collect::<Vec<String>>();
+        let input_text: Vec<String> = text.to_vec::<String>();
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
@@ -115,16 +111,11 @@ impl OpenAIClient {
         response: EmbeddingResponse,
     ) -> Vec<(Chunk, Embedding)> {
         // Map response objects into string embedding pairs
-        let embeddings: Vec<EmbeddingObject> = response.data;
-        let pairs: Vec<(Chunk, Embedding)> = input_text
-            .iter()
-            .zip(embeddings)
-            .map(|(chunk, embedding)| {
-                let embedding: Embedding = Rc::from(embedding.embedding.as_slice());
-                (chunk.clone(), embedding)
-            })
-            .collect();
-        pairs
+        let embedding_objects: Vec<EmbeddingObject> = response.data;
+        let embeddings: Vec<Embedding> =
+            Embedding::into_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
+        let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
+        input_text.into_iter().zip(embeddings).collect()
     }
 
     // This function needs changing to handle the batch size limit of 200
@@ -316,7 +307,6 @@ mod request_model_tests {
             serialized_embedding_request,
             EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS
         );
-        println!("Serialized JSON: {}", serialized_embedding_request);
     }
 
     #[test]
@@ -348,7 +338,6 @@ mod request_model_tests {
         let serialized_batch_embedding_request =
             serde_json::to_string(&batch_embedding_request).unwrap();
         assert_eq!(serialized_batch_embedding_request, BATCH_EMBEDDING_REQUEST);
-        println!("Serialized JSON: {}", serialized_batch_embedding_request);
     }
 
     const EMBEDDING_RESPONSE: &'static str = r#"{"data":[{"embedding":[-0.006929283495992422,-0.005336422007530928,-0.009327292,-0.024047505110502243],"index":0,"object":"embedding"}],"model":"text-embedding-ada-002","object":"list","usage":{"prompt_tokens":5,"total_tokens":5}}"#;

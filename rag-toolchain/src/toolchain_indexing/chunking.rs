@@ -1,9 +1,8 @@
 use crate::toolchain_embeddings::embedding_models::{
     EmbeddingModelMetadata, HasMetadata, TokenizerWrapper,
 };
-use crate::toolchain_indexing::traits::{Chunk, Chunks};
+use crate::toolchain_indexing::types::{Chunk, Chunks};
 use std::num::NonZeroUsize;
-use std::rc::Rc;
 
 /// # ChunkingError
 /// Custom error type representing errors that can occur during chunking
@@ -72,12 +71,12 @@ impl TokenChunker {
         let mut i = 0;
         while i < tokens.len() {
             let end = std::cmp::min(i + chunk_size, tokens.len());
-            let chunk: Chunk = Rc::from(tokens[i..end].to_vec().join("").trim());
+            let chunk: Chunk = Chunk::from(tokens[i..end].to_vec().join("").trim());
             chunks.push(chunk);
             i += chunk_size - self.chunk_overlap;
         }
 
-        Ok(Rc::from(chunks.as_slice()))
+        Ok(Chunks::from(chunks))
     }
 }
 
@@ -95,7 +94,7 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<&str> = chunks.iter().map(|chunk| chunk.as_ref()).collect();
+        let chunks: Vec<String> = chunks.to_vec::<String>();
         assert_eq!(chunks.len(), 5);
         assert_eq!(
             chunks,
@@ -111,7 +110,7 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<&str> = chunks.iter().map(|chunk| chunk.as_ref()).collect();
+        let chunks: Vec<String> = chunks.to_vec::<String>();
         assert_eq!(chunks.len(), 0);
         assert_eq!(chunks, Vec::<String>::new());
     }
