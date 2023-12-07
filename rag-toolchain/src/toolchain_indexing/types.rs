@@ -38,7 +38,6 @@ impl Embedding {
     }
 }
 
-// Generic impl for any type that can be converted into a Rc<[f32]>
 impl<T> From<T> for Embedding
 where
     T: Into<Rc<[f32]>>,

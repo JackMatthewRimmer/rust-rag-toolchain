@@ -3,7 +3,8 @@ use rag_toolchain::toolchain_embeddings::{
 };
 use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
 use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
-use rag_toolchain::toolchain_indexing::traits::{Chunk, Chunks, Embedding, EmbeddingStore};
+use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+use rag_toolchain::toolchain_indexing::types::{Chunk, Chunks, Embedding};
 
 #[tokio::main]
 async fn main() {
