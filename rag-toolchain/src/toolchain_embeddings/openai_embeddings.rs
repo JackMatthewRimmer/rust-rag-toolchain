@@ -56,7 +56,7 @@ impl OpenAIClient {
     /// # build_request
     /// Simple method for building the request to send to OpenAI
     /// just have to call .send() on the request to send it
-    fn build_request(&self, text: &Chunks) -> reqwest::blocking::RequestBuilder {
+    fn build_request(&self, text: Chunks) -> reqwest::blocking::RequestBuilder {
         let input_text: Vec<String> = text.to_vec::<String>();
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
@@ -107,13 +107,15 @@ impl OpenAIClient {
     /// # Returns
     /// `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
     fn handle_success_response(
-        input_text: &Chunks,
+        input_text: Chunks,
         response: EmbeddingResponse,
     ) -> Vec<(Chunk, Embedding)> {
         // Map response objects into string embedding pairs
         let embedding_objects: Vec<EmbeddingObject> = response.data;
+
         let embeddings: Vec<Embedding> =
-            Embedding::into_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
+            Embedding::from_iter(embedding_objects.iter().map(|obj| obj.embedding.clone()));
+
         let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()
     }
@@ -125,7 +127,7 @@ impl OpenAIClient {
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
         // Build the request to send to OpenAI
-        let request = self.build_request(&text);
+        let request = self.build_request(text.clone());
         // Send the request to OpenAI
         let response: Response = match request.send() {
             Ok(response) => response,
@@ -149,7 +151,7 @@ impl OpenAIClient {
                         Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
                     };
                 Ok(OpenAIClient::handle_success_response(
-                    &text,
+                    text.clone(),
                     embedding_response,
                 ))
             }

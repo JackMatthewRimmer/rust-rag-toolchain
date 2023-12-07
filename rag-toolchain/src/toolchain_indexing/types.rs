@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 // ----------------- Embedding -----------------
+#[derive(Debug, Clone)]
 pub struct Embedding {
     embedding: Rc<[f32]>,
 }
@@ -14,29 +15,50 @@ impl Embedding {
         &self.embedding
     }
 
-    pub fn into_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
+    pub fn from_iter<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
     where
         T: Into<Self>,
     {
-        let mut vec: Vec<Embedding> = Vec::new();
+        let mut embedding: Vec<Self> = Vec::new();
         for item in iter {
-            vec.push(item.into());
+            embedding.push(item.into());
         }
-        vec
+        embedding
+    }
+
+    pub fn from_vec<T>(vec: Vec<T>) -> Vec<Self>
+    where
+        T: Into<Self>,
+    {
+        let mut embedding: Vec<Self> = Vec::new();
+        for item in vec.into_iter() {
+            embedding.push(item.into());
+        }
+        embedding
     }
 }
 
-impl From<Vec<f32>> for Embedding {
-    fn from(embedding: Vec<f32>) -> Self {
+// Generic impl for any type that can be converted into a Rc<[f32]>
+impl<T> From<T> for Embedding
+where
+    T: Into<Rc<[f32]>>,
+{
+    fn from(embedding: T) -> Self {
         Self {
             embedding: embedding.into(),
         }
     }
 }
 
+impl From<Embedding> for Vec<f32> {
+    fn from(embedding: Embedding) -> Self {
+        embedding.embedding().to_vec()
+    }
+}
 // ---------------------------------------------
 
 // ----------------- Chunk ------------------
+#[derive(Debug, Clone)]
 pub struct Chunk {
     chunk: Rc<str>,
 }
@@ -51,38 +73,26 @@ impl Chunk {
     }
 }
 
-impl Clone for Chunk {
-    fn clone(&self) -> Self {
+impl<T> From<T> for Chunk
+where
+    T: Into<Rc<str>>,
+{
+    fn from(chunk: T) -> Self {
         Self {
-            chunk: self.chunk.clone(),
-        }
-    }
-}
-
-impl From<String> for Chunk {
-    fn from(string: String) -> Self {
-        Self {
-            chunk: string.into(),
-        }
-    }
-}
-
-impl From<&str> for Chunk {
-    fn from(string: &str) -> Self {
-        Self {
-            chunk: string.into(),
+            chunk: chunk.into(),
         }
     }
 }
 
 impl From<Chunk> for String {
     fn from(chunk: Chunk) -> Self {
-        (*chunk.chunk).to_string()
+        chunk.chunk().to_string()
     }
 }
 // ------------------------------------------
 
 // ----------------- Chunks -----------------
+#[derive(Debug, Clone)]
 pub struct Chunks {
     chunks: Rc<[Chunk]>,
 }
@@ -108,11 +118,20 @@ impl Chunks {
     }
 }
 
-impl From<Vec<Chunk>> for Chunks {
-    fn from(chunks: Vec<Chunk>) -> Self {
+impl<T> From<T> for Chunks
+where
+    T: Into<Rc<[Chunk]>>,
+{
+    fn from(chunks: T) -> Self {
         Self {
             chunks: chunks.into(),
         }
+    }
+}
+
+impl From<Chunks> for Vec<String> {
+    fn from(chunks: Chunks) -> Self {
+        chunks.to_vec()
     }
 }
 // -----------------------------------------
