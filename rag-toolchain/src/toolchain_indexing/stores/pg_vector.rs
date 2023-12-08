@@ -7,7 +7,6 @@ use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
 use std::fmt::{Display, Formatter};
-use std::vec;
 
 use dotenv::dotenv;
 

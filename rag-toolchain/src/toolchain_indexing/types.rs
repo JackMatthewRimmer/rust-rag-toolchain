@@ -2,20 +2,45 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 // ----------------- Embedding -----------------
-#[derive(Debug, Clone)]
+/// # Embedding
+/// Custom type that wraps a pointer to an embedding
+/// immutable and thread safe
+/// this will be returned by an Embedding Generator
+#[derive(Debug, Clone, PartialEq)]
 pub struct Embedding {
     embedding: Arc<[f32]>,
 }
 
 impl Embedding {
+    /// # new
+    ///
+    /// # Arguments
+    /// * `Arc<[f32]>` - pointer to the embedding
+    ///
+    /// # Returns
+    /// * `Embedding` - a new Embedding
     pub fn new(embedding: Arc<[f32]>) -> Self {
         Self { embedding }
     }
 
+    /// # embedding
+    ///
+    /// # Returns
+    /// * `Arc<[f32]>` - pointer to the embedding
     pub fn embedding(&self) -> Arc<[f32]> {
         Arc::clone(&self.embedding)
     }
 
+    /// # iter_to_vec
+    ///
+    /// Helper function to generate a vector given an iterator of items
+    /// that can be converted into an Embedding
+    ///
+    /// # Arguments
+    /// * `Iterator<Item = T>` - iterator of items where T: Into<Embedding>
+    ///
+    /// # Returns
+    /// * `Vec<Embedding>` - vector of Embeddings
     pub fn iter_to_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
     where
         T: Into<Self>,
@@ -27,6 +52,16 @@ impl Embedding {
         embedding
     }
 
+    /// # from_vec
+    ///
+    /// Helper function to convert a vector of items into a vector
+    /// of embeddings
+    ///
+    /// # Arguments
+    /// * `Vec<T>` - vector of items where T: Into<Embedding>
+    ///
+    /// # Returns
+    /// * `Vec<Embedding>` - vector of Embeddings
     pub fn from_vec<T>(vec: Vec<T>) -> Vec<Self>
     where
         T: Into<Self>,
@@ -58,16 +93,31 @@ impl From<Embedding> for Vec<f32> {
 // ---------------------------------------------
 
 // ----------------- Chunk ------------------
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+/// # Chunk
+/// Custom type that wraps a pointer to a text chunk
+/// this will be returned by a form of Chunker struct
+/// immutable and thread safe
 pub struct Chunk {
     chunk: Arc<str>,
 }
 
 impl Chunk {
+    /// # new
+    ///
+    /// # Arguments
+    /// * `Arc<str>` - pointer to the chunk str
+    ///
+    /// # Returns
+    /// * `Chunk` - a new Chunk
     pub fn new(chunk: Arc<str>) -> Self {
         Self { chunk }
     }
 
+    /// # chunk
+    ///
+    /// # Returns
+    /// * `Arc<str>` - pointer to the chunk str
     pub fn chunk(&self) -> Arc<str> {
         Arc::clone(&self.chunk)
     }
@@ -92,20 +142,41 @@ impl From<Chunk> for String {
 // ------------------------------------------
 
 // ----------------- Chunks -----------------
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+/// # Chunks
+/// Custom type that wraps a pointer to a slice of chunks
+/// immutable and thread safe
 pub struct Chunks {
     chunks: Rc<[Chunk]>,
 }
 
 impl Chunks {
+    /// # new
+    ///
+    /// # Arguments
+    /// * `Rc<[Chunk]>` - pointer to the slice of chunks
+    ///
+    /// # Returns
+    /// * `Chunks` - a new Chunks struct
     pub fn new(chunks: Rc<[Chunk]>) -> Self {
         Self { chunks }
     }
 
+    /// # chunks
+    ///
+    /// # Returns
+    /// * `Rc<[Chunk]>` - pointer to the slice of chunks
     pub fn chunks(&self) -> &Rc<[Chunk]> {
         &self.chunks
     }
 
+    /// # to_vec
+    ///
+    /// Helper function to convert a Chunks struct into a vector of items
+    /// Requires that the generic T implements From<Chunk>
+    ///
+    /// # Returns
+    /// * `Vec<T>` - vector of items where T: From<Chunk>
     pub fn to_vec<T>(&self) -> Vec<T>
     where
         T: From<Chunk>,
