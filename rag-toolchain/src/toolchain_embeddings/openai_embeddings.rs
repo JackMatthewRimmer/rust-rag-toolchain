@@ -39,21 +39,42 @@ impl OpenAIClient {
         Ok(OpenAIClient { api_key, client })
     }
 
-    /// # build_request
-    /// Simple method for building the request to send to OpenAI
-    /// just have to call .send() on the request to send it
-    fn build_request(&self, text: Chunks) -> reqwest::blocking::RequestBuilder {
-        let input_text: Vec<String> = text.to_vec::<String>();
-        let request_body = BatchEmbeddingRequest::builder()
-            .input(input_text)
-            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
-            .build();
-        let content_type = HeaderValue::from_static("application/json");
-        self.client
-            .post(OPENAI_EMBEDDING_URL)
-            .bearer_auth(self.api_key.clone())
-            .header(CONTENT_TYPE, content_type)
-            .json(&request_body)
+    /// Sends a request to the OpenAI API and returns the response
+    ///
+    /// # Arguments
+    /// * `request` - The request to send to the OpenAI API
+    /// this request should come prebuilt ready to call .send() on
+    ///
+    /// # Errors
+    /// * `OpenAIError::ErrorSendingRequest` - if request.send() errors
+    /// * `OpenAIError::ErrorGettingResponseBody` - if response.text() errors
+    /// * `OpenAIError::ErrorDeserializingResponseBody` - if serde_json::from_str() errors
+    /// * `OpenAIError` - if the response code is not 200 this can be any of the associates status
+    ///    code errors or variatn of `OpenAIError::UNDEFINED`
+    ///
+    /// # Returns
+    /// * `EmbeddingResponse` - The deserialized response from OpenAI
+    fn send_embedding_request(
+        request: reqwest::blocking::RequestBuilder,
+    ) -> Result<EmbeddingResponse, OpenAIError> {
+        let response: Response = match request.send() {
+            Ok(response) => response,
+            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
+        };
+        if !response.status().is_success() {
+            return Err(OpenAIClient::handle_error_response(response));
+        }
+        let response_body: String = response
+            .text()
+            .map_err(|error| OpenAIError::ErrorGettingResponseBody(error.to_string()))?;
+
+        let embedding_response: EmbeddingResponse = match serde_json::from_str(&response_body) {
+            Err(e) => {
+                return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()));
+            }
+            Ok(embedding_response) => embedding_response,
+        };
+        Ok(embedding_response)
     }
 
     /// Explicit error mapping between response codes and error types
@@ -105,95 +126,57 @@ impl OpenAIClient {
         let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()
     }
-
-    // This function needs changing to handle the batch size limit of 200
-    // If we get a vector of 400 strings we need to split it into two requests
-    pub fn generate_embeddings(
-        &self,
-        text: Chunks,
-    ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
-        // Build the request to send to OpenAI
-        let request = self.build_request(text.clone());
-        // Send the request to OpenAI
-        let response: Response = match request.send() {
-            Ok(response) => response,
-            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
-        };
-
-        //  Handle response based on if it was successful or not
-        match response.status().is_success() {
-            true => {
-                let response_body = match response.text() {
-                    // Safely unwrap the response body
-                    Ok(response_body) => response_body,
-                    // This should never happen
-                    Err(e) => Err(OpenAIError::ErrorGettingResponseBody(e.to_string()))?,
-                };
-                // Deserialize the response into an EmbeddingResponse
-                let embedding_response: EmbeddingResponse =
-                    match serde_json::from_str(&response_body) {
-                        Ok(embedding_response) => embedding_response,
-                        // This should never happen
-                        Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
-                    };
-                Ok(OpenAIClient::handle_success_response(
-                    text.clone(),
-                    embedding_response,
-                ))
-            }
-            false => Err(OpenAIClient::handle_error_response(response)),
-        }
-    }
 }
 
 #[async_trait]
 impl AsyncEmbeddingClient for OpenAIClient {
     type ErrorType = OpenAIError;
 
-    // This function needs changing to handle the batch size limit of 200
-    // If we get a vector of 400 strings we need to split it into two requests
     async fn generate_embeddings(
         &self,
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
-        // Build the request to send to OpenAI
-        let request = self.build_request(text.clone());
-        // Send the request to OpenAI
-        let response: Response = match request.send() {
-            Ok(response) => response,
-            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
-        };
-
-        //  Handle response based on if it was successful or not
-        match response.status().is_success() {
-            true => {
-                let response_body = match response.text() {
-                    // Safely unwrap the response body
-                    Ok(response_body) => response_body,
-                    // This should never happen
-                    Err(e) => Err(OpenAIError::ErrorGettingResponseBody(e.to_string()))?,
-                };
-                // Deserialize the response into an EmbeddingResponse
-                let embedding_response: EmbeddingResponse =
-                    match serde_json::from_str(&response_body) {
-                        Ok(embedding_response) => embedding_response,
-                        // This should never happen
-                        Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
-                    };
-                Ok(OpenAIClient::handle_success_response(
-                    text.clone(),
-                    embedding_response,
-                ))
-            }
-            false => Err(OpenAIClient::handle_error_response(response)),
-        }
+        let input_text: Vec<String> = text.to_vec::<String>();
+        let request_body = BatchEmbeddingRequest::builder()
+            .input(input_text)
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
+        let content_type = HeaderValue::from_static("application/json");
+        let request = self
+            .client
+            .post(OPENAI_EMBEDDING_URL)
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
+        let embedding_response: EmbeddingResponse = OpenAIClient::send_embedding_request(request)?;
+        Ok(OpenAIClient::handle_success_response(
+            text.clone(),
+            embedding_response,
+        ))
     }
 
     async fn generate_embedding(
         &self,
         _text: Chunk,
     ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-        unimplemented!()
+        let request_body = EmbeddingRequest::builder()
+            .input(_text.into())
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
+        let content_type = HeaderValue::from_static("application/json");
+        let request = self
+            .client
+            .post(OPENAI_EMBEDDING_URL)
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
+
+        let embedding_response: EmbeddingResponse = OpenAIClient::send_embedding_request(request)?;
+        Ok(
+            OpenAIClient::handle_success_response(vec![_text.clone()].into(), embedding_response)
+                [0]
+            .clone(),
+        )
     }
 }
 
