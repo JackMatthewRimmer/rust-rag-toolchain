@@ -114,7 +114,7 @@ impl OpenAIClient {
         let embedding_objects: Vec<EmbeddingObject> = response.data;
 
         let embeddings: Vec<Embedding> =
-            Embedding::from_iter(embedding_objects.iter().map(|obj| obj.embedding.clone()));
+            Embedding::iter_to_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
 
         let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()

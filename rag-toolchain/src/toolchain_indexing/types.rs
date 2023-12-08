@@ -15,7 +15,7 @@ impl Embedding {
         &self.embedding
     }
 
-    pub fn from_iter<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
+    pub fn iter_to_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
     where
         T: Into<Self>,
     {

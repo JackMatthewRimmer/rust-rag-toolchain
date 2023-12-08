@@ -1,3 +1,4 @@
+use crate::toolchain_indexing::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
 use std::io::Error as StdError;
@@ -16,8 +17,8 @@ pub trait EmbeddingStore {
     // The custom error type for the store
     type ErrorType: Error;
     /// Takes an embedding and writes it to an external source
-    async fn store(&self, embedding: (String, Vec<f32>)) -> Result<(), Self::ErrorType>;
-    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>)
+    async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), Self::ErrorType>;
+    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
         -> Result<(), Self::ErrorType>;
 }
 
