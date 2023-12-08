@@ -2,9 +2,8 @@ use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
 use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
 use dotenv::dotenv;
-use reqwest::blocking::Client;
-use reqwest::blocking::Response;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
@@ -34,7 +33,7 @@ impl OpenAIClient {
             Ok(api_key) => api_key,
             Err(e) => return Err(e),
         };
-        let client = Client::new();
+        let client: Client = Client::new();
 
         Ok(OpenAIClient { api_key, client })
     }
@@ -54,18 +53,19 @@ impl OpenAIClient {
     ///
     /// # Returns
     /// * `EmbeddingResponse` - The deserialized response from OpenAI
-    fn send_embedding_request(
-        request: reqwest::blocking::RequestBuilder,
+    async fn send_embedding_request(
+        request: reqwest::RequestBuilder,
     ) -> Result<EmbeddingResponse, OpenAIError> {
-        let response: Response = match request.send() {
+        let response: reqwest::Response = match request.send().await {
             Ok(response) => response,
             Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
         };
         if !response.status().is_success() {
-            return Err(OpenAIClient::handle_error_response(response));
+            return Err(OpenAIClient::handle_error_response(response).await);
         }
         let response_body: String = response
             .text()
+            .await
             .map_err(|error| OpenAIError::ErrorGettingResponseBody(error.to_string()))?;
 
         let embedding_response: EmbeddingResponse = match serde_json::from_str(&response_body) {
@@ -84,10 +84,10 @@ impl OpenAIClient {
     ///
     /// # Returns
     /// `OpenAIError` - The error type that maps to the response code
-    fn handle_error_response(response: Response) -> OpenAIError {
+    async fn handle_error_response(response: reqwest::Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
-        let body_text = match response.text() {
+        let body_text = match response.text().await {
             Ok(text) => text,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
@@ -142,13 +142,15 @@ impl AsyncEmbeddingClient for OpenAIClient {
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
-        let request = self
+        let request: reqwest::RequestBuilder = self
             .client
             .post(OPENAI_EMBEDDING_URL)
             .bearer_auth(self.api_key.clone())
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
-        let embedding_response: EmbeddingResponse = OpenAIClient::send_embedding_request(request)?;
+
+        let embedding_response: EmbeddingResponse =
+            OpenAIClient::send_embedding_request(request).await?;
         Ok(OpenAIClient::handle_success_response(
             text.clone(),
             embedding_response,
@@ -161,14 +163,14 @@ impl AsyncEmbeddingClient for OpenAIClient {
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
-        let request = self
+        let request: reqwest::RequestBuilder = self
             .client
             .post(OPENAI_EMBEDDING_URL)
             .bearer_auth(self.api_key.clone())
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
-
-        let embedding_response: EmbeddingResponse = OpenAIClient::send_embedding_request(request)?;
+        let embedding_response: EmbeddingResponse =
+            OpenAIClient::send_embedding_request(request).await?;
         Ok(
             OpenAIClient::handle_success_response(vec![text.clone()].into(), embedding_response)[0]
                 .clone(),
