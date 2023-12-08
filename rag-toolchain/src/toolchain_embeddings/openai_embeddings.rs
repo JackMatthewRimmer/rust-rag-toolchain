@@ -155,12 +155,9 @@ impl AsyncEmbeddingClient for OpenAIClient {
         ))
     }
 
-    async fn generate_embedding(
-        &self,
-        _text: Chunk,
-    ) -> Result<(Chunk, Embedding), Self::ErrorType> {
+    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
-            .input(_text.into())
+            .input(text.clone().into())
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
@@ -173,9 +170,8 @@ impl AsyncEmbeddingClient for OpenAIClient {
 
         let embedding_response: EmbeddingResponse = OpenAIClient::send_embedding_request(request)?;
         Ok(
-            OpenAIClient::handle_success_response(vec![_text.clone()].into(), embedding_response)
-                [0]
-            .clone(),
+            OpenAIClient::handle_success_response(vec![text.clone()].into(), embedding_response)[0]
+                .clone(),
         )
     }
 }
