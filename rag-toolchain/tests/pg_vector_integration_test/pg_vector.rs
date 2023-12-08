@@ -4,6 +4,7 @@ mod pg_vector {
     use rag_toolchain::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
     use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
     use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+    use rag_toolchain::toolchain_indexing::types::{Chunk, Embedding};
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};
 
@@ -18,7 +19,7 @@ mod pg_vector {
             .await
             .unwrap();
         let _result = pg_vector
-            .store(("test".into(), vec![1.0; 1536]))
+            .store(("test".into(), vec![1.0; 1536].into()))
             .await
             .map_err(|_| panic!("panic"));
         assert_row(
@@ -41,10 +42,10 @@ mod pg_vector {
         let pg_vector = PgVectorDB::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(String, Vec<f32>)> = vec![
-            ("test1".into(), vec![1.0; 1536]),
-            ("test2".into(), vec![2.0; 1536]),
-            ("test3".into(), vec![3.0; 1536]),
+        let input: Vec<(Chunk, Embedding)> = vec![
+            ("test1".into(), vec![1.0; 1536].into()),
+            ("test2".into(), vec![2.0; 1536].into()),
+            ("test3".into(), vec![3.0; 1536].into()),
         ];
         let _result = pg_vector
             .store_batch(input)

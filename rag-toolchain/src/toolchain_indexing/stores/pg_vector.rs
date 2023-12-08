@@ -1,5 +1,6 @@
 use crate::toolchain_embeddings::embedding_models::HasMetadata;
 use crate::toolchain_indexing::traits::EmbeddingStore;
+use crate::toolchain_indexing::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
@@ -145,8 +146,11 @@ impl EmbeddingStore for PgVectorDB {
     /// # Returns
     /// * [`Ok(())`] if the insert succeeds
     /// * [`PgVectorError::InsertError`] if the insert fails
-    async fn store(&self, embeddings: (String, Vec<f32>)) -> Result<(), PgVectorError> {
+    async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PgVectorError> {
         let (content, embedding) = embeddings;
+        let text: String = content.into();
+        let vector: Vec<f32> = embedding.into();
+
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -154,8 +158,8 @@ impl EmbeddingStore for PgVectorDB {
         );
 
         sqlx::query(&query)
-            .bind(&content)
-            .bind(&embedding)
+            .bind(text)
+            .bind(vector)
             .execute(&self.pool)
             .await
             .map_err(PgVectorError::InsertError)?;
@@ -173,7 +177,7 @@ impl EmbeddingStore for PgVectorDB {
     /// # Returns
     /// * [`Ok(())`] if the transaction succeeds
     /// * [`PgVectorError::TransactionError`] if the transaction fails
-    async fn store_batch(&self, embeddings: Vec<(String, Vec<f32>)>) -> Result<(), PgVectorError> {
+    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>) -> Result<(), PgVectorError> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -187,9 +191,11 @@ impl EmbeddingStore for PgVectorDB {
             .map_err(PgVectorError::TransactionError)?;
 
         for (content, embedding) in embeddings {
+            let text: String = content.into();
+            let vector: Vec<f32> = embedding.into();
             sqlx::query(&query)
-                .bind(&content)
-                .bind(&embedding)
+                .bind(text)
+                .bind(vector)
                 .execute(&mut *transaction)
                 .await
                 .map_err(PgVectorError::InsertError)?;

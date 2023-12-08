@@ -1,3 +1,4 @@
+use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
 use dotenv::dotenv;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -55,9 +56,10 @@ impl OpenAIClient {
     /// # build_request
     /// Simple method for building the request to send to OpenAI
     /// just have to call .send() on the request to send it
-    fn build_request(&self, text: Vec<String>) -> reqwest::blocking::RequestBuilder {
+    fn build_request(&self, text: Chunks) -> reqwest::blocking::RequestBuilder {
+        let input_text: Vec<String> = text.to_vec::<String>();
         let request_body = BatchEmbeddingRequest::builder()
-            .input(text)
+            .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
         let content_type = HeaderValue::from_static("application/json");
@@ -105,24 +107,25 @@ impl OpenAIClient {
     /// # Returns
     /// `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
     fn handle_success_response(
-        input_text: Vec<String>,
+        input_text: Chunks,
         response: EmbeddingResponse,
-    ) -> Vec<(String, Vec<f32>)> {
+    ) -> Vec<(Chunk, Embedding)> {
         // Map response objects into string embedding pairs
-        let embeddings: Vec<EmbeddingObject> = response.data;
-        let pairs: Vec<(String, Vec<f32>)> = input_text
-            .into_iter()
-            .zip(embeddings.into_iter().map(|embedding| embedding.embedding))
-            .collect();
-        pairs
+        let embedding_objects: Vec<EmbeddingObject> = response.data;
+
+        let embeddings: Vec<Embedding> =
+            Embedding::iter_to_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
+
+        let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
+        input_text.into_iter().zip(embeddings).collect()
     }
 
     // This function needs changing to handle the batch size limit of 200
     // If we get a vector of 400 strings we need to split it into two requests
     pub fn generate_embeddings(
         &self,
-        text: Vec<String>,
-    ) -> Result<Vec<(String, Vec<f32>)>, OpenAIError> {
+        text: Chunks,
+    ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
         // Build the request to send to OpenAI
         let request = self.build_request(text.clone());
         // Send the request to OpenAI
@@ -148,7 +151,7 @@ impl OpenAIClient {
                         Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
                     };
                 Ok(OpenAIClient::handle_success_response(
-                    text,
+                    text.clone(),
                     embedding_response,
                 ))
             }
@@ -306,7 +309,6 @@ mod request_model_tests {
             serialized_embedding_request,
             EMBEDDING_REQUEST_WITH_OPTIONAL_FIELDS
         );
-        println!("Serialized JSON: {}", serialized_embedding_request);
     }
 
     #[test]
@@ -338,7 +340,6 @@ mod request_model_tests {
         let serialized_batch_embedding_request =
             serde_json::to_string(&batch_embedding_request).unwrap();
         assert_eq!(serialized_batch_embedding_request, BATCH_EMBEDDING_REQUEST);
-        println!("Serialized JSON: {}", serialized_batch_embedding_request);
     }
 
     const EMBEDDING_RESPONSE: &'static str = r#"{"data":[{"embedding":[-0.006929283495992422,-0.005336422007530928,-0.009327292,-0.024047505110502243],"index":0,"object":"embedding"}],"model":"text-embedding-ada-002","object":"list","usage":{"prompt_tokens":5,"total_tokens":5}}"#;

@@ -1,6 +1,7 @@
 use crate::toolchain_embeddings::embedding_models::{
     EmbeddingModelMetadata, HasMetadata, TokenizerWrapper,
 };
+use crate::toolchain_indexing::types::{Chunk, Chunks};
 use std::num::NonZeroUsize;
 
 /// # ChunkingError
@@ -58,22 +59,24 @@ impl TokenChunker {
 
     /// # generate_chunks
     /// function to generate chunks from raw text
-    pub fn generate_chunks(&self, raw_text: &str) -> Result<Vec<String>, ChunkingError> {
+    pub fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, ChunkingError> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
             ChunkingError::TokenizationError("Unable to tokenize text".to_string())
         })?;
 
         let chunk_size: usize = self.chunk_size.into();
-        let mut chunks = Vec::new();
+        let mut chunks: Vec<Chunk> = Vec::new();
+
         let mut i = 0;
         while i < tokens.len() {
             let end = std::cmp::min(i + chunk_size, tokens.len());
-            let chunk: String = tokens[i..end].to_vec().join("").trim().to_string();
+            let chunk: Chunk = Chunk::from(tokens[i..end].to_vec().join("").trim());
             chunks.push(chunk);
             i += chunk_size - self.chunk_overlap;
         }
-        Ok(chunks)
+
+        Ok(Chunks::from(chunks))
     }
 }
 
@@ -90,7 +93,8 @@ mod tests {
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
-        let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
+        let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
+        let chunks: Vec<String> = chunks.to_vec::<String>();
         assert_eq!(chunks.len(), 5);
         assert_eq!(
             chunks,
@@ -105,7 +109,8 @@ mod tests {
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
-        let chunks: Vec<String> = chunker.generate_chunks(raw_text).unwrap();
+        let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
+        let chunks: Vec<String> = chunks.to_vec::<String>();
         assert_eq!(chunks.len(), 0);
         assert_eq!(chunks, Vec::<String>::new());
     }
