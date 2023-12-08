@@ -1,18 +1,19 @@
 use std::rc::Rc;
+use std::sync::Arc;
 
 // ----------------- Embedding -----------------
 #[derive(Debug, Clone)]
 pub struct Embedding {
-    embedding: Rc<[f32]>,
+    embedding: Arc<[f32]>,
 }
 
 impl Embedding {
-    pub fn new(embedding: Rc<[f32]>) -> Self {
+    pub fn new(embedding: Arc<[f32]>) -> Self {
         Self { embedding }
     }
 
-    pub fn embedding(&self) -> &Rc<[f32]> {
-        &self.embedding
+    pub fn embedding(&self) -> Arc<[f32]> {
+        Arc::clone(&self.embedding)
     }
 
     pub fn iter_to_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
@@ -40,7 +41,7 @@ impl Embedding {
 
 impl<T> From<T> for Embedding
 where
-    T: Into<Rc<[f32]>>,
+    T: Into<Arc<[f32]>>,
 {
     fn from(embedding: T) -> Self {
         Self {
@@ -59,22 +60,22 @@ impl From<Embedding> for Vec<f32> {
 // ----------------- Chunk ------------------
 #[derive(Debug, Clone)]
 pub struct Chunk {
-    chunk: Rc<str>,
+    chunk: Arc<str>,
 }
 
 impl Chunk {
-    pub fn new(chunk: Rc<str>) -> Self {
+    pub fn new(chunk: Arc<str>) -> Self {
         Self { chunk }
     }
 
-    pub fn chunk(&self) -> &Rc<str> {
-        &self.chunk
+    pub fn chunk(&self) -> Arc<str> {
+        Arc::clone(&self.chunk)
     }
 }
 
 impl<T> From<T> for Chunk
 where
-    T: Into<Rc<str>>,
+    T: Into<Arc<str>>,
 {
     fn from(chunk: T) -> Self {
         Self {

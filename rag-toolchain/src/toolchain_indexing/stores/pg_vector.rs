@@ -7,6 +7,7 @@ use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
 use std::fmt::{Display, Formatter};
+use std::vec;
 
 use dotenv::dotenv;
 
@@ -148,6 +149,9 @@ impl EmbeddingStore for PgVectorDB {
     /// * [`PgVectorError::InsertError`] if the insert fails
     async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PgVectorError> {
         let (content, embedding) = embeddings;
+        let text: String = content.into();
+        let vector: Vec<f32> = embedding.into();
+
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -155,8 +159,8 @@ impl EmbeddingStore for PgVectorDB {
         );
 
         sqlx::query(&query)
-            .bind(content.into())
-            .bind(embedding.into())
+            .bind(text)
+            .bind(vector)
             .execute(&self.pool)
             .await
             .map_err(PgVectorError::InsertError)?;
@@ -188,9 +192,11 @@ impl EmbeddingStore for PgVectorDB {
             .map_err(PgVectorError::TransactionError)?;
 
         for (content, embedding) in embeddings {
+            let text: String = content.into();
+            let vector: Vec<f32> = embedding.into();
             sqlx::query(&query)
-                .bind(content.into())
-                .bind(embedding.into())
+                .bind(text)
+                .bind(vector)
                 .execute(&mut *transaction)
                 .await
                 .map_err(PgVectorError::InsertError)?;
