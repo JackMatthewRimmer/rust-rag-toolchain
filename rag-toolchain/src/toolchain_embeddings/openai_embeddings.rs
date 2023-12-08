@@ -1,31 +1,16 @@
+use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
 use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+use async_trait::async_trait;
 use dotenv::dotenv;
-use reqwest::blocking::Client;
-use reqwest::blocking::Response;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
+use std::fmt::Display;
 use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
-
-#[derive(Debug, PartialEq)]
-pub enum OpenAIError {
-    /// # Invalid Authentication or Incorrect API Key provided
-    CODE401(OpenAIErrorBody),
-    /// # Rate limit reached or Monthly quota exceeded
-    CODE429(OpenAIErrorBody),
-    /// # Server Error
-    CODE500(OpenAIErrorBody),
-    /// # The engine is currently overloaded
-    CODE503(OpenAIErrorBody),
-    /// # Missed cases for error codes, includes Status Code and Error Body as a string
-    UNDEFINED(u16, String),
-    ErrorSendingRequest(String),
-    ErrorGettingResponseBody(String),
-    ErrorDeserializingResponseBody(String),
-}
 
 /// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings
@@ -48,26 +33,48 @@ impl OpenAIClient {
             Ok(api_key) => api_key,
             Err(e) => return Err(e),
         };
-        let client = Client::new();
+        let client: Client = Client::new();
 
         Ok(OpenAIClient { api_key, client })
     }
 
-    /// # build_request
-    /// Simple method for building the request to send to OpenAI
-    /// just have to call .send() on the request to send it
-    fn build_request(&self, text: Chunks) -> reqwest::blocking::RequestBuilder {
-        let input_text: Vec<String> = text.to_vec::<String>();
-        let request_body = BatchEmbeddingRequest::builder()
-            .input(input_text)
-            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
-            .build();
-        let content_type = HeaderValue::from_static("application/json");
-        self.client
-            .post(OPENAI_EMBEDDING_URL)
-            .bearer_auth(self.api_key.clone())
-            .header(CONTENT_TYPE, content_type)
-            .json(&request_body)
+    /// Sends a request to the OpenAI API and returns the response
+    ///
+    /// # Arguments
+    /// * `request` - The request to send to the OpenAI API
+    /// this request should come prebuilt ready to call .send() on
+    ///
+    /// # Errors
+    /// * `OpenAIError::ErrorSendingRequest` - if request.send() errors
+    /// * `OpenAIError::ErrorGettingResponseBody` - if response.text() errors
+    /// * `OpenAIError::ErrorDeserializingResponseBody` - if serde_json::from_str() errors
+    /// * `OpenAIError` - if the response code is not 200 this can be any of the associates status
+    ///    code errors or variatn of `OpenAIError::UNDEFINED`
+    ///
+    /// # Returns
+    /// * `EmbeddingResponse` - The deserialized response from OpenAI
+    async fn send_embedding_request(
+        request: reqwest::RequestBuilder,
+    ) -> Result<EmbeddingResponse, OpenAIError> {
+        let response: reqwest::Response = match request.send().await {
+            Ok(response) => response,
+            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
+        };
+        if !response.status().is_success() {
+            return Err(OpenAIClient::handle_error_response(response).await);
+        }
+        let response_body: String = response
+            .text()
+            .await
+            .map_err(|error| OpenAIError::ErrorGettingResponseBody(error.to_string()))?;
+
+        let embedding_response: EmbeddingResponse = match serde_json::from_str(&response_body) {
+            Err(e) => {
+                return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()));
+            }
+            Ok(embedding_response) => embedding_response,
+        };
+        Ok(embedding_response)
     }
 
     /// Explicit error mapping between response codes and error types
@@ -77,10 +84,10 @@ impl OpenAIClient {
     ///
     /// # Returns
     /// `OpenAIError` - The error type that maps to the response code
-    fn handle_error_response(response: Response) -> OpenAIError {
+    async fn handle_error_response(response: reqwest::Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
-        let body_text = match response.text() {
+        let body_text = match response.text().await {
             Ok(text) => text,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
@@ -119,44 +126,55 @@ impl OpenAIClient {
         let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()
     }
+}
 
-    // This function needs changing to handle the batch size limit of 200
-    // If we get a vector of 400 strings we need to split it into two requests
-    pub fn generate_embeddings(
+#[async_trait]
+impl AsyncEmbeddingClient for OpenAIClient {
+    type ErrorType = OpenAIError;
+
+    async fn generate_embeddings(
         &self,
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
-        // Build the request to send to OpenAI
-        let request = self.build_request(text.clone());
-        // Send the request to OpenAI
-        let response: Response = match request.send() {
-            Ok(response) => response,
-            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
-        };
+        let input_text: Vec<String> = text.to_vec::<String>();
+        let request_body = BatchEmbeddingRequest::builder()
+            .input(input_text)
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
+        let content_type = HeaderValue::from_static("application/json");
+        let request: reqwest::RequestBuilder = self
+            .client
+            .post(OPENAI_EMBEDDING_URL)
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
 
-        //  Handle response based on if it was successful or not
-        match response.status().is_success() {
-            true => {
-                let response_body = match response.text() {
-                    // Safely unwrap the response body
-                    Ok(response_body) => response_body,
-                    // This should never happen
-                    Err(e) => Err(OpenAIError::ErrorGettingResponseBody(e.to_string()))?,
-                };
-                // Deserialize the response into an EmbeddingResponse
-                let embedding_response: EmbeddingResponse =
-                    match serde_json::from_str(&response_body) {
-                        Ok(embedding_response) => embedding_response,
-                        // This should never happen
-                        Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
-                    };
-                Ok(OpenAIClient::handle_success_response(
-                    text.clone(),
-                    embedding_response,
-                ))
-            }
-            false => Err(OpenAIClient::handle_error_response(response)),
-        }
+        let embedding_response: EmbeddingResponse =
+            OpenAIClient::send_embedding_request(request).await?;
+        Ok(OpenAIClient::handle_success_response(
+            text.clone(),
+            embedding_response,
+        ))
+    }
+
+    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
+        let request_body = EmbeddingRequest::builder()
+            .input(text.clone().into())
+            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .build();
+        let content_type = HeaderValue::from_static("application/json");
+        let request: reqwest::RequestBuilder = self
+            .client
+            .post(OPENAI_EMBEDDING_URL)
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
+        let embedding_response: EmbeddingResponse =
+            OpenAIClient::send_embedding_request(request).await?;
+        Ok(
+            OpenAIClient::handle_success_response(vec![text.clone()].into(), embedding_response)[0]
+                .clone(),
+        )
     }
 }
 
@@ -237,6 +255,61 @@ pub struct OpenAIErrorData {
     pub error_type: String,
     pub param: Option<String>,
     pub code: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum OpenAIError {
+    /// # Invalid Authentication or Incorrect API Key provided
+    CODE401(OpenAIErrorBody),
+    /// # Rate limit reached or Monthly quota exceeded
+    CODE429(OpenAIErrorBody),
+    /// # Server Error
+    CODE500(OpenAIErrorBody),
+    /// # The engine is currently overloaded
+    CODE503(OpenAIErrorBody),
+    /// # Missed cases for error codes, includes Status Code and Error Body as a string
+    UNDEFINED(u16, String),
+    ErrorSendingRequest(String),
+    ErrorGettingResponseBody(String),
+    ErrorDeserializingResponseBody(String),
+}
+
+impl std::error::Error for OpenAIError {}
+impl Display for OpenAIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenAIError::CODE401(error_body) => write!(
+                f,
+                "Invalid Authentication or Incorrect API Key provided: {}",
+                error_body.error.message
+            ),
+            OpenAIError::CODE429(error_body) => write!(
+                f,
+                "Rate limit reached or Monthly quota exceeded: {}",
+                error_body.error.message
+            ),
+            OpenAIError::CODE500(error_body) => {
+                write!(f, "Server Error: {}", error_body.error.message)
+            }
+            OpenAIError::CODE503(error_body) => write!(
+                f,
+                "The engine is currently overloaded: {}",
+                error_body.error.message
+            ),
+            OpenAIError::UNDEFINED(status_code, error_body) => {
+                write!(f, "Undefined Error. This should not happen, if this is a missed error please report it: https://github.com/JackMatthewRimmer/rust-rag-toolchain: {} - {}", status_code, error_body)
+            }
+            OpenAIError::ErrorSendingRequest(error) => {
+                write!(f, "Error Sending Request: {}", error)
+            }
+            OpenAIError::ErrorGettingResponseBody(error) => {
+                write!(f, "Error Getting Response Body: {}", error)
+            }
+            OpenAIError::ErrorDeserializingResponseBody(error) => {
+                write!(f, "Error Deserializing Response Body: {}", error)
+            }
+        }
+    }
 }
 
 #[cfg(test)]

@@ -21,11 +21,3 @@ pub trait EmbeddingStore {
     async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
         -> Result<(), Self::ErrorType>;
 }
-
-/// # VectorDBSource
-/// Trait to query a vector database for similar entries
-pub trait EmbeddingSource {
-    /*
-    need to do some digging on what the methods should look like here
-     */
-}
