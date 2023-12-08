@@ -147,27 +147,27 @@ impl From<Chunk> for String {
 /// Custom type that wraps a pointer to a slice of chunks
 /// immutable and thread safe
 pub struct Chunks {
-    chunks: Rc<[Chunk]>,
+    chunks: Arc<[Chunk]>,
 }
 
 impl Chunks {
     /// # new
     ///
     /// # Arguments
-    /// * `Rc<[Chunk]>` - pointer to the slice of chunks
+    /// * `Arc<[Chunk]>` - pointer to the slice of chunks
     ///
     /// # Returns
     /// * `Chunks` - a new Chunks struct
-    pub fn new(chunks: Rc<[Chunk]>) -> Self {
+    pub fn new(chunks: Arc<[Chunk]>) -> Self {
         Self { chunks }
     }
 
     /// # chunks
     ///
     /// # Returns
-    /// * `Rc<[Chunk]>` - pointer to the slice of chunks
-    pub fn chunks(&self) -> &Rc<[Chunk]> {
-        &self.chunks
+    /// * `Arc<[Chunk]>` - pointer to the slice of chunks
+    pub fn chunks(&self) -> Arc<[Chunk]> {
+        Arc::clone(&self.chunks)
     }
 
     /// # to_vec
@@ -191,7 +191,7 @@ impl Chunks {
 
 impl<T> From<T> for Chunks
 where
-    T: Into<Rc<[Chunk]>>,
+    T: Into<Arc<[Chunk]>>,
 {
     fn from(chunks: T) -> Self {
         Self {

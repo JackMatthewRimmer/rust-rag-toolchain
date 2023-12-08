@@ -10,17 +10,24 @@ use tiktoken_rs::CoreBPE;
 #[async_trait]
 pub trait AsyncEmbeddingClient {
     type ErrorType: Error;
-    async fn generate_embedding(text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
-    async fn generate_embeddings(text: Chunks) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
+    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
+    async fn generate_embeddings(
+        &self,
+        text: Chunks,
+    ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
 }
 
 /// # EmbeddingClient
 /// Trait for any client that generates embeddings synchronously
 /// can be used for any local embedding model
+#[async_trait]
 pub trait EmbeddingClient {
     type ErrorType: Error;
-    fn generate_embedding(text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
-    fn generate_embeddings(text: Chunks) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
+    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
+    async fn generate_embeddings(
+        &self,
+        text: Chunks,
+    ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
 }
 
 // ---------------------- Embedding Models ----------------------

@@ -1,4 +1,6 @@
+use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
 use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+use async_trait::async_trait;
 use dotenv::dotenv;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
@@ -6,26 +8,10 @@ use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
+use std::fmt::Display;
 use typed_builder::TypedBuilder;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
-
-#[derive(Debug, PartialEq)]
-pub enum OpenAIError {
-    /// # Invalid Authentication or Incorrect API Key provided
-    CODE401(OpenAIErrorBody),
-    /// # Rate limit reached or Monthly quota exceeded
-    CODE429(OpenAIErrorBody),
-    /// # Server Error
-    CODE500(OpenAIErrorBody),
-    /// # The engine is currently overloaded
-    CODE503(OpenAIErrorBody),
-    /// # Missed cases for error codes, includes Status Code and Error Body as a string
-    UNDEFINED(u16, String),
-    ErrorSendingRequest(String),
-    ErrorGettingResponseBody(String),
-    ErrorDeserializingResponseBody(String),
-}
 
 /// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings
@@ -160,6 +146,57 @@ impl OpenAIClient {
     }
 }
 
+#[async_trait]
+impl AsyncEmbeddingClient for OpenAIClient {
+    type ErrorType = OpenAIError;
+
+    // This function needs changing to handle the batch size limit of 200
+    // If we get a vector of 400 strings we need to split it into two requests
+    async fn generate_embeddings(
+        &self,
+        text: Chunks,
+    ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
+        // Build the request to send to OpenAI
+        let request = self.build_request(text.clone());
+        // Send the request to OpenAI
+        let response: Response = match request.send() {
+            Ok(response) => response,
+            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
+        };
+
+        //  Handle response based on if it was successful or not
+        match response.status().is_success() {
+            true => {
+                let response_body = match response.text() {
+                    // Safely unwrap the response body
+                    Ok(response_body) => response_body,
+                    // This should never happen
+                    Err(e) => Err(OpenAIError::ErrorGettingResponseBody(e.to_string()))?,
+                };
+                // Deserialize the response into an EmbeddingResponse
+                let embedding_response: EmbeddingResponse =
+                    match serde_json::from_str(&response_body) {
+                        Ok(embedding_response) => embedding_response,
+                        // This should never happen
+                        Err(e) => Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()))?,
+                    };
+                Ok(OpenAIClient::handle_success_response(
+                    text.clone(),
+                    embedding_response,
+                ))
+            }
+            false => Err(OpenAIClient::handle_error_response(response)),
+        }
+    }
+
+    async fn generate_embedding(
+        &self,
+        _text: Chunk,
+    ) -> Result<(Chunk, Embedding), Self::ErrorType> {
+        unimplemented!()
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
 pub struct BatchEmbeddingRequest {
@@ -237,6 +274,61 @@ pub struct OpenAIErrorData {
     pub error_type: String,
     pub param: Option<String>,
     pub code: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum OpenAIError {
+    /// # Invalid Authentication or Incorrect API Key provided
+    CODE401(OpenAIErrorBody),
+    /// # Rate limit reached or Monthly quota exceeded
+    CODE429(OpenAIErrorBody),
+    /// # Server Error
+    CODE500(OpenAIErrorBody),
+    /// # The engine is currently overloaded
+    CODE503(OpenAIErrorBody),
+    /// # Missed cases for error codes, includes Status Code and Error Body as a string
+    UNDEFINED(u16, String),
+    ErrorSendingRequest(String),
+    ErrorGettingResponseBody(String),
+    ErrorDeserializingResponseBody(String),
+}
+
+impl std::error::Error for OpenAIError {}
+impl Display for OpenAIError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenAIError::CODE401(error_body) => write!(
+                f,
+                "Invalid Authentication or Incorrect API Key provided: {}",
+                error_body.error.message
+            ),
+            OpenAIError::CODE429(error_body) => write!(
+                f,
+                "Rate limit reached or Monthly quota exceeded: {}",
+                error_body.error.message
+            ),
+            OpenAIError::CODE500(error_body) => {
+                write!(f, "Server Error: {}", error_body.error.message)
+            }
+            OpenAIError::CODE503(error_body) => write!(
+                f,
+                "The engine is currently overloaded: {}",
+                error_body.error.message
+            ),
+            OpenAIError::UNDEFINED(status_code, error_body) => {
+                write!(f, "Undefined Error. This should not happen, if this is a missed error please report it: https://github.com/JackMatthewRimmer/rust-rag-toolchain: {} - {}", status_code, error_body)
+            }
+            OpenAIError::ErrorSendingRequest(error) => {
+                write!(f, "Error Sending Request: {}", error)
+            }
+            OpenAIError::ErrorGettingResponseBody(error) => {
+                write!(f, "Error Getting Response Body: {}", error)
+            }
+            OpenAIError::ErrorDeserializingResponseBody(error) => {
+                write!(f, "Error Deserializing Response Body: {}", error)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
