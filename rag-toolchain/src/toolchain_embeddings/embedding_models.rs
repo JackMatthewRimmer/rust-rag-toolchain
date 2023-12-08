@@ -20,14 +20,11 @@ pub trait AsyncEmbeddingClient {
 /// # EmbeddingClient
 /// Trait for any client that generates embeddings synchronously
 /// can be used for any local embedding model
-#[async_trait]
 pub trait EmbeddingClient {
     type ErrorType: Error;
-    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
-    async fn generate_embeddings(
-        &self,
-        text: Chunks,
-    ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
+    fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
+    fn generate_embeddings(&self, text: Chunks)
+        -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
 }
 
 // ---------------------- Embedding Models ----------------------
