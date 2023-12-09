@@ -321,7 +321,39 @@ impl Display for OpenAIError {
 mod client_tests {
     use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
     use crate::toolchain_embeddings::openai_embeddings::OpenAIClient;
-    use crate::toolchain_indexing::types::{Chunk, Chunks};
+    use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+    const EMBEDDING_RESPONSE: &'static str = r#"
+    {
+        "data": [
+            {
+                "embedding": [
+                    -0.006929283495992422,
+                    -0.005336422007530928,
+                    -0.009327292,
+                    -0.024047505110502243
+                ],
+                "index": 0,
+                "object": "embedding"
+            },
+            {
+                "embedding": [
+                    -0.006929283495992422,
+                    -0.005336422007530928,
+                    -0.009327292,
+                    -0.024047505110502243
+                ],
+                "index": 1,
+                "object": "embedding"
+            }
+        ],
+        "model": "text-embedding-ada-002",
+        "object": "list",
+        "usage": {
+            "prompt_tokens": 5,
+            "total_tokens": 5
+        }
+    }
+    "#;
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
@@ -336,13 +368,24 @@ mod client_tests {
             .mock("POST", "/")
             .with_status(200)
             .with_header("content-type", "application/json")
+            .with_body(EMBEDDING_RESPONSE)
             .create();
 
-        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-1"), Chunk::from("Test-2")]);
-        let response = client.generate_embeddings(chunks).await;
-        println!("Response: {:?}", response);
-
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap();
         mock.assert();
+        for (i, (chunk, embedding)) in response.into_iter().enumerate() {
+            assert_eq!(chunk, Chunk::from(format!("Test-{}", i)));
+            assert_eq!(
+                embedding,
+                Embedding::from(vec![
+                    -0.006929283495992422,
+                    -0.005336422007530928,
+                    -0.009327292,
+                    -0.024047505110502243
+                ])
+            );
+        }
     }
 }
 
