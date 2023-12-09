@@ -35,11 +35,11 @@ impl OpenAIClient {
             Err(e) => return Err(e),
         };
         let client: Client = Client::new();
-
+        let url = OPENAI_EMBEDDING_URL.into();
         Ok(OpenAIClient {
             api_key,
             client,
-            url: OPENAI_EMBEDDING_URL.into(),
+            url,
         })
     }
 
@@ -320,8 +320,11 @@ impl Display for OpenAIError {
 #[cfg(test)]
 mod client_tests {
     use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
-    use crate::toolchain_embeddings::openai_embeddings::OpenAIClient;
+    use crate::toolchain_embeddings::openai_embeddings::{
+        OpenAIClient, OpenAIError, OpenAIErrorBody,
+    };
     use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+
     const EMBEDDING_RESPONSE: &'static str = r#"
     {
         "data": [
@@ -351,6 +354,20 @@ mod client_tests {
         "usage": {
             "prompt_tokens": 5,
             "total_tokens": 5
+        }
+    }
+    "#;
+
+    // Errors come in the same format just with different values,
+    // so will use this for testing all error handling related
+    //to errors with deserializable bodies
+    const ERROR_RESPONSE: &'static str = r#"
+    {
+        "error": {
+            "message": "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "invalid_api_key"
         }
     }
     "#;
@@ -386,6 +403,138 @@ mod client_tests {
                 ])
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_401_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(401)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE401(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        )
+    }
+
+    #[tokio::test]
+    async fn test_429_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(429)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE429(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        )
+    }
+
+    #[tokio::test]
+    async fn test_500_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(500)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE500(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        )
+    }
+
+    #[tokio::test]
+    async fn test_503_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(503)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE503(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        )
     }
 }
 
