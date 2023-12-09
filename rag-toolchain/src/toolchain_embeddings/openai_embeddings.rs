@@ -22,6 +22,7 @@ const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 pub struct OpenAIClient {
     api_key: String,
     client: Client,
+    url: String, // This was done to support mocking
 }
 
 impl OpenAIClient {
@@ -35,7 +36,11 @@ impl OpenAIClient {
         };
         let client: Client = Client::new();
 
-        Ok(OpenAIClient { api_key, client })
+        Ok(OpenAIClient {
+            api_key,
+            client,
+            url: OPENAI_EMBEDDING_URL.into(),
+        })
     }
 
     /// Sends a request to the OpenAI API and returns the response
@@ -144,7 +149,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let content_type = HeaderValue::from_static("application/json");
         let request: reqwest::RequestBuilder = self
             .client
-            .post(OPENAI_EMBEDDING_URL)
+            .post(self.url.clone())
             .bearer_auth(self.api_key.clone())
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
@@ -165,7 +170,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let content_type = HeaderValue::from_static("application/json");
         let request: reqwest::RequestBuilder = self
             .client
-            .post(OPENAI_EMBEDDING_URL)
+            .post(self.url.clone())
             .bearer_auth(self.api_key.clone())
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
@@ -309,6 +314,35 @@ impl Display for OpenAIError {
                 write!(f, "Error Deserializing Response Body: {}", error)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod client_tests {
+    use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
+    use crate::toolchain_embeddings::openai_embeddings::OpenAIClient;
+    use crate::toolchain_indexing::types::{Chunk, Chunks};
+
+    #[tokio::test]
+    async fn test_correct_response_succeeds() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-1"), Chunk::from("Test-2")]);
+        let response = client.generate_embeddings(chunks).await;
+        println!("Response: {:?}", response);
+
+        mock.assert();
     }
 }
 
