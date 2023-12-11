@@ -2,16 +2,13 @@
 
 ## Overview
 
-`rust-rag-toolchain` is a Rust native library designed to empower developers with seamless access to retrieval augmented generation (RAG) capabilities. The library not only facilitates retrieval of information from a vector database but also enables the generation of embeddings, allowing users to persist and utilize this 
-enriched information efficiently.
+`rust-rag-toolchain` is a Rust native library designed to empower developers with seamless access to retrieval augmented generation (RAG) capabilities. The library not only facilitates retrieval of information from a vector database but also enables the generation of embeddings.
 
 ## Features
 
-- **Retrieval Augmented Generation (RAG):** Leverage RAG techniques to enhance the quality and relevance of generated content by incorporating information retrieval mechanisms.
+- **Retrieval Augmented Generation (RAG):** Allows for better prompt completions based on your own knowledge base.
 
-- **Embedding Generation:** Generate embeddings for a knowledge store, enabling efficient representation and analysis.
-
-- **Persistence:** Store generated embeddings, providing a foundation for building data-driven applications.
+- **Embedding Generation:** Generate embeddings for a knowledge store, allowing a foundation for doing RAG with your own data.
 
 ## Getting Started
 
