@@ -189,7 +189,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
         Ok(
-            OpenAIClient::handle_success_response(vec![text.clone()].into(), embedding_response)[0]
+            OpenAIClient::handle_success_response(vec![text.clone()], embedding_response)[0]
                 .clone(),
         )
     }
