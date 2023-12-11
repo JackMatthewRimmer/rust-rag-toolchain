@@ -94,7 +94,7 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<String> = chunks.to_vec::<String>();
+        let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
         assert_eq!(chunks.len(), 5);
         assert_eq!(
             chunks,
@@ -110,7 +110,7 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<String> = chunks.to_vec::<String>();
+        let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
         assert_eq!(chunks.len(), 0);
         assert_eq!(chunks, Vec::<String>::new());
     }

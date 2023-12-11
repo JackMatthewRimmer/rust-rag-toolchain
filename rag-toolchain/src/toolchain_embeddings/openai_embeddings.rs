@@ -134,8 +134,6 @@ impl OpenAIClient {
 
         let embeddings: Vec<Embedding> =
             Embedding::iter_to_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
-
-        let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()
     }
 }
@@ -148,12 +146,18 @@ impl AsyncEmbeddingClient for OpenAIClient {
         &self,
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
-        let input_text: Vec<String> = text.to_vec::<String>();
+        let input_text: Vec<String> = text
+            .iter()
+            .map(|chunk| (*chunk).chunk().to_string())
+            .collect();
+
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
+
         let content_type = HeaderValue::from_static("application/json");
+
         let request: reqwest::RequestBuilder = self
             .client
             .post(self.url.clone())
@@ -163,8 +167,9 @@ impl AsyncEmbeddingClient for OpenAIClient {
 
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
+
         Ok(OpenAIClient::handle_success_response(
-            text.clone(),
+            text,
             embedding_response,
         ))
     }
@@ -184,7 +189,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
         Ok(
-            OpenAIClient::handle_success_response(vec![text.clone()].into(), embedding_response)[0]
+            OpenAIClient::handle_success_response(vec![text.clone()], embedding_response)[0]
                 .clone(),
         )
     }
@@ -417,6 +422,8 @@ mod client_tests {
             assert_eq!(embedding, expected_embedding);
         }
         // Test single request
+        // This is not a great test as for a single request you would only get a vec of length 1
+        // But the mocked response has two
         let chunk = Chunk::from("Test-0");
         let response = client.generate_embedding(chunk).await.unwrap();
         assert_eq!(response.0, Chunk::from("Test-0"));
