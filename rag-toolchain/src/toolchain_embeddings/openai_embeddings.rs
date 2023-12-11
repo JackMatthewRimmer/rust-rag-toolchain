@@ -147,15 +147,17 @@ impl AsyncEmbeddingClient for OpenAIClient {
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
         let input_text: Vec<String> = text
-            .clone()
-            .into_iter()
-            .map(|chunk| String::from(chunk))
+            .iter()
+            .map(|chunk| (*chunk).chunk().to_string())
             .collect();
+
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
             .build();
+
         let content_type = HeaderValue::from_static("application/json");
+
         let request: reqwest::RequestBuilder = self
             .client
             .post(self.url.clone())
@@ -165,6 +167,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
 
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
+
         Ok(OpenAIClient::handle_success_response(
             text,
             embedding_response,
