@@ -3,7 +3,7 @@ use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::env::VarError;
@@ -65,7 +65,9 @@ impl OpenAIClient {
             Ok(response) => response,
             Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
         };
-        if !response.status().is_success() {
+
+        let status_code: StatusCode = response.status();
+        if !status_code.is_success() {
             return Err(OpenAIClient::handle_error_response(response).await);
         }
         let response_body: String = response
@@ -75,7 +77,10 @@ impl OpenAIClient {
 
         let embedding_response: EmbeddingResponse = match serde_json::from_str(&response_body) {
             Err(e) => {
-                return Err(OpenAIError::ErrorDeserializingResponseBody(e.to_string()));
+                return Err(OpenAIError::ErrorDeserializingResponseBody(
+                    status_code.as_u16(),
+                    e.to_string(),
+                ));
             }
             Ok(embedding_response) => embedding_response,
         };
@@ -96,10 +101,11 @@ impl OpenAIClient {
             Ok(text) => text,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
-        println!("Error Body: {}", body_text);
         let error_body: OpenAIErrorBody = match serde_json::from_str(&body_text) {
             Ok(error_body) => error_body,
-            Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
+            Err(e) => {
+                return OpenAIError::ErrorDeserializingResponseBody(status_code, e.to_string())
+            }
         };
         match status_code {
             401 => OpenAIError::CODE401(error_body),
@@ -276,7 +282,8 @@ pub enum OpenAIError {
     UNDEFINED(u16, String),
     ErrorSendingRequest(String),
     ErrorGettingResponseBody(String),
-    ErrorDeserializingResponseBody(String),
+    // # Carries underlying error and the status code
+    ErrorDeserializingResponseBody(u16, String),
 }
 
 impl std::error::Error for OpenAIError {}
@@ -310,8 +317,12 @@ impl Display for OpenAIError {
             OpenAIError::ErrorGettingResponseBody(error) => {
                 write!(f, "Error Getting Response Body: {}", error)
             }
-            OpenAIError::ErrorDeserializingResponseBody(error) => {
-                write!(f, "Error Deserializing Response Body: {}", error)
+            OpenAIError::ErrorDeserializingResponseBody(code, error) => {
+                write!(
+                    f,
+                    "Status Code: {} Error Deserializing Response Body: {}",
+                    code, error
+                )
             }
         }
     }
@@ -534,6 +545,61 @@ mod client_tests {
                     code: "invalid_api_key".to_string()
                 }
             })
+        )
+    }
+
+    #[tokio::test]
+    async fn test_undefined_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(409)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::UNDEFINED(409, ERROR_RESPONSE.to_string())
+        )
+    }
+
+    #[tokio::test]
+    async fn test_bad_body_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(401)
+            .with_header("content-type", "application/json")
+            .with_body("Sorry cant help right now")
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::ErrorDeserializingResponseBody(
+                401,
+                "expected value at line 1 column 1".to_string()
+            )
         )
     }
 }
