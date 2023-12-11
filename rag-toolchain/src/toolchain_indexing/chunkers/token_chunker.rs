@@ -1,7 +1,5 @@
-use crate::toolchain_embeddings::embedding_models::{
-    EmbeddingModelMetadata, HasMetadata, TokenizerWrapper,
-};
 use crate::toolchain_indexing::types::{Chunk, Chunks};
+use crate::util::embedding_shared::{EmbeddingModelMetadata, HasMetadata, TokenizerWrapper};
 use std::num::NonZeroUsize;
 
 /// # ChunkingError
@@ -84,7 +82,7 @@ impl TokenChunker {
 mod tests {
 
     use super::*;
-    use crate::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
+    use crate::util::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[test]
     fn test_generate_chunks_with_valid_input() {

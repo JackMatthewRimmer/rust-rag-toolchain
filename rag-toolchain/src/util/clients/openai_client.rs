@@ -1,5 +1,5 @@
-use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
 use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+use crate::util::embedding_shared::AsyncEmbeddingClient;
 use async_trait::async_trait;
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
@@ -341,11 +341,11 @@ impl Display for OpenAIError {
 
 #[cfg(test)]
 mod client_tests {
-    use crate::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
-    use crate::toolchain_embeddings::openai_embeddings::{
-        OpenAIClient, OpenAIError, OpenAIErrorBody,
-    };
     use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+    use crate::util::clients::openai_client::{
+        OpenAIClient, OpenAIError, OpenAIErrorBody, OpenAIErrorData,
+    };
+    use crate::util::embedding_shared::AsyncEmbeddingClient;
 
     const EMBEDDING_RESPONSE: &'static str = r#"
     {
@@ -444,7 +444,7 @@ mod client_tests {
             .with_body(ERROR_RESPONSE)
             .create();
         let expected_response = OpenAIError::CODE400(OpenAIErrorBody {
-            error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+            error: OpenAIErrorData {
                 message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
                 error_type: "invalid_request_error".to_string(),
                 param: None,
@@ -476,7 +476,7 @@ mod client_tests {
             .with_body(ERROR_RESPONSE)
             .create();
         let expected_response = OpenAIError::CODE401(OpenAIErrorBody {
-            error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+            error: OpenAIErrorData {
                 message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
                 error_type: "invalid_request_error".to_string(),
                 param: None,
@@ -508,7 +508,7 @@ mod client_tests {
             .with_body(ERROR_RESPONSE)
             .create();
         let expected_response = OpenAIError::CODE429(OpenAIErrorBody {
-            error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+            error: OpenAIErrorData {
                 message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
                 error_type: "invalid_request_error".to_string(),
                 param: None,
@@ -540,7 +540,7 @@ mod client_tests {
             .with_body(ERROR_RESPONSE)
             .create();
         let expected_response = OpenAIError::CODE500(OpenAIErrorBody {
-            error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+            error: OpenAIErrorData {
                 message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
                 error_type: "invalid_request_error".to_string(),
                 param: None,
@@ -572,7 +572,7 @@ mod client_tests {
             .with_body(ERROR_RESPONSE)
             .create();
         let expected_response = OpenAIError::CODE503(OpenAIErrorBody {
-            error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+            error: OpenAIErrorData {
                 message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
                 error_type: "invalid_request_error".to_string(),
                 param: None,

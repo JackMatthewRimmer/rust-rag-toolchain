@@ -1,11 +1,11 @@
-use rag_toolchain::toolchain_embeddings::embedding_models::AsyncEmbeddingClient;
-use rag_toolchain::toolchain_embeddings::{
-    embedding_models::OpenAIEmbeddingModel, openai_embeddings::OpenAIClient,
-};
-use rag_toolchain::toolchain_indexing::chunking::TokenChunker;
-use rag_toolchain::toolchain_indexing::stores::pg_vector::PgVectorDB;
-use rag_toolchain::toolchain_indexing::traits::EmbeddingStore;
+use rag_toolchain::toolchain_indexing::chunkers::token_chunker::TokenChunker;
 use rag_toolchain::toolchain_indexing::types::{Chunk, Chunks, Embedding};
+use rag_toolchain::util::stores::pg_vector::PgVectorDB;
+use rag_toolchain::util::stores::traits::EmbeddingStore;
+use rag_toolchain::util::{
+    clients::openai_client::OpenAIClient, embedding_shared::AsyncEmbeddingClient,
+    embedding_shared::OpenAIEmbeddingModel,
+};
 
 #[tokio::main]
 async fn main() {

@@ -1,14 +1,6 @@
 use crate::toolchain_indexing::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
-use std::io::Error as StdError;
-
-/// # Source
-/// Trait for struct that allows reading the raw text for an external source
-pub trait LoadSource {
-    /// Called an returns a vector of raw text to generate embeddings for
-    fn load(&self) -> Result<Vec<String>, StdError>;
-}
 
 /// # Destination
 /// Trait for struct that allows embeddings to be wrote to an external destination

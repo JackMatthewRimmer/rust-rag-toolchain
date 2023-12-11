@@ -1,6 +1,6 @@
-use crate::toolchain_embeddings::embedding_models::HasMetadata;
-use crate::toolchain_indexing::traits::EmbeddingStore;
 use crate::toolchain_indexing::types::{Chunk, Embedding};
+use crate::util::embedding_shared::HasMetadata;
+use crate::util::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
@@ -256,7 +256,7 @@ impl Display for PgVectorError {
 #[cfg(all(test, feature = "pg_vector"))]
 mod tests {
     use super::*;
-    use crate::toolchain_embeddings::embedding_models::OpenAIEmbeddingModel::TextEmbeddingAda002;
+    use crate::util::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[tokio::test]
     async fn test_throws_env_var_error_user() {
