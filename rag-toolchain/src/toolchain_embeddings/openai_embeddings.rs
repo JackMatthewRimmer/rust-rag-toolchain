@@ -134,8 +134,6 @@ impl OpenAIClient {
 
         let embeddings: Vec<Embedding> =
             Embedding::iter_to_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
-
-        let input_text: Vec<Chunk> = input_text.to_vec::<Chunk>();
         input_text.into_iter().zip(embeddings).collect()
     }
 }
@@ -148,7 +146,11 @@ impl AsyncEmbeddingClient for OpenAIClient {
         &self,
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
-        let input_text: Vec<String> = text.to_vec::<String>();
+        let input_text: Vec<String> = text
+            .clone()
+            .into_iter()
+            .map(|chunk| String::from(chunk))
+            .collect();
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
@@ -164,7 +166,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
         Ok(OpenAIClient::handle_success_response(
-            text.clone(),
+            text,
             embedding_response,
         ))
     }
