@@ -108,6 +108,7 @@ impl OpenAIClient {
             }
         };
         match status_code {
+            400 => OpenAIError::CODE400(error_body),
             401 => OpenAIError::CODE401(error_body),
             429 => OpenAIError::CODE429(error_body),
             500 => OpenAIError::CODE500(error_body),
@@ -271,6 +272,8 @@ pub struct OpenAIErrorData {
 #[derive(Debug, PartialEq)]
 pub enum OpenAIError {
     /// # Invalid Authentication or Incorrect API Key provided
+    CODE400(OpenAIErrorBody),
+    /// # Invalid Authentication or Incorrect API Key provided
     CODE401(OpenAIErrorBody),
     /// # Rate limit reached or Monthly quota exceeded
     CODE429(OpenAIErrorBody),
@@ -290,6 +293,9 @@ impl std::error::Error for OpenAIError {}
 impl Display for OpenAIError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            OpenAIError::CODE400(error_body) => {
+                write!(f, "Bad Request: {}", error_body.error.message)
+            }
             OpenAIError::CODE401(error_body) => write!(
                 f,
                 "Invalid Authentication or Incorrect API Key provided: {}",
@@ -414,6 +420,54 @@ mod client_tests {
                 ])
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_400_gives_correct_error() {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let mut server = mockito::Server::new();
+        let url = server.url();
+
+        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        client.url = url.clone();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(400)
+            .with_header("content-type", "application/json")
+            .with_body(ERROR_RESPONSE)
+            .create();
+
+        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let response = client.generate_embeddings(chunks).await.unwrap_err();
+        mock.assert();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE400(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        );
+
+        let chunk = Chunk::from("Test-0");
+        let response = client.generate_embedding(chunk).await.unwrap_err();
+
+        assert_eq!(
+            response,
+            OpenAIError::CODE400(OpenAIErrorBody {
+                error: crate::toolchain_embeddings::openai_embeddings::OpenAIErrorData {
+                    message: "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.".to_string(),
+                    error_type: "invalid_request_error".to_string(),
+                    param: None,
+                    code: "invalid_api_key".to_string()
+                }
+            })
+        );
     }
 
     #[tokio::test]
