@@ -422,6 +422,8 @@ mod client_tests {
             assert_eq!(embedding, expected_embedding);
         }
         // Test single request
+        // This is not a great test as for a single request you would only get a vec of length 1
+        // But the mocked response has two
         let chunk = Chunk::from("Test-0");
         let response = client.generate_embedding(chunk).await.unwrap();
         assert_eq!(response.0, Chunk::from("Test-0"));
