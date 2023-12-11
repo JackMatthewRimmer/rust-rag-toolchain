@@ -394,17 +394,15 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-
         let mut client: OpenAIClient = OpenAIClient::new().unwrap();
         client.url = url.clone();
-
         let mock = server
             .mock("POST", "/")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(EMBEDDING_RESPONSE)
             .create();
-
+        // Test batch request
         let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
         let response = client.generate_embeddings(chunks).await.unwrap();
         mock.assert();
@@ -420,6 +418,19 @@ mod client_tests {
                 ])
             );
         }
+        // Test single request
+        let chunk = Chunk::from("Test-0");
+        let response = client.generate_embedding(chunk).await.unwrap();
+        assert_eq!(response.0, Chunk::from("Test-0"));
+        assert_eq!(
+            response.1,
+            Embedding::from(vec![
+                -0.006929283495992422,
+                -0.005336422007530928,
+                -0.009327292,
+                -0.024047505110502243
+            ])
+        );
     }
 
     #[tokio::test]
@@ -427,21 +438,18 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-
         let mut client: OpenAIClient = OpenAIClient::new().unwrap();
         client.url = url.clone();
-
         let mock = server
             .mock("POST", "/")
             .with_status(400)
             .with_header("content-type", "application/json")
             .with_body(ERROR_RESPONSE)
             .create();
-
+        // Test batch request
         let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
         let response = client.generate_embeddings(chunks).await.unwrap_err();
         mock.assert();
-
         assert_eq!(
             response,
             OpenAIError::CODE400(OpenAIErrorBody {
@@ -453,10 +461,9 @@ mod client_tests {
                 }
             })
         );
-
+        // Test single request
         let chunk = Chunk::from("Test-0");
         let response = client.generate_embedding(chunk).await.unwrap_err();
-
         assert_eq!(
             response,
             OpenAIError::CODE400(OpenAIErrorBody {
