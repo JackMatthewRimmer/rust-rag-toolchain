@@ -1,5 +1,5 @@
-use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
-use crate::util::embedding_shared::AsyncEmbeddingClient;
+use crate::clients::traits::AsyncEmbeddingClient;
+use crate::common::types::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
@@ -341,11 +341,11 @@ impl Display for OpenAIError {
 
 #[cfg(test)]
 mod client_tests {
-    use crate::toolchain_indexing::types::{Chunk, Chunks, Embedding};
-    use crate::util::clients::openai_client::{
+    use crate::clients::openai_client::{
         OpenAIClient, OpenAIError, OpenAIErrorBody, OpenAIErrorData,
     };
-    use crate::util::embedding_shared::AsyncEmbeddingClient;
+    use crate::clients::traits::AsyncEmbeddingClient;
+    use crate::common::types::{Chunk, Chunks, Embedding};
 
     const EMBEDDING_RESPONSE: &'static str = r#"
     {

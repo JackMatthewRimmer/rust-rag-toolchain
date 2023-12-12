@@ -1,4 +1,4 @@
-use crate::toolchain_indexing::types::{Chunk, Embedding};
+use crate::common::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
 

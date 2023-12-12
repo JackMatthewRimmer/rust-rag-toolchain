@@ -2,8 +2,8 @@ use std::fs;
 use std::num::NonZeroUsize;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rag_toolchain::toolchain_indexing::chunkers::token_chunker::TokenChunker;
-use rag_toolchain::util::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
+use rag_toolchain::chunkers::token_chunker::TokenChunker;
+use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
 /*
 Benchmarking of 30,000 words
 */

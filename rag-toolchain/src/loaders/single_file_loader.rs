@@ -1,4 +1,4 @@
-use crate::toolchain_indexing::loaders::traits::LoadSource;
+use crate::loaders::traits::LoadSource;
 use std::fs::read_to_string;
 
 /// # SingleFileSource
