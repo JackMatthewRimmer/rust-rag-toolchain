@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
 
@@ -30,7 +31,10 @@ pub trait TokenizerWrapper {
 // ------------------ OpenAI Embedding Models ------------------
 /// # OpenAIEmbeddingModel
 /// Top level enum to hold all OpenAI embedding model variants
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
 pub enum OpenAIEmbeddingModel {
+    #[serde(rename = "text-embedding-ada-002")]
     TextEmbeddingAda002,
 }
 
