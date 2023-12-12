@@ -1,6 +1,3 @@
-use crate::common::types::{Chunk, Chunks, Embedding};
-use async_trait::async_trait;
-use std::error::Error;
 use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
 

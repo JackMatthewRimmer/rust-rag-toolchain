@@ -259,49 +259,30 @@ mod tests {
     use crate::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[tokio::test]
-    async fn test_throws_env_var_error_user() {
+    async fn test_throws_correct_errors() {
         let result = PgVectorDB::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
-    }
 
-    #[tokio::test]
-    async fn test_throws_env_var_error_password() {
         std::env::set_var("POSTGRES_USER", "postgres");
         let result = PgVectorDB::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
-    }
 
-    #[tokio::test]
-    async fn test_throws_env_var_error_host() {
-        std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         let result = PgVectorDB::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
-    }
 
-    #[tokio::test]
-    async fn test_throws_env_var_error_database() {
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         let result = PgVectorDB::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
-    }
 
-    #[tokio::test]
-    async fn test_throws_error_when_cant_connect() {
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "postgres");
         let result = PgVectorDB::new("test", TextEmbeddingAda002)
             .await
