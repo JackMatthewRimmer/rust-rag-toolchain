@@ -28,8 +28,18 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
+    /// # new
     /// Create a new OpenAIClient.
     /// Must have the OPENAI_API_KEY environment variable set
+    ///
+    /// # Arguments
+    /// * `embedding_model` - The embedding model to use for the client
+    ///
+    /// # Errors
+    /// * `VarError` - If the OPENAI_API_KEY environment variable is not set
+    ///
+    /// # Returns
+    /// * `OpenAIClient` - The OpenAIClient
     pub fn new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
@@ -46,6 +56,7 @@ impl OpenAIClient {
         })
     }
 
+    /// # send_embedding_request
     /// Sends a request to the OpenAI API and returns the response
     ///
     /// # Arguments
@@ -90,6 +101,7 @@ impl OpenAIClient {
         Ok(embedding_response)
     }
 
+    /// # handle_error_response
     /// Explicit error mapping between response codes and error types
     ///
     /// # Arguments
@@ -120,7 +132,9 @@ impl OpenAIClient {
         }
     }
 
+    /// # handle_success_response
     /// Takes a successful response and maps it into a vector of string embedding pairs
+    /// assumption made the two iters will zip up 1:1 (as this should be the case)
     ///
     /// # Arguments
     /// `input_text` - The input text that was sent to OpenAI
@@ -145,6 +159,19 @@ impl OpenAIClient {
 impl AsyncEmbeddingClient for OpenAIClient {
     type ErrorType = OpenAIError;
 
+    /// # generate_embeddings
+    /// Function to generate an embedding for [`Chunks`]
+    /// get an embedding for multiple strings
+    ///
+    /// # Arguments
+    /// * `text` - The text chunks to generate an embedding for
+    ///
+    /// # Errors
+    /// * `OpenAIError` - If the request to OpenAI fails
+    ///  
+    /// # Returns
+    /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
+    /// a vec of chunk and the relevant embedding for that chunk
     async fn generate_embeddings(
         &self,
         text: Chunks,
@@ -177,6 +204,19 @@ impl AsyncEmbeddingClient for OpenAIClient {
         ))
     }
 
+    /// # generate_embedding
+    /// Function to generate an embedding for [`Chunk`]
+    /// get an embedding for a single string
+    ///
+    /// # Arguments
+    /// * `text` - The text chunk to generate an embedding for
+    ///
+    /// # Errors
+    /// * `OpenAIError` - If the request to OpenAI fails
+    ///  
+    /// # Returns
+    /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
+    /// a chunk and the relevant embedding for that chunk
     async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
             .input(text.clone().into())
@@ -198,6 +238,8 @@ impl AsyncEmbeddingClient for OpenAIClient {
     }
 }
 
+// --------------------------------------------------------------------------------
+/// See https://platform.openai.com/docs/api-reference/embeddings/create
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
 pub struct BatchEmbeddingRequest {
@@ -254,7 +296,11 @@ pub enum EncodingFormat {
     Float,
     Base64,
 }
+// --------------------------------------------------------------------------------
 
+// --------------------------------------------------------------------------------
+// This is what is returned from OpenAI
+// when an error occurs
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct OpenAIErrorBody {
     pub error: OpenAIErrorData,
@@ -268,6 +314,7 @@ pub struct OpenAIErrorData {
     pub param: Option<String>,
     pub code: String,
 }
+// --------------------------------------------------------------------------------
 
 #[derive(Debug, PartialEq)]
 pub enum OpenAIError {
@@ -284,6 +331,7 @@ pub enum OpenAIError {
     /// # Missed cases for error codes, includes Status Code and Error Body as a string
     UNDEFINED(u16, String),
     ErrorSendingRequest(String),
+    /// # Carries underlying error
     ErrorGettingResponseBody(String),
     // # Carries underlying error and the status code
     ErrorDeserializingResponseBody(u16, String),
