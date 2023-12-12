@@ -14,8 +14,8 @@ use typed_builder::TypedBuilder;
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 
 /// # OpenAIEmbeddingClient
-/// Allows for interacting with the OpenAI API to generate embeddings
-/// Can either embed a single string or a batch of strings
+/// Allows for interacting with the OpenAI API to generate embeddings.
+/// You can either embed a single string or a batch of strings.
 ///
 /// # Required Environment Variables
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
@@ -33,13 +33,14 @@ impl OpenAIClient {
     /// Must have the OPENAI_API_KEY environment variable set
     ///
     /// # Arguments
-    /// * `embedding_model` - The embedding model to use for the client
+    /// * `embedding_model` - The type of embedding model you wish to use.
+    /// See <https://platform.openai.com/docs/guides/embeddings/what-are-embeddings>
     ///
     /// # Errors
-    /// * `VarError` - If the OPENAI_API_KEY environment variable is not set
+    /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set
     ///
     /// # Returns
-    /// * `OpenAIClient` - The OpenAIClient
+    /// * [`OpenAIClient`] - The OpenAIClient
     pub fn new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
@@ -56,22 +57,22 @@ impl OpenAIClient {
         })
     }
 
-    /// # send_embedding_request
-    /// Sends a request to the OpenAI API and returns the response
-    ///
-    /// # Arguments
-    /// * `request` - The request to send to the OpenAI API
-    /// this request should come prebuilt ready to call .send() on
-    ///
-    /// # Errors
-    /// * `OpenAIError::ErrorSendingRequest` - if request.send() errors
-    /// * `OpenAIError::ErrorGettingResponseBody` - if response.text() errors
-    /// * `OpenAIError::ErrorDeserializingResponseBody` - if serde_json::from_str() errors
-    /// * `OpenAIError` - if the response code is not 200 this can be any of the associates status
-    ///    code errors or variatn of `OpenAIError::UNDEFINED`
-    ///
-    /// # Returns
-    /// * `EmbeddingResponse` - The deserialized response from OpenAI
+    // # send_embedding_request
+    // Sends a request to the OpenAI API and returns the response
+    //
+    // # Arguments
+    // * `request` - The request to send to the OpenAI API
+    // this request should come prebuilt ready to call .send() on
+    //
+    // # Errors
+    // * [`OpenAIError::ErrorSendingRequest`] - if request.send() errors
+    // * [`OpenAIError::ErrorGettingResponseBody`] - if response.text() errors
+    // * [`OpenAIError::ErrorDeserializingResponseBody`] - if serde_json::from_str() errors
+    // * [`OpenAIError`] - if the response code is not 200 this can be any of the associates status
+    //    code errors or variatn of `OpenAIError::UNDEFINED`
+    //
+    // # Returns
+    // * `EmbeddingResponse` - The deserialized response from OpenAI
     async fn send_embedding_request(
         request: reqwest::RequestBuilder,
     ) -> Result<EmbeddingResponse, OpenAIError> {
@@ -101,14 +102,14 @@ impl OpenAIClient {
         Ok(embedding_response)
     }
 
-    /// # handle_error_response
-    /// Explicit error mapping between response codes and error types
-    ///
-    /// # Arguments
-    /// `response` - The reqwest response from OpenAI
-    ///
-    /// # Returns
-    /// `OpenAIError` - The error type that maps to the response code
+    // # handle_error_response
+    // Explicit error mapping between response codes and error types
+    //
+    // # Arguments
+    // `response` - The reqwest response from OpenAI
+    //
+    // # Returns
+    // `OpenAIError` - The error type that maps to the response code
     async fn handle_error_response(response: reqwest::Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
@@ -132,16 +133,16 @@ impl OpenAIClient {
         }
     }
 
-    /// # handle_success_response
-    /// Takes a successful response and maps it into a vector of string embedding pairs
-    /// assumption made the two iters will zip up 1:1 (as this should be the case)
-    ///
-    /// # Arguments
-    /// `input_text` - The input text that was sent to OpenAI
-    /// `response` - The deserialized response from OpenAI
-    ///
-    /// # Returns
-    /// `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
+    // # handle_success_response
+    // Takes a successful response and maps it into a vector of string embedding pairs
+    // assumption made the two iters will zip up 1:1 (as this should be the case)
+    //
+    // # Arguments
+    // `input_text` - The input text that was sent to OpenAI
+    // `response` - The deserialized response from OpenAI
+    //
+    // # Returns
+    // `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
     fn handle_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
@@ -160,18 +161,18 @@ impl AsyncEmbeddingClient for OpenAIClient {
     type ErrorType = OpenAIError;
 
     /// # generate_embeddings
-    /// Function to generate an embedding for [`Chunks`]
-    /// get an embedding for multiple strings
+    /// Function to generate embeddings for [`Chunks`].
+    /// Allows you to get an embedding for multiple strings.
     ///
     /// # Arguments
-    /// * `text` - The text chunks to generate an embedding for
+    /// * `text` - The text chunks/strings to generate an embeddings for.
     ///
     /// # Errors
-    /// * `OpenAIError` - If the request to OpenAI fails
+    /// * [`OpenAIError`] - If the request to OpenAI fails.
     ///  
     /// # Returns
-    /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
-    /// a vec of chunk and the relevant embedding for that chunk
+    /// * `Result<Vec<(Chunk, Embedding)>, OpenAIError>` - A result containing
+    /// pairs of the original text and the embedding that was generated.
     async fn generate_embeddings(
         &self,
         text: Chunks,
@@ -205,18 +206,18 @@ impl AsyncEmbeddingClient for OpenAIClient {
     }
 
     /// # generate_embedding
-    /// Function to generate an embedding for [`Chunk`]
-    /// get an embedding for a single string
+    /// Function to generate an embedding for a [`Chunk`].
+    /// Allows you to get an embedding for a single string.
     ///
     /// # Arguments
-    /// * `text` - The text chunk to generate an embedding for
+    /// * `text` - The text chunk/string to generate an embedding for.
     ///
     /// # Errors
-    /// * `OpenAIError` - If the request to OpenAI fails
+    /// * [`OpenAIError`] - If the request to OpenAI fails.
     ///  
     /// # Returns
     /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
-    /// a chunk and the relevant embedding for that chunk
+    /// a pair of the original text and the embedding that was generated.
     async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
             .input(text.clone().into())
