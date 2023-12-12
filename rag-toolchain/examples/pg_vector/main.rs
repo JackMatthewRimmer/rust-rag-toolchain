@@ -33,7 +33,8 @@ async fn main() {
             .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
-    let client: OpenAIClient = OpenAIClient::new().unwrap();
+    let client: OpenAIClient =
+        OpenAIClient::new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
     println!("Embeddings: {:?}", embeddings);
 
