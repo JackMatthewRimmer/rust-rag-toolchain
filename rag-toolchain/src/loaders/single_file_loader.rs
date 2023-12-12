@@ -1,4 +1,4 @@
-use crate::toolchain_indexing::traits::LoadSource;
+use crate::loaders::traits::LoadSource;
 use std::fs::read_to_string;
 
 /// # SingleFileSource
@@ -15,7 +15,8 @@ impl SingleFileSource {
 }
 
 impl LoadSource for SingleFileSource {
-    fn load(&self) -> Result<Vec<String>, std::io::Error> {
+    type ErrorType = std::io::Error;
+    fn load(&self) -> Result<Vec<String>, Self::ErrorType> {
         let file_contents: String = read_to_string(&self.path)?;
         Ok(vec![file_contents])
     }
