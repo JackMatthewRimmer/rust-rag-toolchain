@@ -1,4 +1,5 @@
 use crate::clients::traits::AsyncEmbeddingClient;
+use crate::common::embedding_shared::OpenAIEmbeddingModel;
 use crate::common::types::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
 use dotenv::dotenv;
@@ -22,13 +23,14 @@ const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 pub struct OpenAIClient {
     api_key: String,
     client: Client,
+    embedding_model: OpenAIEmbeddingModel,
     url: String, // This was done to support mocking
 }
 
 impl OpenAIClient {
     /// Create a new OpenAIClient.
     /// Must have the OPENAI_API_KEY environment variable set
-    pub fn new() -> Result<OpenAIClient, VarError> {
+    pub fn new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
             Ok(api_key) => api_key,
@@ -39,6 +41,7 @@ impl OpenAIClient {
         Ok(OpenAIClient {
             api_key,
             client,
+            embedding_model,
             url,
         })
     }
@@ -153,7 +156,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
 
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
-            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .model(self.embedding_model)
             .build();
 
         let content_type = HeaderValue::from_static("application/json");
@@ -177,7 +180,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
     async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
             .input(text.clone().into())
-            .model(OpenAIEmbeddingModel::TextEmbeddingAda002)
+            .model(self.embedding_model)
             .build();
         let content_type = HeaderValue::from_static("application/json");
         let request: reqwest::RequestBuilder = self
@@ -243,14 +246,6 @@ pub struct EmbeddingObject {
 pub struct Usage {
     pub prompt_tokens: usize,
     pub total_tokens: usize,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum OpenAIEmbeddingModel {
-    // For some reason this comes back as text-embedding-ada-002-v2
-    #[serde(rename = "text-embedding-ada-002")]
-    TextEmbeddingAda002,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -345,6 +340,7 @@ mod client_tests {
         OpenAIClient, OpenAIError, OpenAIErrorBody, OpenAIErrorData,
     };
     use crate::clients::traits::AsyncEmbeddingClient;
+    use crate::common::embedding_shared::OpenAIEmbeddingModel;
     use crate::common::types::{Chunk, Chunks, Embedding};
 
     const EMBEDDING_RESPONSE: &'static str = r#"
@@ -399,7 +395,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -435,7 +432,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -467,7 +465,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -499,7 +498,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -531,7 +531,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -563,7 +564,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -595,7 +597,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -620,7 +623,8 @@ mod client_tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let mut server = mockito::Server::new();
         let url = server.url();
-        let mut client: OpenAIClient = OpenAIClient::new().unwrap();
+        let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
+        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
