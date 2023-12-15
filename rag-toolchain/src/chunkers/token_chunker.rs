@@ -1,4 +1,4 @@
-use crate::common::embedding_shared::{EmbeddingModelMetadata, HasMetadata, TokenizerWrapper};
+use crate::common::embedding_shared::{EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
 use crate::common::types::{Chunk, Chunks};
 use std::num::NonZeroUsize;
 
@@ -30,7 +30,7 @@ impl TokenChunker {
     pub fn new(
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
-        embedding_model: impl HasMetadata,
+        embedding_model: impl EmbeddingModel,
     ) -> Result<Self, ChunkingError> {
         let metadata: EmbeddingModelMetadata = embedding_model.metadata();
         Self::validate_arguments(chunk_size.into(), chunk_overlap, metadata.max_tokens)?;

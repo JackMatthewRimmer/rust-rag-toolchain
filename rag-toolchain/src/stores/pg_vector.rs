@@ -1,4 +1,4 @@
-use crate::common::embedding_shared::HasMetadata;
+use crate::common::embedding_shared::EmbeddingModel;
 use crate::common::types::{Chunk, Embedding};
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
@@ -10,11 +10,10 @@ use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
 
-/// # PgVector
+/// # PostgresVectorStore
 ///
-/// This struct is used to store and retriever information needed to connect to a Postgres database
+/// This struct is used to store and as a retriever information needed to connect to a Postgres database
 /// and should be passed to an embedding task as a destination for the data to be stored.
-/// Using the will require an async runtime as sqlx is used to connect to the database.
 ///
 /// If a table already exists with the same name, the table will be dropped and recreated.
 ///
@@ -29,14 +28,14 @@ use dotenv::dotenv;
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
 #[derive(Debug)]
-pub struct PgVectorDB {
+pub struct PostgresVectorStore {
     /// We make the pool public incase users want to
     /// do extra operations on the database
     pub pool: Pool<Postgres>,
     table_name: String,
 }
 
-impl PgVectorDB {
+impl PostgresVectorStore {
     /// # new
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
@@ -50,7 +49,7 @@ impl PgVectorDB {
     /// the constructed [`PgVector`] struct
     pub async fn new(
         table_name: &str,
-        embedding_model: impl HasMetadata,
+        embedding_model: impl EmbeddingModel,
     ) -> Result<Self, PgVectorError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
@@ -64,16 +63,16 @@ impl PgVectorDB {
             format!("postgres://{}:{}@{}/{}", username, password, host, db_name);
 
         // Connect to the database
-        let pool = PgVectorDB::connect(&connection_string)
+        let pool = PostgresVectorStore::connect(&connection_string)
             .await
             .map_err(PgVectorError::ConnectionError)?;
 
         // Create the table
-        PgVectorDB::create_table(pool.clone(), table_name, embedding_diminsions)
+        PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
             .await
             .map_err(PgVectorError::TableCreationError)?;
 
-        Ok(PgVectorDB {
+        Ok(PostgresVectorStore {
             pool,
             table_name: table_name.into(),
         })
@@ -133,7 +132,7 @@ impl PgVectorDB {
 }
 
 #[async_trait]
-impl EmbeddingStore for PgVectorDB {
+impl EmbeddingStore for PostgresVectorStore {
     type ErrorType = PgVectorError;
     /// # store
     ///
@@ -260,31 +259,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_throws_correct_errors() {
-        let result = PgVectorDB::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_USER", "postgres");
-        let result = PgVectorDB::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        let result = PgVectorDB::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_HOST", "localhost");
-        let result = PgVectorDB::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_DATABASE", "postgres");
-        let result = PgVectorDB::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::ConnectionError(_)));

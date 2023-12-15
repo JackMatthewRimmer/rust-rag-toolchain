@@ -2,9 +2,8 @@ use std::sync::Arc;
 
 // ----------------- Embedding -----------------
 /// # Embedding
-/// Custom type that wraps a pointer to an embedding
-/// immutable and thread safe
-/// this will be returned by an Embedding Generator
+/// Custom type that wraps a pointer to an embedding/vector.
+/// It is immutable and thread safe
 #[derive(Debug, Clone, PartialEq)]
 pub struct Embedding {
     embedding: Arc<[f32]>,
@@ -94,9 +93,8 @@ impl From<Embedding> for Vec<f32> {
 // ----------------- Chunk ------------------
 #[derive(Debug, Clone, PartialEq)]
 /// # Chunk
-/// Custom type that wraps a pointer to a text chunk
-/// this will be returned by a form of Chunker struct
-/// immutable and thread safe
+/// Custom type that wraps a pointer to a piece of text.
+/// It is immutable and thread safe
 pub struct Chunk {
     chunk: Arc<str>,
 }
@@ -141,5 +139,6 @@ impl From<Chunk> for String {
 // ------------------------------------------
 
 // ----------------- Chunks -----------------
+/// Type alias for a vector of [`Chunk`]
 pub type Chunks = Vec<Chunk>;
 // -----------------------------------------

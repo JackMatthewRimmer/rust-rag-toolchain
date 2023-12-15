@@ -3,7 +3,7 @@ mod pg_vector {
     use pgvector::Vector;
     use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
     use rag_toolchain::common::types::{Chunk, Embedding};
-    use rag_toolchain::stores::pg_vector::PgVectorDB;
+    use rag_toolchain::stores::pg_vector::PostgresVectorStore;
     use rag_toolchain::stores::traits::EmbeddingStore;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};
@@ -15,7 +15,7 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PgVectorDB::new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let _result = pg_vector
@@ -39,7 +39,7 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PgVectorDB::new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = vec![

@@ -3,19 +3,22 @@ use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
 
 // ---------------------- Embedding Models ----------------------
-/// # HasMetadata
+/// # EmbeddingModel
 /// This trait is used for methods to understand the requirements
 /// set out by which embedding model is being used such as embedding
 /// dimensions and max tokens
-pub trait HasMetadata {
+pub trait EmbeddingModel {
     fn metadata(&self) -> EmbeddingModelMetadata;
 }
 
 /// # EmbeddingModelMetadata
 /// Struct to contain all of the relevant metadata for an embedding model
 pub struct EmbeddingModelMetadata {
+    // The dimension of the vectors produced by the embedding model
     pub dimensions: usize,
+    // The maximum amount of tokens that can be sent to the embedding model
     pub max_tokens: usize,
+    // The tokenizer that the embedding model uses
     pub tokenizer: Box<dyn TokenizerWrapper>,
 }
 
@@ -39,7 +42,7 @@ pub enum OpenAIEmbeddingModel {
 }
 
 // Match the embedding model to the metadata
-impl HasMetadata for OpenAIEmbeddingModel {
+impl EmbeddingModel for OpenAIEmbeddingModel {
     fn metadata(&self) -> EmbeddingModelMetadata {
         match self {
             OpenAIEmbeddingModel::TextEmbeddingAda002 => EmbeddingModelMetadata {

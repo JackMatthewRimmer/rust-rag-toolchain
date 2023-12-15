@@ -5,6 +5,7 @@ use std::fs::read_to_string;
 /// Reads a single file and returns the contents as a vector with one file
 /// which is the file contents
 pub struct SingleFileSource {
+    /// File path
     path: String,
 }
 
