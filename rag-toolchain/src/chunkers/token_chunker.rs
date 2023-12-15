@@ -2,22 +2,31 @@ use crate::common::embedding_shared::{EmbeddingModelMetadata, HasMetadata, Token
 use crate::common::types::{Chunk, Chunks};
 use std::num::NonZeroUsize;
 
-/// # ChunkingError
-/// Custom error type representing errors that can occur during chunking
-#[derive(Debug, PartialEq, Eq)]
-pub enum ChunkingError {
-    WindowSizeTooLarge(String),
-    TokenizationError(String),
-    InvalidChunkSize(String),
-}
-
+/// # TokenChunker
+/// Allows you to chunk text using token based chunking
 pub struct TokenChunker {
+    /// chunk_size: The size in tokens of each chunk
     chunk_size: NonZeroUsize,
+    /// chunk_overlap: The number of tokens that overlap between each chunk
     chunk_overlap: usize,
+    /// tokenizer: The type of tokenizer
     tokenizer: Box<dyn TokenizerWrapper>,
 }
 
 impl TokenChunker {
+    /// # new
+    ///
+    /// # Arguments
+    /// * `chunk_size` - The size in tokens of each chunk
+    /// * `chunk_overlap` - The number of tokens that overlap between each chunk
+    /// * `embedding_model` - The embedding model to use
+    ///
+    /// # Errors
+    /// * [`ChunkingError::InvalidChunkSize`] - Chunk size must be smaller than the maximum number of tokens
+    /// * [`ChunkingError::ChunkOverlapTooLarge`] - Chunk overlap must be smaller than chunk size
+    ///
+    /// # Returns
+    /// * `Result<TokenChunker, ChunkingError>` - The token chunker
     pub fn new(
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
@@ -48,7 +57,7 @@ impl TokenChunker {
         }
 
         if chunk_overlap >= chunk_size {
-            Err(ChunkingError::WindowSizeTooLarge(
+            Err(ChunkingError::ChunkOverlapTooLarge(
                 "Window size must be smaller than chunk size".to_string(),
             ))?
         }
@@ -76,6 +85,15 @@ impl TokenChunker {
 
         Ok(Chunks::from(chunks))
     }
+}
+
+/// # ChunkingError
+/// Custom error type representing errors that can occur during chunking
+#[derive(Debug, PartialEq, Eq)]
+pub enum ChunkingError {
+    ChunkOverlapTooLarge(String),
+    TokenizationError(String),
+    InvalidChunkSize(String),
 }
 
 #[cfg(test)]
@@ -125,7 +143,7 @@ mod tests {
 
         assert_eq!(
             chunker,
-            ChunkingError::WindowSizeTooLarge(
+            ChunkingError::ChunkOverlapTooLarge(
                 "Window size must be smaller than chunk size".to_string()
             )
         );
