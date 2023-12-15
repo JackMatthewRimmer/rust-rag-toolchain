@@ -42,8 +42,20 @@ impl TokenChunker {
         Ok(chunker)
     }
 
-    /// # validate_arguments
-    /// Responsible for checking if the given arguments are valid
+    // # validate_arguments
+    // function to validate arguments when [`TokenChunker::new`] is called
+    //
+    // # Arguments
+    // * `chunk_size` - The size in tokens of each chunk
+    // * `chunk_overlap` - The number of tokens that overlap between each chunk
+    // * `max_chunk_size` - The maximum number of tokens allowed which is defined
+    //                      by the embedding model passed to the [`TokenChunker::new`] function
+    // # Errors
+    // * [`ChunkingError::InvalidChunkSize`] - Chunk size must be smaller than the maximum number of tokens
+    // * [`ChunkingError::ChunkOverlapTooLarge`] - Chunk overlap must be smaller than chunk size
+    //
+    // # Returns
+    // `Result<(), ChunkingError>` - Result indicating whether the arguments are valid
     fn validate_arguments(
         chunk_size: usize,
         chunk_overlap: usize,
@@ -66,6 +78,15 @@ impl TokenChunker {
 
     /// # generate_chunks
     /// function to generate chunks from raw text
+    ///
+    /// # Arguments
+    /// * `raw_text` - The raw text to generate chunks from
+    ///
+    /// # Errors
+    /// * [`ChunkingError::TokenizationError`] - Unable to tokenize text
+    ///
+    /// # Returns
+    /// `Result<Chunks, ChunkingError>` - The generated chunks
     pub fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, ChunkingError> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {

@@ -240,7 +240,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
 }
 
 // --------------------------------------------------------------------------------
-/// See https://platform.openai.com/docs/api-reference/embeddings/create
+/// See <https://platform.openai.com/docs/api-reference/embeddings/create>
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
 pub struct BatchEmbeddingRequest {
