@@ -3,7 +3,7 @@ use rag_toolchain::clients::openai_client::OpenAIClient;
 use rag_toolchain::clients::traits::AsyncEmbeddingClient;
 use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel;
 use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
-use rag_toolchain::stores::pg_vector::PgVectorDB;
+use rag_toolchain::stores::pg_vector::PostgresVectorStore;
 use rag_toolchain::stores::traits::EmbeddingStore;
 
 #[tokio::main]
@@ -27,13 +27,14 @@ async fn main() {
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai
-    let store: PgVectorDB =
-        PgVectorDB::new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002)
+    let store: PostgresVectorStore =
+        PostgresVectorStore::new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002)
             .await
             .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
-    let client: OpenAIClient = OpenAIClient::new().unwrap();
+    let client: OpenAIClient =
+        OpenAIClient::new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
     println!("Embeddings: {:?}", embeddings);
 

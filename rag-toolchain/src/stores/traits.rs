@@ -2,8 +2,9 @@ use crate::common::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
 
-/// # Destination
-/// Trait for struct that allows embeddings to be wrote to an external destination
+/// # EmbeddingStore
+/// Trait for struct that allows embeddings to be wrote to an
+/// external persistent store. Mainly a vector database.
 #[async_trait]
 pub trait EmbeddingStore {
     // The custom error type for the store
