@@ -36,7 +36,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For any questions or assistance, feel free to contact the maintainers:
 
-- Your Name <your.email@example.com>
-- Another Contributor <contributor@example.com>
+Please raise an issue and I will get back to you quickly
 
 Enjoy leveraging the power of retrieval augmented generation and embedding generation with `rust-rag-toolchain`!
