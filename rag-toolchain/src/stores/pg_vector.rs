@@ -1,3 +1,4 @@
+use crate::clients::traits::AsyncEmbeddingClient;
 use crate::common::embedding_shared::EmbeddingModel;
 use crate::common::types::{Chunk, Embedding};
 use crate::stores::traits::EmbeddingStore;
@@ -6,9 +7,19 @@ use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
+
+use super::traits::AsyncRetriever;
+
+/// Type states for the PostgresVectorStore
+trait StoreState {}
+struct AsStore {}
+impl StoreState for AsStore {}
+struct AsRetriever {}
+impl StoreState for AsRetriever {}
 
 /// # PostgresVectorStore
 ///
@@ -28,14 +39,19 @@ use dotenv::dotenv;
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
 #[derive(Debug)]
-pub struct PostgresVectorStore {
+pub struct PostgresVectorStore<T>
+where
+    T: StoreState,
+{
     /// We make the pool public incase users want to
     /// do extra operations on the database
     pub pool: Pool<Postgres>,
     table_name: String,
+    embedding_client: Option<Box<dyn AsyncEmbeddingClient>>,
+    _type_state: std::marker::PhantomData<T>,
 }
 
-impl PostgresVectorStore {
+impl PostgresVectorStore<AsStore> {
     /// # new
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
@@ -75,7 +91,21 @@ impl PostgresVectorStore {
         Ok(PostgresVectorStore {
             pool,
             table_name: table_name.into(),
+            embedding_client: None,
+            _type_state: std::marker::PhantomData,
         })
+    }
+
+    pub fn as_retriever(
+        self,
+        embedding_client: impl AsyncEmbeddingClient,
+    ) -> PostgresVectorStore<AsRetriever> {
+        PostgresVectorStore {
+            pool: self.pool,
+            table_name: self.table_name,
+            embedding_client,
+            _type_state: std::marker::PhantomData,
+        }
     }
 
     /// # connect
@@ -132,7 +162,29 @@ impl PostgresVectorStore {
 }
 
 #[async_trait]
-impl EmbeddingStore for PostgresVectorStore {
+impl AsyncRetriever for PostgresVectorStore<AsRetriever> {
+    async fn retrieve(&self, text: &str) -> Result<Chunk, Box<dyn Error>> {
+        if let Some(embedding_client) = *self.embedding_client {
+            let (content, embedding) = embedding_client.generate_embedding(text.into()).await?;
+            let embedding_query: String = format!(
+                "
+                SELECT text FROM {} ORDER BY embedding <=> $1::vector LIMIT 1",
+                &self.table_name
+            );
+            let similar_text: String = sqlx::query_as(&embedding_query)
+                .bind(embedding.into())
+                .fetch_one(&self.pool)
+                .await?;
+            Ok(Chunk::from(similar_text))
+        } else {
+            // Throw better error here
+            Err("No embedding client provided".into())
+        }
+    }
+}
+
+#[async_trait]
+impl EmbeddingStore for PostgresVectorStore<AsStore> {
     type ErrorType = PgVectorError;
     /// # store
     ///
