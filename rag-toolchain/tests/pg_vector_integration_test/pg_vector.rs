@@ -9,9 +9,13 @@ and we would expect back the string that had a certain vector
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
+    use async_trait::async_trait;
     use pgvector::Vector;
+    use rag_toolchain::clients::traits::AsyncEmbeddingClient;
     use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
-    use rag_toolchain::common::types::{Chunk, Embedding};
+    use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
+    use rag_toolchain::retrievers::postgres_vector_retriever::PostgresVectorRetriever;
+    use rag_toolchain::retrievers::traits::AsyncRetriever;
     use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
     use rag_toolchain::stores::traits::EmbeddingStore;
     use serde_json::Value;
@@ -73,6 +77,45 @@ mod pg_vector {
         }
     }
 
+    #[tokio::test]
+    async fn test_retriever_returns_correct_data() {
+        const TABLE_NAME: &str = "test_db_3";
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", "localhost");
+        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+            .await
+            .unwrap();
+        let input: Vec<(Chunk, Embedding)> = read_test_data();
+        let _result = pg_vector
+            .store_batch(input.clone())
+            .await
+            .map_err(|_| panic!("panic"));
+
+        for (i, (chunk, embedding)) in input.iter().enumerate() {
+            assert_row(
+                &pg_vector.pool,
+                (i + 1) as i32,
+                chunk.clone().into(),
+                embedding.clone().into(),
+                TABLE_NAME,
+            )
+            .await;
+        }
+
+        let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
+        let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+            pg_vector.as_retriever(mock_client);
+
+        let result: Chunk = retriever
+            .retrieve("snakes are a very dangerous creature")
+            .await
+            .unwrap();
+
+        assert_eq!(result, input[0].0);
+    }
+
     async fn assert_row(
         pool: &Pool<Postgres>,
         id: i32,
@@ -123,5 +166,36 @@ mod pg_vector {
             input_data.push((Chunk::from(chunk), Embedding::from(embedding)))
         }
         input_data
+    }
+
+    pub struct MockEmbeddingClient {
+        input_data: Vec<(Chunk, Embedding)>,
+    }
+    impl MockEmbeddingClient {
+        pub fn new() -> Self {
+            MockEmbeddingClient {
+                input_data: read_test_data(),
+            }
+        }
+    }
+    #[async_trait]
+    impl AsyncEmbeddingClient for MockEmbeddingClient {
+        type ErrorType = std::io::Error;
+        async fn generate_embedding(
+            &self,
+            text: Chunk,
+        ) -> Result<(Chunk, Embedding), Self::ErrorType> {
+            if (text == self.input_data[0].0) {
+                Ok(self.input_data[0].clone())
+            } else {
+                Ok(self.input_data[1].clone())
+            }
+        }
+        async fn generate_embeddings(
+            &self,
+            text: Chunks,
+        ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType> {
+            unimplemented!()
+        }
     }
 }
