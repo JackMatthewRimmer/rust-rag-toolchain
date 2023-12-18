@@ -183,13 +183,9 @@ mod pg_vector {
         type ErrorType = std::io::Error;
         async fn generate_embedding(
             &self,
-            text: Chunk,
+            _text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            if text == self.input_data[0].0 {
-                Ok(self.input_data[0].clone())
-            } else {
-                Ok(self.input_data[1].clone())
-            }
+            Ok(self.input_data[0].clone())
         }
         async fn generate_embeddings(
             &self,
