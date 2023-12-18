@@ -185,7 +185,7 @@ mod pg_vector {
             &self,
             text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            if (text == self.input_data[0].0) {
+            if text == self.input_data[0].0 {
                 Ok(self.input_data[0].clone())
             } else {
                 Ok(self.input_data[1].clone())
@@ -193,7 +193,7 @@ mod pg_vector {
         }
         async fn generate_embeddings(
             &self,
-            text: Chunks,
+            _text: Chunks,
         ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType> {
             unimplemented!()
         }
