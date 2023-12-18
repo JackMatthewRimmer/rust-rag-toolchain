@@ -33,13 +33,13 @@ where
     T: AsyncEmbeddingClient + Sync,
     T::ErrorType: 'static,
 {
-    type ErrorType = PostgresRetrieverError;
+    type ErrorType = PostgresRetrieverError<T::ErrorType>;
     async fn retrieve(&self, text: &str) -> Result<Chunk, Self::ErrorType> {
         let (_, embedding) = self
             .embedding_client
             .generate_embedding(text.into())
             .await
-            .map_err(|error| PostgresRetrieverError::EmbeddingClientError(Box::new(error)))?;
+            .map_err(|error| PostgresRetrieverError::EmbeddingClientError(error))?;
         let mapped_embedding: Vec<f32> = embedding.into();
         let embedding_query: String = format!(
             "
@@ -57,12 +57,12 @@ where
 }
 
 #[derive(Debug)]
-pub enum PostgresRetrieverError {
-    EmbeddingClientError(Box<dyn Error>),
+pub enum PostgresRetrieverError<T: Error> {
+    EmbeddingClientError(T),
     QueryError(SqlxError),
 }
-impl Error for PostgresRetrieverError {}
-impl Display for PostgresRetrieverError {
+impl<T: Error> Error for PostgresRetrieverError<T> {}
+impl<T: Error> Display for PostgresRetrieverError<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PostgresRetrieverError::EmbeddingClientError(error) => {
