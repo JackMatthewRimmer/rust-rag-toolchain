@@ -1,11 +1,3 @@
-/*
-What needs to be done to make this integration test fully functional:
-We need to create a mocked client that returns some form of real vector data for two different strings
-We then use that mocked client to create a PostgresVectorStore and store the two strings
-We then convert the store to a retrieve something similar to each string
-and we would expect back the string that had a certain vector
-*/
-
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
