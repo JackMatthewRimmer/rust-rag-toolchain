@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
 
-use crate::clients::openai_client::OpenAIError;
-
 // ---------------------- Embedding Models ----------------------
 /// # EmbeddingModel
 /// This trait is used for methods to understand the requirements
