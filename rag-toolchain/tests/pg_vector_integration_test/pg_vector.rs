@@ -3,7 +3,7 @@ mod pg_vector {
     use pgvector::Vector;
     use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
     use rag_toolchain::common::types::{Chunk, Embedding};
-    use rag_toolchain::stores::pg_vector::PostgresVectorStore;
+    use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
     use rag_toolchain::stores::traits::EmbeddingStore;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};

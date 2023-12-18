@@ -1,7 +1,4 @@
-use crate::{
-    clients::traits::AsyncEmbeddingClient,
-    common::types::{Chunk, Embedding},
-};
+use crate::common::types::{Chunk, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
 
@@ -16,11 +13,4 @@ pub trait EmbeddingStore {
     async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), Self::ErrorType>;
     async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
         -> Result<(), Self::ErrorType>;
-}
-
-/// # EmbeddingRetriever
-/// Trait for stores that allow for similar text to be retrieved using embeddings
-#[async_trait]
-pub trait AsyncRetriever {
-    async fn retrieve(&self, text: &str) -> Result<Chunk, Box<dyn Error>>;
 }
