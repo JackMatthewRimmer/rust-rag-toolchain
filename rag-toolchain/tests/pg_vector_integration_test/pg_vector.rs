@@ -1,10 +1,20 @@
+/*
+What needs to be done to make this integration test fully functional:
+We need to create a mocked client that returns some form of real vector data for two different strings
+We then use that mocked client to create a PostgresVectorStore and store the two strings
+We then convert the store to a retrieve something similar to each string
+and we would expect back the string that had a certain vector
+*/
+
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
+
     use pgvector::Vector;
     use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
     use rag_toolchain::common::types::{Chunk, Embedding};
     use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
     use rag_toolchain::stores::traits::EmbeddingStore;
+    use serde_json::Value;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};
 
@@ -15,18 +25,21 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+
+        let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
+
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let _result = pg_vector
-            .store(("test".into(), vec![1.0; 1536].into()))
+            .store((test_chunk.clone(), test_embedding.clone()))
             .await
             .map_err(|_| panic!("panic"));
         assert_row(
             &pg_vector.pool,
             1,
-            "test".into(),
-            vec![1.0; 1536],
+            test_chunk.into(),
+            test_embedding.into(),
             TABLE_NAME,
         )
         .await;
@@ -42,42 +55,22 @@ mod pg_vector {
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(Chunk, Embedding)> = vec![
-            ("test1".into(), vec![1.0; 1536].into()),
-            ("test2".into(), vec![2.0; 1536].into()),
-            ("test3".into(), vec![3.0; 1536].into()),
-        ];
+        let input: Vec<(Chunk, Embedding)> = read_test_data();
         let _result = pg_vector
-            .store_batch(input)
+            .store_batch(input.clone())
             .await
             .map_err(|_| panic!("panic"));
 
-        assert_row(
-            &pg_vector.pool,
-            1,
-            "test1".into(),
-            vec![1.0; 1536],
-            TABLE_NAME,
-        )
-        .await;
-
-        assert_row(
-            &pg_vector.pool,
-            2,
-            "test2".into(),
-            vec![2.0; 1536],
-            TABLE_NAME,
-        )
-        .await;
-
-        assert_row(
-            &pg_vector.pool,
-            3,
-            "test3".into(),
-            vec![3.0; 1536],
-            TABLE_NAME,
-        )
-        .await;
+        for (i, (chunk, embedding)) in input.iter().enumerate() {
+            assert_row(
+                &pg_vector.pool,
+                (i + 1) as i32,
+                chunk.clone().into(),
+                embedding.clone().into(),
+                TABLE_NAME,
+            )
+            .await;
+        }
     }
 
     async fn assert_row(
@@ -111,5 +104,24 @@ mod pg_vector {
         id: i32,
         content: String,
         embedding: Vec<f32>,
+    }
+
+    fn read_test_data() -> Vec<(Chunk, Embedding)> {
+        let file_string =
+            std::fs::read_to_string("tests/pg_vector_integration_test/test_data.json").unwrap();
+        let json: Vec<Value> = serde_json::from_str(&file_string).unwrap();
+        let mut input_data: Vec<(Chunk, Embedding)> = Vec::new();
+
+        for object in json {
+            let chunk: String = object["chunk"].to_string();
+            let embedding: Vec<f32> = object["embedding"]
+                .as_array()
+                .unwrap()
+                .into_iter()
+                .map(|x| x.as_f64().unwrap() as f32)
+                .collect();
+            input_data.push((Chunk::from(chunk), Embedding::from(embedding)))
+        }
+        input_data
     }
 }
