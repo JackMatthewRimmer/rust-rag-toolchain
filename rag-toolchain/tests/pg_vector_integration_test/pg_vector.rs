@@ -80,7 +80,7 @@ mod pg_vector {
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
-        let data_to_store : Vec<(Chunk, Embedding)> = input[0..2].to_vec();
+        let data_to_store: Vec<(Chunk, Embedding)> = input[0..2].to_vec();
         let _result = pg_vector
             .store_batch(data_to_store.clone())
             .await
@@ -101,10 +101,7 @@ mod pg_vector {
         let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
             pg_vector.as_retriever(mock_client);
 
-        let result: Chunk = retriever
-            .retrieve("this text is ignored")
-            .await
-            .unwrap();
+        let result: Chunk = retriever.retrieve("this text is ignored").await.unwrap();
 
         assert_eq!(result, input[1].0);
     }
