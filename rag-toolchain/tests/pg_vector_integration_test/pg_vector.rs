@@ -80,7 +80,7 @@ mod pg_vector {
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
-        let data_to_store = input[0..1].to_vec();
+        let data_to_store : Vec<(Chunk, Embedding)>= input[0..1].to_vec();
         let _result = pg_vector
             .store_batch(data_to_store.clone())
             .await
@@ -178,7 +178,7 @@ mod pg_vector {
             &self,
             _text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            Ok(self.input_data[3].clone())
+            Ok(self.input_data[2].clone())
         }
         async fn generate_embeddings(
             &self,
