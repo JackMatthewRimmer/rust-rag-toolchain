@@ -39,7 +39,7 @@ where
             .embedding_client
             .generate_embedding(text.into())
             .await
-            .map_err(|error| PostgresRetrieverError::EmbeddingClientError(error))?;
+            .map_err(PostgresRetrieverError::EmbeddingClientError)?;
         let mapped_embedding: Vec<f32> = embedding.into();
         let embedding_query: String = format!(
             "
