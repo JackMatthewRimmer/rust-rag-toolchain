@@ -79,7 +79,7 @@ mod pg_vector {
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(Chunk, Embedding)> = read_test_data();
+        let input: Vec<(Chunk, Embedding)> = read_test_data()[0..1].to_vec();
         let _result = pg_vector
             .store_batch(input.clone())
             .await
@@ -101,11 +101,11 @@ mod pg_vector {
             pg_vector.as_retriever(mock_client);
 
         let result: Chunk = retriever
-            .retrieve("snakes are a very dangerous creature")
+            .retrieve("Ghosts are really scary and dangerous")
             .await
             .unwrap();
 
-        assert_eq!(result, input[0].0);
+        assert_eq!(result, input[1].0);
     }
 
     async fn assert_row(
@@ -143,7 +143,7 @@ mod pg_vector {
 
     fn read_test_data() -> Vec<(Chunk, Embedding)> {
         let file_string =
-            std::fs::read_to_string("tests/pg_vector_integration_test/test_data.json").unwrap();
+            std::fs::read_to_string("tests/pg_vector_integration_test/test-data.json").unwrap();
         let json: Vec<Value> = serde_json::from_str(&file_string).unwrap();
         let mut input_data: Vec<(Chunk, Embedding)> = Vec::new();
 
@@ -177,7 +177,7 @@ mod pg_vector {
             &self,
             _text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            Ok(self.input_data[0].clone())
+            Ok(self.input_data[3].clone())
         }
         async fn generate_embeddings(
             &self,
