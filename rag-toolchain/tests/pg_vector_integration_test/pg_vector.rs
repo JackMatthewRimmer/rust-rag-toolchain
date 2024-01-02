@@ -79,13 +79,14 @@ mod pg_vector {
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(Chunk, Embedding)> = read_test_data()[0..1].to_vec();
+        let input: Vec<(Chunk, Embedding)> = read_test_data();
+        let data_to_store = input[0..1].to_vec();
         let _result = pg_vector
-            .store_batch(input.clone())
+            .store_batch(data_to_store.clone())
             .await
             .map_err(|_| panic!("panic"));
 
-        for (i, (chunk, embedding)) in input.iter().enumerate() {
+        for (i, (chunk, embedding)) in data_to_store.iter().enumerate() {
             assert_row(
                 &pg_vector.pool,
                 (i + 1) as i32,
