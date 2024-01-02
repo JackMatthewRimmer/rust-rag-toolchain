@@ -44,7 +44,7 @@ where
         let mapped_embedding: Vector = Vector::from(embedding.embedding().to_vec());
         let embedding_query: String = format!(
             "
-            SELECT content FROM {} ORDER BY embedding <-> $1 LIMIT 1",
+            SELECT content FROM {} ORDER BY embedding <=> $1 LIMIT 1",
             &self.table_name
         );
         let similar_text: Vec<PgRow> = sqlx::query(&embedding_query)

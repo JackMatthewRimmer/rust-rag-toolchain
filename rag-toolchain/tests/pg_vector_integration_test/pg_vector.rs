@@ -102,7 +102,7 @@ mod pg_vector {
             pg_vector.as_retriever(mock_client);
 
         let result: Chunk = retriever
-            .retrieve("Ghosts are really dangerous and scary, Snakes are really dangerous and scary")
+            .retrieve("this text is ignored")
             .await
             .unwrap();
 
@@ -178,7 +178,6 @@ mod pg_vector {
             &self,
             _text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            println!("{:?}", self.input_data[2]);
             Ok(self.input_data[2].clone())
         }
         async fn generate_embeddings(
