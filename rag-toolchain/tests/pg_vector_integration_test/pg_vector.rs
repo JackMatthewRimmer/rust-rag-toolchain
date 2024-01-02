@@ -178,6 +178,7 @@ mod pg_vector {
             &self,
             _text: Chunk,
         ) -> Result<(Chunk, Embedding), Self::ErrorType> {
+            println!("{:?}", self.input_data[2]);
             Ok(self.input_data[2].clone())
         }
         async fn generate_embeddings(

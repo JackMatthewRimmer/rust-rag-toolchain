@@ -43,16 +43,18 @@ where
         let mapped_embedding: Vec<f32> = embedding.into();
         let embedding_query: String = format!(
             "
-            SELECT content FROM {} ORDER BY embedding <-> $1::vector LIMIT 1",
+            SELECT content FROM {} ORDER BY embedding <-> $1 LIMIT 1",
             &self.table_name
         );
-        let similar_text: PgRow = sqlx::query(&embedding_query)
+        let similar_text: Vec<PgRow> = sqlx::query(&embedding_query)
             .bind(mapped_embedding)
-            .fetch_one(&self.pool)
+            .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
-        Ok(Chunk::from(similar_text.get::<String, _>("content")))
+        println!("Similar text: {:?}", similar_text.iter().map(|x| x.get::<String, _>("content")).collect::<Vec<String>>());
+
+        Ok(Chunk::from(similar_text[0].get::<String, _>("content")))
     }
 }
 
