@@ -102,7 +102,7 @@ mod pg_vector {
             pg_vector.as_retriever(mock_client);
 
         let result: Chunk = retriever
-            .retrieve("Ghosts are really scary and dangerous")
+            .retrieve("Ghosts are really dangerous and scary")
             .await
             .unwrap();
 
