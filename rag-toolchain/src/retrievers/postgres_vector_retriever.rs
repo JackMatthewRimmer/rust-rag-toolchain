@@ -1,6 +1,7 @@
 use crate::clients::traits::AsyncEmbeddingClient;
 use crate::common::types::Chunk;
 use crate::retrievers::traits::AsyncRetriever;
+use pgvector::Vector;
 use async_trait::async_trait;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
@@ -40,7 +41,7 @@ where
             .generate_embedding(text.into())
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
-        let mapped_embedding: Vec<f32> = embedding.into();
+        let mapped_embedding: Vector = Vector::from(embedding.embedding().to_vec());
         let embedding_query: String = format!(
             "
             SELECT content FROM {} ORDER BY embedding <-> $1 LIMIT 1",
