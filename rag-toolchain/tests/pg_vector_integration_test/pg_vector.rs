@@ -1,6 +1,8 @@
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
+    use std::num::NonZeroI16;
+
     use async_trait::async_trait;
     use pgvector::Vector;
     use rag_toolchain::clients::traits::AsyncEmbeddingClient;
@@ -101,7 +103,13 @@ mod pg_vector {
         let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
             pg_vector.as_retriever(mock_client);
 
-        let result: Chunk = retriever.retrieve("this text is ignored").await.unwrap();
+        let result: Chunk = retriever
+            .retrieve("this text is ignored", NonZeroI16::new(1).unwrap())
+            .await
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .to_owned();
 
         assert_eq!(result, input[1].0);
     }

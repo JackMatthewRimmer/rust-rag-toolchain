@@ -8,6 +8,7 @@ use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::num::{NonZeroI16, NonZeroU16};
 
 pub struct PostgresVectorRetriever<T>
 where
@@ -35,25 +36,34 @@ where
     T::ErrorType: 'static,
 {
     type ErrorType = PostgresRetrieverError<T::ErrorType>;
-    async fn retrieve(&self, text: &str) -> Result<Chunk, Self::ErrorType> {
+    async fn retrieve(
+        &self,
+        text: &str,
+        number_of_results: NonZeroI16,
+    ) -> Result<Vec<Chunk>, Self::ErrorType> {
+        let n: i16 = number_of_results.get();
         let (_, embedding) = self
             .embedding_client
             .generate_embedding(text.into())
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
-        let mapped_embedding: Vector = Vector::from(embedding.embedding().to_vec());
         let embedding_query: String = format!(
             "
-            SELECT content FROM {} ORDER BY embedding <=> $1 LIMIT 1",
+            SELECT content FROM {} ORDER BY embedding <=> $1::vector LIMIT $2",
             &self.table_name
         );
         let similar_text: Vec<PgRow> = sqlx::query(&embedding_query)
-            .bind(mapped_embedding)
+            .bind(embedding.embedding().to_vec())
+            .bind(n.clone())
             .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
-
-        Ok(Chunk::from(similar_text[0].get::<String, _>("content")))
+        let n_rows: Vec<Chunk> = similar_text
+            .iter()
+            .take(n as usize)
+            .map(|row| Chunk::from(row.get::<String, _>("content")))
+            .collect();
+        Ok(n_rows)
     }
 }
 
