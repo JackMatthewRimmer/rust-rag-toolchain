@@ -7,7 +7,7 @@ use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::num::NonZeroI16;
+use std::num::NonZeroU32;
 
 pub struct PostgresVectorRetriever<T>
 where
@@ -38,9 +38,10 @@ where
     async fn retrieve(
         &self,
         text: &str,
-        number_of_results: NonZeroI16,
+        number_of_results: NonZeroU32,
     ) -> Result<Vec<Chunk>, Self::ErrorType> {
-        let n: i16 = number_of_results.get();
+        let n: u32 = number_of_results.get();
+
         let (_, embedding) = self
             .embedding_client
             .generate_embedding(text.into())
@@ -53,7 +54,7 @@ where
         );
         let similar_text: Vec<PgRow> = sqlx::query(&embedding_query)
             .bind(embedding.embedding().to_vec())
-            .bind(n.clone())
+            .bind(n as i32)
             .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;

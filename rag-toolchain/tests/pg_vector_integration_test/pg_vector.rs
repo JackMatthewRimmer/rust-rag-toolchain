@@ -1,7 +1,7 @@
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
-    use std::num::NonZeroI16;
+    use std::num::NonZeroU32;
 
     use async_trait::async_trait;
     use pgvector::Vector;
@@ -104,7 +104,7 @@ mod pg_vector {
             pg_vector.as_retriever(mock_client);
 
         let result: Chunk = retriever
-            .retrieve("this text is ignored", NonZeroI16::new(1).unwrap())
+            .retrieve("this text is ignored", NonZeroU32::new(1).unwrap())
             .await
             .unwrap()
             .get(0)
