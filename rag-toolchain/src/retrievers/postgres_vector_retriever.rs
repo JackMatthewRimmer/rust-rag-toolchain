@@ -2,13 +2,12 @@ use crate::clients::traits::AsyncEmbeddingClient;
 use crate::common::types::Chunk;
 use crate::retrievers::traits::AsyncRetriever;
 use async_trait::async_trait;
-use pgvector::Vector;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::num::{NonZeroI16, NonZeroU16};
+use std::num::NonZeroI16;
 
 pub struct PostgresVectorRetriever<T>
 where
