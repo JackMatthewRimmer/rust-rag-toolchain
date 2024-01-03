@@ -1,8 +1,6 @@
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
-    use std::num::NonZeroU32;
-
     use async_trait::async_trait;
     use pgvector::Vector;
     use rag_toolchain::clients::traits::AsyncEmbeddingClient;
@@ -15,15 +13,12 @@ mod pg_vector {
     use serde_json::Value;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};
+    use std::num::NonZeroU32;
 
     #[tokio::test]
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-
+        with_env_vars();
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
 
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
@@ -46,10 +41,7 @@ mod pg_vector {
     #[tokio::test]
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+        with_env_vars();
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
@@ -74,10 +66,7 @@ mod pg_vector {
     #[tokio::test]
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+        with_env_vars();
         let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
@@ -125,6 +114,13 @@ mod pg_vector {
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
         assert_eq!(row.embedding, embeddings);
+    }
+
+    fn with_env_vars() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", "localhost");
+        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
