@@ -1,10 +1,11 @@
+use serde::Serialize;
 use std::sync::Arc;
 
 // ----------------- Embedding -----------------
 /// # Embedding
 /// Custom type that wraps a pointer to an embedding/vector.
 /// It is immutable and thread safe
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Embedding {
     embedding: Arc<[f32]>,
 }
@@ -91,7 +92,7 @@ impl From<Embedding> for Vec<f32> {
 // ---------------------------------------------
 
 // ----------------- Chunk ------------------
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 /// # Chunk
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe

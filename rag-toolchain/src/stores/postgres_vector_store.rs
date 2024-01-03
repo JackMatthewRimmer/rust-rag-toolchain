@@ -1,11 +1,14 @@
+use crate::clients::traits::AsyncEmbeddingClient;
 use crate::common::embedding_shared::EmbeddingModel;
 use crate::common::types::{Chunk, Embedding};
+use crate::retrievers::postgres_vector_retriever::PostgresVectorRetriever;
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::env::{self, VarError};
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
@@ -76,6 +79,13 @@ impl PostgresVectorStore {
             pool,
             table_name: table_name.into(),
         })
+    }
+
+    pub fn as_retriever<T: AsyncEmbeddingClient>(
+        &self,
+        embedding_client: T,
+    ) -> PostgresVectorRetriever<T> {
+        PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client)
     }
 
     /// # connect
@@ -223,7 +233,7 @@ pub enum PgVectorError {
     /// Error when calling [`PgVector::store_batch()`] fails
     TransactionError(SqlxError),
 }
-impl std::error::Error for PgVectorError {}
+impl Error for PgVectorError {}
 impl From<VarError> for PgVectorError {
     fn from(error: VarError) -> Self {
         PgVectorError::EnvVarError(error)

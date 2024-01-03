@@ -13,12 +13,3 @@ pub trait AsyncEmbeddingClient {
         text: Chunks,
     ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
 }
-
-/// # EmbeddingClient
-/// Trait for any client that generates embeddings synchronously
-pub trait EmbeddingClient {
-    type ErrorType: Error;
-    fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
-    fn generate_embeddings(&self, text: Chunks)
-        -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
-}
