@@ -24,4 +24,10 @@ pub trait AsyncRetriever {
         text: &str,
         number_of_results: NonZeroU32,
     ) -> Result<Vec<Chunk>, Self::ErrorType>;
+    async fn retrieve_with_threshold(
+        &self,
+        text: &str,
+        number_of_results: NonZeroU32,
+        threshold: f32,
+    ) -> Result<Vec<Chunk>, Self::ErrorType>;
 }
