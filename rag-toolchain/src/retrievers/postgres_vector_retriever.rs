@@ -9,6 +9,13 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
 
+/*
+Current impl makes it terrible if you already have your own database set up.
+
+Expects the text to be in a column called content. We really need to create a way
+for either us to spin up the db for you are you can bring your own
+*/
+
 pub struct PostgresVectorRetriever<T>
 where
     T: AsyncEmbeddingClient,
@@ -66,29 +73,6 @@ where
             .generate_embedding(text.into())
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
-        let query: String = format!(
-            "
-            SELECT content FROM {} ORDER BY embedding <=> $1::vector LIMIT $2",
-            &self.table_name
-        );
-        self.execute_query(query, n, embedding).await
-    }
-
-    // TODO: Implement this method properly
-    async fn retrieve_with_threshold(
-        &self,
-        text: &str,
-        number_of_results: NonZeroU32,
-        threshold: f32,
-    ) -> Result<Vec<Chunk>, Self::ErrorType> {
-        let n: u32 = number_of_results.get();
-        let (_, embedding) = self
-            .embedding_client
-            .generate_embedding(text.into())
-            .await
-            .map_err(PostgresRetrieverError::EmbeddingClientError)?;
-
-        // This needs a threshold adding
         let query: String = format!(
             "
             SELECT content FROM {} ORDER BY embedding <=> $1::vector LIMIT $2",
