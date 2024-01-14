@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
 
 /// # PostgresVectorRetriever
-/// 
+///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 /// It is parameterized over a type T which implements the AsyncEmbeddingClient trait.
 /// This is because text needs to be embeded before it can be compared to other text.
@@ -24,17 +24,17 @@ where
 }
 
 /// # PostgresVectorRetriever
-/// 
+///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     /// # new
     /// This new function should be called the a vectors stores as_retriver() function.
-    /// 
-    /// # Arguments 
+    ///
+    /// # Arguments
     /// * `pool` - A sqlx::Pool<Postgres> which is used to connect to the database.
     /// * `table_name` - The name of the table which contains the vectors.
     /// * `embedding_client` - An instance of a type which implements the AsyncEmbeddingClient trait.
-    /// 
+    ///
     /// # Returns
     /// * A PostgresVectorRetriever
     pub(crate) fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T) -> Self {
@@ -47,7 +47,7 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
 }
 
 /// # AsyncRetriever
-/// 
+///
 /// This trait is implemented for PostgresVectorRetriever.
 #[async_trait]
 impl<T> AsyncRetriever for PostgresVectorRetriever<T>
@@ -59,25 +59,21 @@ where
     type ErrorType = PostgresRetrieverError<T::ErrorType>;
 
     /// # retrieve
-    /// 
+    ///
     /// Implementation of the retrieve function for PostgresVectorRetriever.
-    /// 
+    ///
     /// # Arguments
     /// * `text` - The text to find similar text for.
     /// * `number_of_results` - The number of results to return.
-    /// 
+    ///
     /// # Errors
     /// * [`PostgresRetrieverError::EmbeddingClientError`] - If the embedding client returns an error.
     /// * [`PostgresRetrieverError::QueryError`] - If there is an error querying the database.
-    /// 
+    ///
     /// # Returns
     /// * A [`Vec<Chunk>`] which are the most similar to the input text.
-    async fn retrieve(
-        &self,
-        text: &str,
-        number_of_results: NonZeroU32,
-    ) -> Result<Vec<Chunk>, Self::ErrorType> {
-        let n: u32 = number_of_results.get();
+    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType> {
+        let k: u32 = top_k.get();
         let (_, embedding): (_, Embedding) = self
             .embedding_client
             .generate_embedding(text.into())
@@ -92,14 +88,14 @@ where
 
         let similar_text: Vec<PgRow> = sqlx::query(&query)
             .bind(embedding.embedding().to_vec())
-            .bind(n as i32)
+            .bind(k as i32)
             .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
         let n_rows: Vec<Chunk> = similar_text
             .iter()
-            .take(n as usize)
+            .take(k as usize)
             .map(|row| Chunk::from(row.get::<String, _>("content")))
             .collect();
         Ok(n_rows)
@@ -107,7 +103,7 @@ where
 }
 
 /// # PostgresRetrieverError
-/// 
+///
 /// This error is generic as it is parameterized over the error type of the embedding client.
 /// This allows us to avoid dynamic dispatched error types.
 #[derive(Debug)]

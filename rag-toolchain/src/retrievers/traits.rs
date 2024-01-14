@@ -19,9 +19,5 @@ Probably best to just offer all of these as separate methods
 #[async_trait]
 pub trait AsyncRetriever {
     type ErrorType: Error;
-    async fn retrieve(
-        &self,
-        text: &str,
-        number_of_results: NonZeroU32,
-    ) -> Result<Vec<Chunk>, Self::ErrorType>;
+    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType>;
 }
