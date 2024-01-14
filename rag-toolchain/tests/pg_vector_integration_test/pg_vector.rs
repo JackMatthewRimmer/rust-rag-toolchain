@@ -41,16 +41,8 @@ mod pg_vector {
     #[tokio::test]
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
-<<<<<<< HEAD
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
-=======
         with_env_vars();
-        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
->>>>>>> 58d2d7692ed4559b389f715fea221afe8368f6e6
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
@@ -74,16 +66,8 @@ mod pg_vector {
     #[tokio::test]
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-<<<<<<< HEAD
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
-=======
         with_env_vars();
-        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
->>>>>>> 58d2d7692ed4559b389f715fea221afe8368f6e6
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
