@@ -9,6 +9,11 @@ use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+/// # PostgresVectorRetriever
+/// 
+/// This struct is a allows for the retrieval of similar text from a postgres database.
+/// It is parameterized over a type T which implements the AsyncEmbeddingClient trait.
+/// This is because text needs to be embeded before it can be compared to other text.
 pub struct PostgresVectorRetriever<T>
 where
     T: AsyncEmbeddingClient,
@@ -18,8 +23,21 @@ where
     embedding_client: T,
 }
 
+/// # PostgresVectorRetriever
+/// 
+/// This struct is a allows for the retrieval of similar text from a postgres database.
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
-    pub fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T) -> Self {
+    /// # new
+    /// This new function should be called the a vectors stores as_retriver() function.
+    /// 
+    /// # Arguments 
+    /// * `pool` - A sqlx::Pool<Postgres> which is used to connect to the database.
+    /// * `table_name` - The name of the table which contains the vectors.
+    /// * `embedding_client` - An instance of a type which implements the AsyncEmbeddingClient trait.
+    /// 
+    /// # Returns
+    /// * A PostgresVectorRetriever
+    pub(crate) fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T) -> Self {
         PostgresVectorRetriever {
             pool,
             table_name,
@@ -28,13 +46,25 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     }
 }
 
+/// # AsyncRetriever
+/// 
+/// This trait is implemented for PostgresVectorRetriever.
 #[async_trait]
 impl<T> AsyncRetriever for PostgresVectorRetriever<T>
 where
     T: AsyncEmbeddingClient + Sync,
     T::ErrorType: 'static,
 {
+    // We parameterize over the error type of the embedding client.
     type ErrorType = PostgresRetrieverError<T::ErrorType>;
+    /// # retrieve
+    /// 
+    /// This function retrieves the most similar text to the input text.
+    /// 
+    /// # Arguments
+    /// * `text` - The text to find similar text to.
+    /// * `pool` - A sqlx::Pool<Postgres> which is used to connect to the database.
+    /// * `table_name` - The name of the table which contains the vectors.
     async fn retrieve(&self, text: &str) -> Result<Chunk, Self::ErrorType> {
         let (_, embedding) = self
             .embedding_client

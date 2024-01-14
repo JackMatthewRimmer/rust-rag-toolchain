@@ -24,7 +24,7 @@ mod pg_vector {
 
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
 
-        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let _result = pg_vector
@@ -48,7 +48,7 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
@@ -76,7 +76,7 @@ mod pg_vector {
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();

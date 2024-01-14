@@ -50,7 +50,7 @@ impl PostgresVectorStore {
     ///
     /// # Returns
     /// the constructed [`PgVector`] struct
-    pub async fn new(
+    pub async fn try_new(
         table_name: &str,
         embedding_model: impl EmbeddingModel,
     ) -> Result<Self, PgVectorError> {
@@ -269,31 +269,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_throws_correct_errors() {
-        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_USER", "postgres");
-        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_HOST", "localhost");
-        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_DATABASE", "postgres");
-        let result = PostgresVectorStore::new("test", TextEmbeddingAda002)
+        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PgVectorError::ConnectionError(_)));

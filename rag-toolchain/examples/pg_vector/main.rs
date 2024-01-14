@@ -28,7 +28,7 @@ async fn main() {
 
     // I would check your store initialized before sending of embeddings to openai
     let store: PostgresVectorStore =
-        PostgresVectorStore::new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002)
+        PostgresVectorStore::try_new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002)
             .await
             .unwrap();
 
