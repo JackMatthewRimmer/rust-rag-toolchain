@@ -1,13 +1,13 @@
 use crate::clients::traits::AsyncEmbeddingClient;
-use crate::common::types::Chunk;
+use crate::common::types::{Chunk, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
 use async_trait::async_trait;
-use pgvector::Vector;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres, Row};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::num::NonZeroU32;
 
 /// # PostgresVectorRetriever
 /// 
@@ -57,36 +57,59 @@ where
 {
     // We parameterize over the error type of the embedding client.
     type ErrorType = PostgresRetrieverError<T::ErrorType>;
+
     /// # retrieve
     /// 
-    /// This function retrieves the most similar text to the input text.
+    /// Implementation of the retrieve function for PostgresVectorRetriever.
     /// 
     /// # Arguments
-    /// * `text` - The text to find similar text to.
-    /// * `pool` - A sqlx::Pool<Postgres> which is used to connect to the database.
-    /// * `table_name` - The name of the table which contains the vectors.
-    async fn retrieve(&self, text: &str) -> Result<Chunk, Self::ErrorType> {
-        let (_, embedding) = self
+    /// * `text` - The text to find similar text for.
+    /// * `number_of_results` - The number of results to return.
+    /// 
+    /// # Errors
+    /// * [`PostgresRetrieverError::EmbeddingClientError`] - If the embedding client returns an error.
+    /// * [`PostgresRetrieverError::QueryError`] - If there is an error querying the database.
+    /// 
+    /// # Returns
+    /// * A [`Vec<Chunk>`] which are the most similar to the input text.
+    async fn retrieve(
+        &self,
+        text: &str,
+        number_of_results: NonZeroU32,
+    ) -> Result<Vec<Chunk>, Self::ErrorType> {
+        let n: u32 = number_of_results.get();
+        let (_, embedding): (_, Embedding) = self
             .embedding_client
             .generate_embedding(text.into())
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
-        let mapped_embedding: Vector = Vector::from(embedding.embedding().to_vec());
-        let embedding_query: String = format!(
+
+        let query: String = format!(
             "
-            SELECT content FROM {} ORDER BY embedding <=> $1 LIMIT 1",
+            SELECT content FROM {} ORDER BY embedding <=> $1::vector LIMIT $2",
             &self.table_name
         );
-        let similar_text: Vec<PgRow> = sqlx::query(&embedding_query)
-            .bind(mapped_embedding)
+
+        let similar_text: Vec<PgRow> = sqlx::query(&query)
+            .bind(embedding.embedding().to_vec())
+            .bind(n as i32)
             .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
-        Ok(Chunk::from(similar_text[0].get::<String, _>("content")))
+        let n_rows: Vec<Chunk> = similar_text
+            .iter()
+            .take(n as usize)
+            .map(|row| Chunk::from(row.get::<String, _>("content")))
+            .collect();
+        Ok(n_rows)
     }
 }
 
+/// # PostgresRetrieverError
+/// 
+/// This error is generic as it is parameterized over the error type of the embedding client.
+/// This allows us to avoid dynamic dispatched error types.
 #[derive(Debug)]
 pub enum PostgresRetrieverError<T: Error> {
     EmbeddingClientError(T),

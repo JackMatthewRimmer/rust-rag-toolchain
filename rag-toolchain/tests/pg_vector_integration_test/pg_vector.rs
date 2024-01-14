@@ -13,15 +13,12 @@ mod pg_vector {
     use serde_json::Value;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};
+    use std::num::NonZeroU32;
 
     #[tokio::test]
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
-
+        with_env_vars();
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
 
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
@@ -44,11 +41,16 @@ mod pg_vector {
     #[tokio::test]
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
+<<<<<<< HEAD
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+=======
+        with_env_vars();
+        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+>>>>>>> 58d2d7692ed4559b389f715fea221afe8368f6e6
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
@@ -72,11 +74,16 @@ mod pg_vector {
     #[tokio::test]
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
+<<<<<<< HEAD
         std::env::set_var("POSTGRES_USER", "postgres");
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         std::env::set_var("POSTGRES_HOST", "localhost");
         std::env::set_var("POSTGRES_DATABASE", "pg_vector");
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+=======
+        with_env_vars();
+        let pg_vector = PostgresVectorStore::new(TABLE_NAME, TextEmbeddingAda002)
+>>>>>>> 58d2d7692ed4559b389f715fea221afe8368f6e6
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
@@ -101,7 +108,13 @@ mod pg_vector {
         let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
             pg_vector.as_retriever(mock_client);
 
-        let result: Chunk = retriever.retrieve("this text is ignored").await.unwrap();
+        let result: Chunk = retriever
+            .retrieve("this text is ignored", NonZeroU32::new(1).unwrap())
+            .await
+            .unwrap()
+            .get(0)
+            .unwrap()
+            .to_owned();
 
         assert_eq!(result, input[1].0);
     }
@@ -117,6 +130,13 @@ mod pg_vector {
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
         assert_eq!(row.embedding, embeddings);
+    }
+
+    fn with_env_vars() {
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", "localhost");
+        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
