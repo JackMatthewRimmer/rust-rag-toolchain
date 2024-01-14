@@ -1,3 +1,12 @@
+/// Postgres Integration Test
+/// 
+/// This test is an integration test for the postgres vector store and retriever.
+/// 
+/// It firstly tests by simply upserting vectors into the databse and asserting that they are there
+/// 
+/// It firstly upserts the first two items of the test data into the vector databse. it is expected that when retrieving
+/// based of the third item of the test data that the second item is returned. as that is the most similar text
+
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
 
@@ -93,7 +102,7 @@ mod pg_vector {
             pg_vector.as_retriever(mock_client);
 
         let result: Chunk = retriever
-            .retrieve("this text is ignored", NonZeroU32::new(1).unwrap())
+            .retrieve("This sentence is similar to a foo bar sentence .", NonZeroU32::new(1).unwrap())
             .await
             .unwrap()
             .get(0)
