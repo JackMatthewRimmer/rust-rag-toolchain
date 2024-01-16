@@ -34,7 +34,7 @@ use dotenv::dotenv;
 pub struct PostgresVectorStore {
     /// We make the pool public incase users want to
     /// do extra operations on the database
-    pub pool: Pool<Postgres>,
+    pool: Pool<Postgres>,
     table_name: String,
 }
 
@@ -79,6 +79,10 @@ impl PostgresVectorStore {
             pool,
             table_name: table_name.into(),
         })
+    }
+
+    pub fn get_pool(&self) -> Pool<Postgres> {
+        self.pool.clone()
     }
 
     pub fn as_retriever<T: AsyncEmbeddingClient>(

@@ -17,7 +17,7 @@ async fn main() {
     // But has been done here for demonstration purposes
     let text = std::fs::read_to_string("examples/pg_vector/example_text.txt").unwrap();
     println!("Text: {}", text);
-    let chunker = TokenChunker::new(
+    let chunker = TokenChunker::try_new(
         std::num::NonZeroUsize::new(50).unwrap(),
         25,
         OpenAIEmbeddingModel::TextEmbeddingAda002,
@@ -34,7 +34,7 @@ async fn main() {
 
     // Create a new client and generate the embeddings for the chunks
     let client: OpenAIClient =
-        OpenAIClient::new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
+        OpenAIClient::try_new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
     println!("Embeddings: {:?}", embeddings);
 

@@ -38,7 +38,7 @@ mod pg_vector {
             .await
             .map_err(|_| panic!("panic"));
         assert_row(
-            &pg_vector.pool,
+            &pg_vector.get_pool(),
             1,
             test_chunk.into(),
             test_embedding.into(),
@@ -62,7 +62,7 @@ mod pg_vector {
 
         for (i, (chunk, embedding)) in input.iter().enumerate() {
             assert_row(
-                &pg_vector.pool,
+                &pg_vector.get_pool(),
                 (i + 1) as i32,
                 chunk.clone().into(),
                 embedding.clone().into(),
@@ -88,7 +88,7 @@ mod pg_vector {
 
         for (i, (chunk, embedding)) in data_to_store.iter().enumerate() {
             assert_row(
-                &pg_vector.pool,
+                &pg_vector.get_pool(),
                 (i + 1) as i32,
                 chunk.clone().into(),
                 embedding.clone().into(),
