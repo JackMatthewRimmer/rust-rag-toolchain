@@ -6,6 +6,7 @@ use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use std::env;
 use std::env::VarError;
 use std::fmt::Display;
@@ -83,7 +84,7 @@ impl OpenAIClient {
 
         let status_code: StatusCode = response.status();
         if !status_code.is_success() {
-            return Err(OpenAIClient::handle_error_response(response).await);
+            return Err(OpenAIClient::handle_embedding_error_response(response).await);
         }
         let response_body: String = response
             .text()
@@ -110,7 +111,7 @@ impl OpenAIClient {
     //
     // # Returns
     // `OpenAIError` - The error type that maps to the response code
-    async fn handle_error_response(response: reqwest::Response) -> OpenAIError {
+    async fn handle_embedding_error_response(response: reqwest::Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
         let body_text = match response.text().await {
@@ -143,7 +144,7 @@ impl OpenAIClient {
     //
     // # Returns
     // `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
-    fn handle_success_response(
+    fn handle_embedding_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
     ) -> Vec<(Chunk, Embedding)> {
@@ -199,7 +200,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
 
-        Ok(OpenAIClient::handle_success_response(
+        Ok(OpenAIClient::handle_embedding_success_response(
             text,
             embedding_response,
         ))
@@ -233,8 +234,9 @@ impl AsyncEmbeddingClient for OpenAIClient {
         let embedding_response: EmbeddingResponse =
             OpenAIClient::send_embedding_request(request).await?;
         Ok(
-            OpenAIClient::handle_success_response(vec![text.clone()], embedding_response)[0]
-                .clone(),
+            OpenAIClient::handle_embedding_success_response(vec![text.clone()], embedding_response)
+                [0]
+            .clone(),
         )
     }
 }
@@ -297,6 +299,41 @@ pub enum EncodingFormat {
     Float,
     Base64,
 }
+// --------------------------------------------------------------------------------
+/// See <https://platform.openai.com/docs/api-reference/embeddings/create>
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ChatMessageRole {
+    System,
+    User,
+    Assistant,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OpenAIModel {
+    #[serde(rename = "gpt-4")]
+    Gpt4,
+    #[serde(rename = "gpt-3.5")]
+    Gpt3Point5,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ChatMessage {
+    pub role: ChatMessageRole,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
+#[serde(rename_all = "snake_case")]
+pub struct ChatCompletionRequest {
+    pub model: OpenAIModel,
+    pub messages: Vec<ChatMessage>,
+    #[builder(default, setter(strip_option))]
+    pub additional_config: Option<Map<String, Value>>,
+}
+// --------------------------------------------------------------------------------
+
 // --------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------
@@ -384,7 +421,7 @@ impl Display for OpenAIError {
 }
 
 #[cfg(test)]
-mod client_tests {
+mod embedding_client_tests {
     use crate::clients::openai_client::{
         OpenAIClient, OpenAIError, OpenAIErrorBody, OpenAIErrorData,
     };
