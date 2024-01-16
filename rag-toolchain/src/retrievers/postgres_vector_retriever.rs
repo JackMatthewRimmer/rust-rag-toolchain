@@ -27,7 +27,7 @@ where
 ///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
-    /// # new
+    /// # try_new
     /// This new function should be called the a vectors stores as_retriver() function.
     ///
     /// # Arguments

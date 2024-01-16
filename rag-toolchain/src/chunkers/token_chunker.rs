@@ -14,7 +14,7 @@ pub struct TokenChunker {
 }
 
 impl TokenChunker {
-    /// # new
+    /// # try_new
     ///
     /// # Arguments
     /// * `chunk_size` - The size in tokens of each chunk

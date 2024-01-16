@@ -28,7 +28,7 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
-    /// # new
+    /// # try_new
     /// Create a new OpenAIClient.
     /// Must have the OPENAI_API_KEY environment variable set
     ///
