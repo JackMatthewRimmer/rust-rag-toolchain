@@ -61,6 +61,8 @@ where
     /// # retrieve
     ///
     /// Implementation of the retrieve function for PostgresVectorRetriever.
+    /// This is currently doing a cosine similarity search. We intend to support
+    /// all the similarity functions supported by postgres in the future.
     ///
     /// # Arguments
     /// * `text` - The text to find similar text for.
