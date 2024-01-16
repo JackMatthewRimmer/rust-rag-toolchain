@@ -1,4 +1,4 @@
-name: Integration Test 
+name: PgVector Integration Test 
 
 on:
   push:
