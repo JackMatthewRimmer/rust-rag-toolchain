@@ -28,7 +28,7 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
-    /// # new
+    /// # try_new
     /// Create a new OpenAIClient.
     /// Must have the OPENAI_API_KEY environment variable set
     ///
@@ -41,7 +41,7 @@ impl OpenAIClient {
     ///
     /// # Returns
     /// * [`OpenAIClient`] - The OpenAIClient
-    pub fn new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIClient, VarError> {
+    pub fn try_new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
             Ok(api_key) => api_key,
@@ -445,7 +445,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -482,7 +482,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -515,7 +515,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -548,7 +548,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -581,7 +581,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -614,7 +614,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -647,7 +647,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")
@@ -673,7 +673,7 @@ mod client_tests {
         let mut server = mockito::Server::new();
         let url = server.url();
         let model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
-        let mut client: OpenAIClient = OpenAIClient::new(model).unwrap();
+        let mut client: OpenAIClient = OpenAIClient::try_new(model).unwrap();
         client.url = url.clone();
         let mock = server
             .mock("POST", "/")

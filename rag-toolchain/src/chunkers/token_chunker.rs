@@ -14,7 +14,7 @@ pub struct TokenChunker {
 }
 
 impl TokenChunker {
-    /// # new
+    /// # try_new
     ///
     /// # Arguments
     /// * `chunk_size` - The size in tokens of each chunk
@@ -27,7 +27,7 @@ impl TokenChunker {
     ///
     /// # Returns
     /// * `Result<TokenChunker, ChunkingError>` - The token chunker
-    pub fn new(
+    pub fn try_new(
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
         embedding_model: impl EmbeddingModel,
@@ -129,7 +129,7 @@ mod tests {
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
         let chunker: TokenChunker =
-            TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
+            TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
         let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
         assert_eq!(chunks.len(), 5);
@@ -145,7 +145,7 @@ mod tests {
         let window_size: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
         let chunker: TokenChunker =
-            TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
+            TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
         let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
         assert_eq!(chunks.len(), 0);
@@ -157,7 +157,7 @@ mod tests {
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
         let chunker: ChunkingError =
-            match TokenChunker::new(chunk_size, window_size, TextEmbeddingAda002) {
+            match TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002) {
                 Ok(_) => panic!("Expected error"),
                 Err(e) => e,
             };

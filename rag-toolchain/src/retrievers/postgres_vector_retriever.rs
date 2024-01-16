@@ -27,7 +27,7 @@ where
 ///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
-    /// # new
+    /// # try_new
     /// This new function should be called the a vectors stores as_retriver() function.
     ///
     /// # Arguments
@@ -61,6 +61,8 @@ where
     /// # retrieve
     ///
     /// Implementation of the retrieve function for PostgresVectorRetriever.
+    /// This is currently doing a cosine similarity search. We intend to support
+    /// all the similarity functions supported by postgres in the future.
     ///
     /// # Arguments
     /// * `text` - The text to find similar text for.
