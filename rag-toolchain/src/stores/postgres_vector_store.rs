@@ -39,7 +39,7 @@ pub struct PostgresVectorStore {
 }
 
 impl PostgresVectorStore {
-    /// # new
+    /// # try_new
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
     ///
