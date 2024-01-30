@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use typed_builder::TypedBuilder;
 
+use crate::clients::types::PromptMessage;
+
 /// See <https://platform.openai.com/docs/api-reference/embeddings/create>
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
 #[serde(rename_all = "snake_case")]
@@ -47,6 +49,25 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+impl From<PromptMessage> for ChatMessage {
+    fn from(prompt_message: PromptMessage) -> Self {
+        match prompt_message {
+            PromptMessage::SystemMessage(message) => ChatMessage {
+                role: ChatMessageRole::System,
+                content: message,
+            },
+            PromptMessage::HumanMessage(message) => ChatMessage {
+                role: ChatMessageRole::User,
+                content: message,
+            },
+            PromptMessage::AIMessage(message) => ChatMessage {
+                role: ChatMessageRole::Assistant,
+                content: message,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Usage {
     pub prompt_tokens: usize,
@@ -62,7 +83,7 @@ pub struct ChatCompletionChoices {
     pub finish_reason: String,
 }
 
-pub mod request_model_tests {
+mod request_model_tests {
 
     use super::*;
     const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","content":"Hello,howareyou?"},{"role":"user","content":"I'mdoinggreat.Howaboutyou?"},{"role":"system","":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
