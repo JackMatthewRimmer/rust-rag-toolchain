@@ -13,6 +13,7 @@ pub struct ChatCompletionRequest {
     pub additional_config: Option<Map<String, Value>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatCompletionResponse {
     pub id: String,
     pub object: String,
@@ -55,24 +56,20 @@ pub struct Usage {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatCompletionChoices {
-    pub message: ChatCompletionChoice,
+    pub index: usize,
+    pub message: ChatMessage,
     pub logprobs: Option<bool>,
     pub finish_reason: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ChatCompletionChoice {
-    pub message: ChatMessage,
-    pub index: usize,
 }
 
 pub mod request_model_tests {
 
     use super::*;
-    const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","message":"Hello,howareyou?"},{"role":"user","message":"I'mdoinggreat.Howaboutyou?"},{"role":"system","message":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
+    const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","content":"Hello,howareyou?"},{"role":"user","content":"I'mdoinggreat.Howaboutyou?"},{"role":"system","":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
+    const CHAT_COMPLETION_RESPONSE: &str = r#"{"id":"chatcmpl-123","object":"chat.completion","created":1677652288,"model":"gpt-4","system_fingerprint":"fp_44709d6fcb","choices":[{"index":0,"message":{"role":"assistant","content":"\n\nHello there, how may I assist you today?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":12,"total_tokens":21}}"#;
 
     #[test]
-    fn test_chat_completion_request() {
+    fn test_chat_completion_request_serializes() {
         let mut additional_config: Map<String, Value> = Map::new();
         additional_config.insert("temerature".into(), 0.7.into());
 
@@ -92,11 +89,39 @@ pub mod request_model_tests {
                     content: "I'mdoingwell.I'mgladtohearyou'redoingwell.".into(),
                 },
             ],
-            additional_config: Some(additional_config)
+            additional_config: Some(additional_config),
         };
 
         let request_json: String = serde_json::to_string(&request).unwrap();
         assert_eq!(request_json, CHAT_COMPLETION_REQUEST);
     }
-    
+
+    #[test]
+    fn test_chat_completions_response_deserializes() {
+        let response: ChatCompletionResponse =
+            serde_json::from_str(CHAT_COMPLETION_RESPONSE).unwrap();
+
+        let expected_response: ChatCompletionResponse = ChatCompletionResponse {
+            id: "chatcmpl-123".into(),
+            object: "chat.completion".into(),
+            created: 1677652288,
+            model: OpenAIModel::Gpt4,
+            system_fingerprint: "fp_44709d6fcb".into(),
+            choices: vec![ChatCompletionChoices {
+                index: 0,
+                message: ChatMessage {
+                    role: ChatMessageRole::Assistant,
+                    content: "\n\nHello there, how may I assist you today?".into(),
+                },
+                logprobs: None,
+                finish_reason: "stop".into(),
+            }],
+            usage: Usage {
+                prompt_tokens: 9,
+                completion_tokens: 12,
+                total_tokens: 21,
+            },
+        };
+        assert_eq!(expected_response, response)
+    }
 }
