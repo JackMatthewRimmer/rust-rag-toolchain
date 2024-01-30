@@ -3,6 +3,7 @@ use crate::clients::model::embeddings::{
 };
 use crate::clients::model::errors::{OpenAIError, OpenAIErrorBody};
 use crate::clients::traits::AsyncEmbeddingClient;
+use crate::clients::types::PromptMessage;
 use crate::common::embedding_shared::OpenAIEmbeddingModel;
 use crate::common::types::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
@@ -11,6 +12,9 @@ use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, StatusCode};
 use std::env;
 use std::env::VarError;
+
+use super::model::chat_completions::ChatMessage;
+use super::traits::AsyncChatClient;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 
@@ -238,6 +242,32 @@ impl AsyncEmbeddingClient for OpenAIClient {
                 [0]
             .clone(),
         )
+    }
+}
+
+#[async_trait]
+impl AsyncChatClient for OpenAIClient {
+    type ErrorType = OpenAIError;
+    /// # invoke
+    /// Function to generate a chat completion for a vector of [`PromptMessage`].
+    /// Allows you to get a chat completion for a vector of [`PromptMessage`].
+    ///
+    /// # Arguments
+    /// * `prompt_messages` - The prompt messages to generate a chat completion for.
+    ///
+    /// # Errors
+    /// * [`OpenAIError`] - If the request to OpenAI fails.
+    ///  
+    /// # Returns
+    /// * `Result<PromptMessage, OpenAIError>` - A result containing
+    /// the chat completion that was generated.
+    async fn invoke(
+        &self,
+        prompt_messages: Vec<PromptMessage>,
+    ) -> Result<PromptMessage, Self::ErrorType> {
+        let chat_messages: Vec<ChatMessage> =
+            prompt_messages.into_iter().map(ChatMessage::from).collect();
+        todo!()
     }
 }
 
