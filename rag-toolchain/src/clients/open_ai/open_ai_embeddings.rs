@@ -11,8 +11,8 @@ use std::env::VarError;
 use async_trait::async_trait;
 
 
-
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
+
 
 /// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings.
