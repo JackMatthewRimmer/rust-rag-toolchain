@@ -1,6 +1,7 @@
 use crate::clients::model::embeddings::{
     BatchEmbeddingRequest, EmbeddingObject, EmbeddingRequest, EmbeddingResponse,
 };
+use crate::clients::model::chat_completions::{ChatCompletionRequest, OpenAIModel};
 use crate::clients::model::errors::{OpenAIError, OpenAIErrorBody};
 use crate::clients::traits::AsyncEmbeddingClient;
 use crate::clients::types::PromptMessage;
@@ -267,6 +268,14 @@ impl AsyncChatClient for OpenAIClient {
     ) -> Result<PromptMessage, Self::ErrorType> {
         let chat_messages: Vec<ChatMessage> =
             prompt_messages.into_iter().map(ChatMessage::from).collect();
+
+        let request_body: ChatCompletionRequest =  ChatCompletionRequest::builder()
+            .model(OpenAIModel::Gpt4)
+            .messages(chat_messages)
+            .build();
+        
+
+
         todo!()
     }
 }

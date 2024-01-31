@@ -7,7 +7,12 @@ pub enum PromptMessage {
     AIMessage(String),
 }
 
+
 impl PromptMessage {
+    /// # content
+    /// 
+    /// Given that the clients will return a message that we only care for the message
+    /// this function will return the message as a string to avoid pattern matching.
     pub fn content(&self) -> String {
         match self {
             PromptMessage::SystemMessage(message) => message.clone(),
