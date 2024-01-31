@@ -1,7 +1,7 @@
 use crate::clients::model::embeddings::{
     BatchEmbeddingRequest, EmbeddingObject, EmbeddingRequest, EmbeddingResponse,
 };
-use crate::clients::model::chat_completions::{ChatCompletionRequest, OpenAIModel};
+use crate::clients::model::chat_completions::{ChatCompletionRequest, OpenAIModel, ChatCompletionResponse};
 use crate::clients::model::errors::{OpenAIError, OpenAIErrorBody};
 use crate::clients::traits::AsyncEmbeddingClient;
 use crate::clients::types::PromptMessage;
@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, StatusCode};
+use serde::de::DeserializeOwned;
 use std::env;
 use std::env::VarError;
 
@@ -79,33 +80,34 @@ impl OpenAIClient {
     //
     // # Returns
     // * `EmbeddingResponse` - The deserialized response from OpenAI
-    async fn send_embedding_request(
+
+    async fn send_request<T>(
         request: reqwest::RequestBuilder,
-    ) -> Result<EmbeddingResponse, OpenAIError> {
-        let response: reqwest::Response = match request.send().await {
-            Ok(response) => response,
-            Err(e) => return Err(OpenAIError::ErrorSendingRequest(e.to_string())),
-        };
+    ) -> Result<T, OpenAIError> 
+    where T: DeserializeOwned {
+
+        let response: reqwest::Response = request.send()
+            .await
+            .map_err(|error| OpenAIError::ErrorSendingRequest(error.to_string()))?;
 
         let status_code: StatusCode = response.status();
         if !status_code.is_success() {
-            return Err(OpenAIClient::handle_embedding_error_response(response).await);
+            let mapped_error: OpenAIError = OpenAIClient::handle_embedding_error_response(response).await;
+            return Err(mapped_error);
         }
+
         let response_body: String = response
             .text()
             .await
             .map_err(|error| OpenAIError::ErrorGettingResponseBody(error.to_string()))?;
+        
 
-        let embedding_response: EmbeddingResponse = match serde_json::from_str(&response_body) {
-            Err(e) => {
-                return Err(OpenAIError::ErrorDeserializingResponseBody(
-                    status_code.as_u16(),
-                    e.to_string(),
-                ));
-            }
-            Ok(embedding_response) => embedding_response,
-        };
-        Ok(embedding_response)
+        serde_json::from_str(&response_body)
+            .map_err(|error| OpenAIError::ErrorDeserializingResponseBody(
+                status_code.as_u16(),
+                error.to_string(),
+        ))
+
     }
 
     // # handle_error_response
@@ -123,6 +125,7 @@ impl OpenAIClient {
             Ok(text) => text,
             Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
         };
+
         let error_body: OpenAIErrorBody = match serde_json::from_str(&body_text) {
             Ok(error_body) => error_body,
             Err(e) => {
@@ -187,14 +190,11 @@ impl AsyncEmbeddingClient for OpenAIClient {
             .iter()
             .map(|chunk| (*chunk).chunk().to_string())
             .collect();
-
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(self.embedding_model)
             .build();
-
         let content_type = HeaderValue::from_static("application/json");
-
         let request: reqwest::RequestBuilder = self
             .client
             .post(self.url.clone())
@@ -203,7 +203,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
             .json(&request_body);
 
         let embedding_response: EmbeddingResponse =
-            OpenAIClient::send_embedding_request(request).await?;
+            OpenAIClient::send_request(request).await?;
 
         Ok(OpenAIClient::handle_embedding_success_response(
             text,
@@ -237,7 +237,7 @@ impl AsyncEmbeddingClient for OpenAIClient {
             .header(CONTENT_TYPE, content_type)
             .json(&request_body);
         let embedding_response: EmbeddingResponse =
-            OpenAIClient::send_embedding_request(request).await?;
+            OpenAIClient::send_request(request).await?;
         Ok(
             OpenAIClient::handle_embedding_success_response(vec![text.clone()], embedding_response)
                 [0]
@@ -273,9 +273,16 @@ impl AsyncChatClient for OpenAIClient {
             .model(OpenAIModel::Gpt4)
             .messages(chat_messages)
             .build();
-        
 
+        let content_type = HeaderValue::from_static("application/json");
+        let request: reqwest::RequestBuilder = self
+            .client
+            .post(self.url.clone())
+            .bearer_auth(self.api_key.clone())
+            .header(CONTENT_TYPE, content_type)
+            .json(&request_body);
 
+        let response: ChatCompletionResponse = OpenAIClient::send_request(request).await?;
         todo!()
     }
 }
