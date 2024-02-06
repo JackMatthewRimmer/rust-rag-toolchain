@@ -20,8 +20,9 @@ pub struct ChatCompletionResponse {
     pub id: String,
     pub object: String,
     pub created: u64,
-    pub model: OpenAIModel,
-    pub system_fingerprint: String,
+    pub model: String, // String for now
+    #[serde(default)]
+    pub system_fingerprint: Option<String>,
     pub choices: Vec<ChatCompletionChoices>,
     pub usage: Usage,
 }
@@ -39,7 +40,7 @@ pub enum ChatMessageRole {
 pub enum OpenAIModel {
     #[serde(rename = "gpt-4")]
     Gpt4,
-    #[serde(rename = "gpt-3.5")]
+    #[serde(rename = "gpt-3.5-turbo")]
     Gpt3Point5,
 }
 
@@ -89,10 +90,12 @@ pub struct Usage {
 pub struct ChatCompletionChoices {
     pub index: usize,
     pub message: ChatMessage,
-    pub logprobs: Option<bool>,
+    #[serde(default)]
+    pub logprobs: Option<String>,
     pub finish_reason: String,
 }
 
+#[cfg(test)]
 mod request_model_tests {
 
     use super::*;
@@ -136,8 +139,8 @@ mod request_model_tests {
             id: "chatcmpl-123".into(),
             object: "chat.completion".into(),
             created: 1677652288,
-            model: OpenAIModel::Gpt4,
-            system_fingerprint: "fp_44709d6fcb".into(),
+            model: "gpt-4".into(),
+            system_fingerprint: Some("fp_44709d6fcb".into()),
             choices: vec![ChatCompletionChoices {
                 index: 0,
                 message: ChatMessage {

@@ -46,7 +46,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
             prompt_messages.into_iter().map(ChatMessage::from).collect();
 
         let body: ChatCompletionRequest = ChatCompletionRequest {
-            model: self.model.clone(),
+            model: self.model,
             messages: mapped_messages,
             additional_config: None,
         };
