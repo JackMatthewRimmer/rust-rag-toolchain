@@ -21,7 +21,7 @@ pub struct ChatCompletionResponse {
     pub object: String,
     pub created: u64,
     pub model: String, // String for now
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub system_fingerprint: Option<String>,
     pub choices: Vec<ChatCompletionChoices>,
     pub usage: Usage,
@@ -90,7 +90,7 @@ pub struct Usage {
 pub struct ChatCompletionChoices {
     pub index: usize,
     pub message: ChatMessage,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logprobs: Option<String>,
     pub finish_reason: String,
 }
@@ -99,7 +99,7 @@ pub struct ChatCompletionChoices {
 mod request_model_tests {
 
     use super::*;
-    const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","content":"Hello,howareyou?"},{"role":"user","content":"I'mdoinggreat.Howaboutyou?"},{"role":"system","":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
+    const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","content":"Hello,howareyou?"},{"role":"user","content":"I'mdoinggreat.Howaboutyou?"},{"role":"system","content":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
     const CHAT_COMPLETION_RESPONSE: &str = r#"{"id":"chatcmpl-123","object":"chat.completion","created":1677652288,"model":"gpt-4","system_fingerprint":"fp_44709d6fcb","choices":[{"index":0,"message":{"role":"assistant","content":"\n\nHello there, how may I assist you today?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":12,"total_tokens":21}}"#;
 
     #[test]
