@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use serde_json::{Map, Value};
 use std::env::VarError;
 
 use crate::clients::open_ai::model::chat_completions::{
@@ -21,6 +22,7 @@ pub struct OpenAIChatCompletionClient {
     url: String,
     client: OpenAIHttpClient,
     model: OpenAIModel,
+    additional_config: Option<Map<String, Value>>,
 }
 
 impl OpenAIChatCompletionClient {
@@ -30,7 +32,18 @@ impl OpenAIChatCompletionClient {
             url: OPENAI_CHAT_COMPLETIONS_URL.into(),
             client,
             model,
+            additional_config: None,
         })
+    }
+
+    /// # with_additional_config
+    ///
+    /// This methods allows users to set additional parameters to be included
+    /// in chat completion requests such as top_p, temperature, seed etc. Note
+    /// that setting 'n' will not yield anything as we only return the first
+    /// message we got back.
+    pub fn with_additional_config(&mut self, config: Map<String, Value>) {
+        self.additional_config = Some(config);
     }
 }
 
@@ -48,7 +61,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
         let body: ChatCompletionRequest = ChatCompletionRequest {
             model: self.model,
             messages: mapped_messages,
-            additional_config: None,
+            additional_config: self.additional_config.clone(),
         };
 
         let response: ChatCompletionResponse = self.client.send_request(body, &self.url).await?;

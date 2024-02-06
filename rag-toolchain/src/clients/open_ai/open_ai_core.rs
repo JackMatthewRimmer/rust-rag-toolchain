@@ -111,7 +111,7 @@ impl OpenAIHttpClient {
         let status_code = response.status().as_u16();
         let body_text = match response.text().await {
             Ok(text) => text,
-            Err(e) => return OpenAIError::UNDEFINED(status_code, e.to_string()),
+            Err(e) => return OpenAIError::Undefined(status_code, e.to_string()),
         };
 
         let error_body: OpenAIErrorBody = match serde_json::from_str(&body_text) {
@@ -126,7 +126,7 @@ impl OpenAIHttpClient {
             429 => OpenAIError::CODE429(error_body),
             500 => OpenAIError::CODE500(error_body),
             503 => OpenAIError::CODE503(error_body),
-            undefined => OpenAIError::UNDEFINED(undefined, body_text),
+            undefined => OpenAIError::Undefined(undefined, body_text),
         }
     }
 }

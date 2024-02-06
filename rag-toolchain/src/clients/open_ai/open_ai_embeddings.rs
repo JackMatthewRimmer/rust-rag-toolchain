@@ -385,7 +385,7 @@ mod embedding_client_tests {
             .with_header("content-type", "application/json")
             .with_body(ERROR_RESPONSE)
             .create();
-        let expected_response = OpenAIError::UNDEFINED(409, ERROR_RESPONSE.to_string());
+        let expected_response = OpenAIError::Undefined(409, ERROR_RESPONSE.to_string());
         // Test batch request
         let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
         let response = client.generate_embeddings(chunks).await.unwrap_err();

@@ -31,7 +31,7 @@ pub enum OpenAIError {
     /// # The engine is currently overloaded
     CODE503(OpenAIErrorBody),
     /// # Missed cases for error codes, includes Status Code and Error Body as a string
-    UNDEFINED(u16, String),
+    Undefined(u16, String),
     ErrorSendingRequest(String),
     /// # Carries underlying error
     ErrorGettingResponseBody(String),
@@ -64,7 +64,7 @@ impl Display for OpenAIError {
                 "The engine is currently overloaded: {}",
                 error_body.error.message
             ),
-            OpenAIError::UNDEFINED(status_code, error_body) => {
+            OpenAIError::Undefined(status_code, error_body) => {
                 write!(f, "Undefined Error. This should not happen, if this is a missed error please report it: https://github.com/JackMatthewRimmer/rust-rag-toolchain: {} - {}", status_code, error_body)
             }
             OpenAIError::ErrorSendingRequest(error) => {

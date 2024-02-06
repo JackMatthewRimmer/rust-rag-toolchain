@@ -1,3 +1,5 @@
+use serde_json::{Map, Value};
+
 use rag_toolchain::clients::{
     AsyncChatClient, OpenAIChatCompletionClient, OpenAIModel, PromptMessage,
 };
@@ -5,7 +7,11 @@ use rag_toolchain::clients::{
 #[tokio::main]
 async fn main() {
     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
-    let client: OpenAIChatCompletionClient = OpenAIChatCompletionClient::try_new(model).unwrap();
+    let mut client: OpenAIChatCompletionClient =
+        OpenAIChatCompletionClient::try_new(model).unwrap();
+    let mut additional_config: Map<String, Value> = Map::new();
+    additional_config.insert("temperature".into(), 2.into());
+    client.with_additional_config(additional_config);
 
     let system_message: PromptMessage = PromptMessage::SystemMessage(
         "You are a comedian that cant ever reply to someone unless its phrased as a sarcastic joke"
