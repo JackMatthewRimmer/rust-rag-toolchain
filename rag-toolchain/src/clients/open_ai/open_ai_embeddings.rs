@@ -1,18 +1,16 @@
-use crate::common::embedding_shared::OpenAIEmbeddingModel;
-use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
-use crate::clients::model::errors::OpenAIError;
-use crate::clients::traits::AsyncEmbeddingClient;
-use crate::common::types::{Chunk, Chunks, Embedding};
-use crate::clients::model::embeddings::{
-    BatchEmbeddingRequest, EmbeddingRequest, EmbeddingResponse, EmbeddingObject
+use crate::clients::open_ai::model::embeddings::{
+    BatchEmbeddingRequest, EmbeddingObject, EmbeddingRequest, EmbeddingResponse,
 };
+use crate::clients::open_ai::model::errors::OpenAIError;
+use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
+use crate::clients::traits::AsyncEmbeddingClient;
+use crate::common::embedding_shared::OpenAIEmbeddingModel;
+use crate::common::types::{Chunk, Chunks, Embedding};
 
-use std::env::VarError;
 use async_trait::async_trait;
-
+use std::env::VarError;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
-
 
 /// # OpenAIEmbeddingClient
 /// Allows for interacting with the OpenAI API to generate embeddings.
@@ -20,14 +18,16 @@ const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 ///
 /// # Required Environment Variables
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
-struct OpenAIEmbeddingClient {
+pub struct OpenAIEmbeddingClient {
     url: String,
     client: OpenAIHttpClient,
     embedding_model: OpenAIEmbeddingModel,
 }
 
 impl OpenAIEmbeddingClient {
-    fn try_new(embedding_model: OpenAIEmbeddingModel) -> Result<OpenAIEmbeddingClient, VarError> {
+    pub fn try_new(
+        embedding_model: OpenAIEmbeddingModel,
+    ) -> Result<OpenAIEmbeddingClient, VarError> {
         let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
         Ok(OpenAIEmbeddingClient {
             url: OPENAI_EMBEDDING_URL.into(),
@@ -84,15 +84,13 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
             .iter()
             .map(|chunk| (*chunk).chunk().to_string())
             .collect();
-        
+
         let request_body = BatchEmbeddingRequest::builder()
             .input(input_text)
             .model(self.embedding_model)
             .build();
 
-        let response: EmbeddingResponse = self.client
-            .send_request(request_body, &self.url)
-            .await?;
+        let response: EmbeddingResponse = self.client.send_request(request_body, &self.url).await?;
         Ok(Self::handle_embedding_success_response(text, response))
     }
 
@@ -114,9 +112,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
             .input(text.clone().into())
             .model(self.embedding_model)
             .build();
-        let response: EmbeddingResponse = self.client
-            .send_request(request_body, &self.url)
-            .await?;
+        let response: EmbeddingResponse = self.client.send_request(request_body, &self.url).await?;
         Ok(Self::handle_embedding_success_response(vec![text], response)[0].clone())
     }
 }
@@ -124,7 +120,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
 #[cfg(test)]
 mod embedding_client_tests {
     use super::*;
-    use crate::clients::model::errors::{OpenAIErrorBody, OpenAIErrorData};
+    use crate::clients::open_ai::model::errors::{OpenAIErrorBody, OpenAIErrorData};
 
     const EMBEDDING_RESPONSE: &'static str = r#"
     {

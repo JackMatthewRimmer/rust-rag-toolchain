@@ -34,7 +34,7 @@ pub enum ChatMessageRole {
     Assistant,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenAIModel {
     #[serde(rename = "gpt-4")]
@@ -64,6 +64,16 @@ impl From<PromptMessage> for ChatMessage {
                 role: ChatMessageRole::Assistant,
                 content: message,
             },
+        }
+    }
+}
+
+impl From<ChatMessage> for PromptMessage {
+    fn from(value: ChatMessage) -> Self {
+        match value.role {
+            ChatMessageRole::Assistant => PromptMessage::AIMessage(value.content),
+            ChatMessageRole::System => PromptMessage::SystemMessage(value.content),
+            ChatMessageRole::User => PromptMessage::HumanMessage(value.content),
         }
     }
 }

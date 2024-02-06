@@ -1,12 +1,12 @@
-use crate::clients::model::errors::{OpenAIError, OpenAIErrorBody};
+use crate::clients::open_ai::model::errors::{OpenAIError, OpenAIErrorBody};
 
-use reqwest::{RequestBuilder, Response, Client, StatusCode};
-use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use dotenv::dotenv;
+use reqwest::header::{HeaderValue, CONTENT_TYPE};
+use reqwest::{Client, RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::env::VarError;
 use std::env;
+use std::env::VarError;
 
 pub struct OpenAIHttpClient {
     client: Client,
@@ -34,7 +34,7 @@ impl OpenAIHttpClient {
             Err(e) => return Err(e),
         };
         let client: Client = Client::new();
-        Ok(OpenAIHttpClient {api_key,client})
+        Ok(OpenAIHttpClient { api_key, client })
     }
 
     // # send_reqest
@@ -54,13 +54,14 @@ impl OpenAIHttpClient {
     // # Returns
     // * `EmbeddingResponse` - The deserialized response from OpenAI
 
-    pub async fn send_request<T, U>(
-        &self, body: T, url: &str,
-    ) -> Result<U, OpenAIError> 
-    where T: Serialize ,U: DeserializeOwned {
-
+    pub async fn send_request<T, U>(&self, body: T, url: &str) -> Result<U, OpenAIError>
+    where
+        T: Serialize,
+        U: DeserializeOwned,
+    {
         let request = self.build_requeset(body, url);
-        let response: reqwest::Response = request.send()
+        let response: reqwest::Response = request
+            .send()
             .await
             .map_err(|error| OpenAIError::ErrorSendingRequest(error.to_string()))?;
 
@@ -76,18 +77,18 @@ impl OpenAIHttpClient {
             .await
             .map_err(|error| OpenAIError::ErrorGettingResponseBody(error.to_string()))?;
 
-        serde_json::from_str(&response_body)
-            .map_err(|error| OpenAIError::ErrorDeserializingResponseBody(
-                status_code.as_u16(),
-                error.to_string(),
-        ))
-
+        serde_json::from_str(&response_body).map_err(|error| {
+            OpenAIError::ErrorDeserializingResponseBody(status_code.as_u16(), error.to_string())
+        })
     }
 
     /// # build_request
-    /// 
+    ///
     /// Helper method to build a request with the correct headers and body
-    fn build_requeset<T>(&self, request_body: T, url: &str) -> RequestBuilder where T: Serialize {
+    fn build_requeset<T>(&self, request_body: T, url: &str) -> RequestBuilder
+    where
+        T: Serialize,
+    {
         let content_type = HeaderValue::from_static("application/json");
         self.client
             .post(url)
