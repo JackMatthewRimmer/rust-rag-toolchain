@@ -1,6 +1,6 @@
+use crate::common::embedding_shared::OpenAIEmbeddingModel;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
-use crate::common::embedding_shared::OpenAIEmbeddingModel;
 
 /// See <https://platform.openai.com/docs/api-reference/embeddings/create>
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, TypedBuilder)]
