@@ -8,6 +8,7 @@ use serde::Serialize;
 use std::env;
 use std::env::VarError;
 
+#[derive(Debug)]
 pub struct OpenAIHttpClient {
     client: Client,
     api_key: String,
@@ -128,5 +129,102 @@ impl OpenAIHttpClient {
             503 => OpenAIError::CODE503(error_body),
             undefined => OpenAIError::Undefined(undefined, body_text),
         }
+    }
+}
+
+#[cfg(test)]
+mod open_ai_core_tests {
+    use super::*;
+    use mockito::{Mock, Server, ServerGuard};
+    use serde::{Deserialize, Serialize};
+
+    const ERROR_RESPONSE: &'static str = r#"
+    {
+        "error": {
+            "message": "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "invalid_api_key"
+        }
+    }
+    "#;
+
+    #[test]
+    fn status_400_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = OpenAIError::CODE400(expected_error_body);
+        assert_status_mapping(400, expected_error);
+    }
+
+    #[test]
+    fn status_401_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = OpenAIError::CODE401(expected_error_body);
+        assert_status_mapping(401, expected_error);
+    }
+
+    #[test]
+    fn status_429_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = OpenAIError::CODE429(expected_error_body);
+        assert_status_mapping(429, expected_error);
+    }
+
+    #[test]
+    fn status_500_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = OpenAIError::CODE500(expected_error_body);
+        assert_status_mapping(500, expected_error);
+    }
+
+    #[test]
+    fn status_503_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = OpenAIError::CODE503(expected_error_body);
+        assert_status_mapping(503, expected_error);
+    }
+
+    // Helper method to assert all known status codes are mapped correctly
+    fn assert_status_mapping(status_code: usize, expected_error: OpenAIError) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let body = RequestBody {
+            message: "hello".into(),
+        };
+        let (client, mut server) = with_mocked_client();
+        let mock = with_mocked_request(&mut server, status_code, ERROR_RESPONSE);
+        let error = rt
+            .block_on(client.send_request::<RequestBody, RequestBody>(body, &server.url()))
+            .unwrap_err();
+        mock.assert();
+        assert_eq!(expected_error, error);
+    }
+
+    // Method which mocks the response the server will give. this
+    // allows us to stub the requests instead of sending them to OpenAI
+    fn with_mocked_request(
+        server: &mut ServerGuard,
+        status_code: usize,
+        response_body: &str,
+    ) -> Mock {
+        server
+            .mock("POST", "/")
+            .with_status(status_code)
+            .with_header("content-type", "application/json")
+            .with_body(response_body)
+            .create()
+    }
+
+    // This methods returns a client which is pointing at the mocked url
+    // and the mock server which we can orchestrate the stubbings on.
+    fn with_mocked_client() -> (OpenAIHttpClient, ServerGuard) {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let server = Server::new();
+        let client = OpenAIHttpClient::try_new().unwrap();
+        (client, server)
+    }
+
+    #[derive(Debug, Serialize, Deserialize)]
+    struct RequestBody {
+        message: String,
     }
 }
