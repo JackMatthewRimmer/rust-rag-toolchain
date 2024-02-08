@@ -1,1 +1,3 @@
-pub mod token_chunker;
+mod token_chunker;
+
+pub use token_chunker::TokenChunker;

@@ -4,8 +4,7 @@ use crate::clients::open_ai::model::embeddings::{
 use crate::clients::open_ai::model::errors::OpenAIError;
 use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
 use crate::clients::traits::AsyncEmbeddingClient;
-use crate::common::embedding_shared::OpenAIEmbeddingModel;
-use crate::common::types::{Chunk, Chunks, Embedding};
+use crate::common::{Chunk, Chunks, Embedding, OpenAIEmbeddingModel};
 
 use async_trait::async_trait;
 use std::env::VarError;

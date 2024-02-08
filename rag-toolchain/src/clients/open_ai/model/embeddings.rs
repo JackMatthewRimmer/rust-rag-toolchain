@@ -1,4 +1,4 @@
-use crate::common::embedding_shared::OpenAIEmbeddingModel;
+use crate::common::OpenAIEmbeddingModel;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 
