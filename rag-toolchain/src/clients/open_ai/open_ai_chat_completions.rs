@@ -74,3 +74,95 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
         Ok(messages[0].clone())
     }
 }
+
+#[cfg(test)]
+mod chat_completion_client_test {
+    use super::*;
+    use mockito::{Mock, Server, ServerGuard};
+
+    const CHAT_COMPLETION_RESPONSE: &'static str = r#"
+    {
+        "id": "chatcmpl-123",
+        "object": "chat.completion",
+        "created": 1677652288,
+        "model": "gpt-3.5-turbo-0613",
+        "system_fingerprint": "fp_44709d6fcb",
+        "choices": [{
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Hello there, how may I assist you today?"
+          },
+          "logprobs": null,
+          "finish_reason": "stop"
+        }],
+        "usage": {
+          "prompt_tokens": 9,
+          "completion_tokens": 12,
+          "total_tokens": 21
+        }
+    }
+    "#;
+
+    const ERROR_RESPONSE: &'static str = r#"
+    {
+        "error": {
+            "message": "Incorrect API key provided: fdas. You can find your API key at https://platform.openai.com/account/api-keys.",
+            "type": "invalid_request_error",
+            "param": null,
+            "code": "invalid_api_key"
+        }
+    }
+    "#;
+
+    #[tokio::test]
+    async fn test_correct_response_succeeds() {
+        let (client, mut server) = with_mocked_client();
+        let mock = with_mocked_request(&mut server, 200, CHAT_COMPLETION_RESPONSE);
+        let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
+        let response = client.invoke(vec![prompt]).await.unwrap();
+        let expected_response =
+            PromptMessage::AIMessage("Hello there, how may I assist you today?".into());
+        mock.assert();
+        assert_eq!(expected_response, response);
+    }
+
+    #[tokio::test]
+    async fn test_error_response_maps_correctly() {
+        let (client, mut server) = with_mocked_client();
+        let mock = with_mocked_request(&mut server, 401, ERROR_RESPONSE);
+        let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
+        let response = client.invoke(vec![prompt]).await.unwrap_err();
+        let error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_response = OpenAIError::CODE401(error_body);
+        mock.assert();
+        assert_eq!(expected_response, response);
+    }
+
+    // Method which mocks the response the server will give. this
+    // allows us to stub the requests instead of sending them to OpenAI
+    fn with_mocked_request(
+        server: &mut ServerGuard,
+        status_code: usize,
+        response_body: &str,
+    ) -> Mock {
+        server
+            .mock("POST", "/")
+            .with_status(status_code)
+            .with_header("content-type", "application/json")
+            .with_body(response_body)
+            .create()
+    }
+
+    // This methods returns a client which is pointing at the mocked url
+    // and the mock server which we can orchestrate the stubbings on.
+    fn with_mocked_client() -> (OpenAIChatCompletionClient, ServerGuard) {
+        std::env::set_var("OPENAI_API_KEY", "fake key");
+        let server = Server::new();
+        let url = server.url();
+        let model = OpenAIModel::Gpt3Point5;
+        let mut client = OpenAIChatCompletionClient::try_new(model).unwrap();
+        client.url = url;
+        (client, server)
+    }
+}

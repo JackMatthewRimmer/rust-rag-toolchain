@@ -10,7 +10,7 @@ async fn main() {
     let mut client: OpenAIChatCompletionClient =
         OpenAIChatCompletionClient::try_new(model).unwrap();
     let mut additional_config: Map<String, Value> = Map::new();
-    additional_config.insert("temperature".into(), 2.into());
+    additional_config.insert("temperature".into(), 0.5.into());
     client.with_additional_config(additional_config);
 
     let system_message: PromptMessage = PromptMessage::SystemMessage(
