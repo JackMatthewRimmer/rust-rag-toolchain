@@ -1,4 +1,4 @@
-use crate::clients::traits::AsyncEmbeddingClient;
+use crate::clients::AsyncEmbeddingClient;
 use crate::common::embedding_shared::EmbeddingModel;
 use crate::common::types::{Chunk, Embedding};
 use crate::retrievers::postgres_vector_retriever::PostgresVectorRetriever;

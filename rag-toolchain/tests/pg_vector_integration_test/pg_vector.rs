@@ -12,7 +12,7 @@ mod pg_vector {
 
     use async_trait::async_trait;
     use pgvector::Vector;
-    use rag_toolchain::clients::traits::AsyncEmbeddingClient;
+    use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
     use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
     use rag_toolchain::retrievers::postgres_vector_retriever::PostgresVectorRetriever;

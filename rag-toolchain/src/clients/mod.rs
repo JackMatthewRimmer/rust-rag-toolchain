@@ -1,4 +1,8 @@
-/// Module that defines a client for interacting with the OpenAI API
-pub mod openai_client;
-/// Module that defines the traits used by the clients in this crate
-pub mod traits;
+mod open_ai;
+mod traits;
+mod types;
+pub use self::open_ai::open_ai_chat_completions::OpenAIChatCompletionClient;
+pub use self::open_ai::open_ai_embeddings::OpenAIEmbeddingClient;
+pub use self::open_ai::OpenAIModel;
+pub use self::traits::{AsyncChatClient, AsyncEmbeddingClient};
+pub use self::types::PromptMessage;

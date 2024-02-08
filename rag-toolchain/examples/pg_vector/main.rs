@@ -1,6 +1,5 @@
 use rag_toolchain::chunkers::token_chunker::TokenChunker;
-use rag_toolchain::clients::openai_client::OpenAIClient;
-use rag_toolchain::clients::traits::AsyncEmbeddingClient;
+use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIEmbeddingClient};
 use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel;
 use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
 use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
@@ -33,8 +32,8 @@ async fn main() {
             .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
-    let client: OpenAIClient =
-        OpenAIClient::try_new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
+    let client: OpenAIEmbeddingClient =
+        OpenAIEmbeddingClient::try_new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
     println!("Embeddings: {:?}", embeddings);
 
