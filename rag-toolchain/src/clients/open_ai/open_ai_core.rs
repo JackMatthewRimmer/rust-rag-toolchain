@@ -136,7 +136,7 @@ impl OpenAIHttpClient {
 mod open_ai_core_tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
-    use serde::{Deserialize, Serialize};
+    use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
     const ERROR_RESPONSE: &'static str = r#"
     {
@@ -182,6 +182,34 @@ mod open_ai_core_tests {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE503(expected_error_body);
         assert_status_mapping(503, expected_error);
+    }
+
+    #[test]
+    fn undefined_maps_correctly() {
+        let expected_error = OpenAIError::Undefined(404, ERROR_RESPONSE.into());
+        assert_status_mapping(404, expected_error);
+    }
+
+    #[tokio::test]
+    async fn error_deserializing_response_body_maps_correctly() {
+        let response_body = "some invalid response";
+        let status_code: u16 = 400;
+        let body = RequestBody {
+            message: "hello".into(),
+        };
+        let (client, mut server) = with_mocked_client();
+        let mock = with_mocked_request(&mut server, status_code.into(), response_body);
+        let error = client
+            .send_request::<RequestBody, RequestBody>(body, &server.url())
+            .await
+            .unwrap_err();
+        // The error here is the message from serde
+        let expected_error = OpenAIError::ErrorDeserializingResponseBody(
+            status_code,
+            "expected value at line 1 column 1".into(),
+        );
+        mock.assert();
+        assert_eq!(expected_error, error);
     }
 
     // Helper method to assert all known status codes are mapped correctly
