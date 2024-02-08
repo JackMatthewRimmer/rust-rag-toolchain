@@ -1,4 +1,4 @@
-use crate::common::types::Chunk;
+use crate::common::Chunk;
 use async_trait::async_trait;
 use std::{error::Error, num::NonZeroU32};
 

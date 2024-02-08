@@ -1,9 +1,7 @@
-use rag_toolchain::chunkers::token_chunker::TokenChunker;
+use rag_toolchain::chunkers::TokenChunker;
 use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIEmbeddingClient};
-use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel;
-use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
-use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
-use rag_toolchain::stores::traits::EmbeddingStore;
+use rag_toolchain::common::{Chunk, Chunks, Embedding, OpenAIEmbeddingModel};
+use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
 
 #[tokio::main]
 async fn main() {

@@ -2,7 +2,7 @@
 ///
 /// This test is an integration test for the postgres vector store and retriever.
 ///
-/// It firstly tests by simply upserting vectors into the databse and asserting that they are there
+/// It firstly tests by simply upserting vectors into the database and asserting that they are there
 ///
 /// It firstly upserts the first two items of the test data into the vector databse. it is expected that when retrieving
 /// based of the third item of the test data that the second item is returned. as that is the most similar text
@@ -13,12 +13,11 @@ mod pg_vector {
     use async_trait::async_trait;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
-    use rag_toolchain::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
-    use rag_toolchain::common::types::{Chunk, Chunks, Embedding};
-    use rag_toolchain::retrievers::postgres_vector_retriever::PostgresVectorRetriever;
-    use rag_toolchain::retrievers::traits::AsyncRetriever;
-    use rag_toolchain::stores::postgres_vector_store::PostgresVectorStore;
-    use rag_toolchain::stores::traits::EmbeddingStore;
+    use rag_toolchain::common::{
+        Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
+    };
+    use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
+    use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
     use sqlx::postgres::PgRow;
     use sqlx::{Pool, Postgres, Row};

@@ -1,3 +1,7 @@
 #[cfg(feature = "pg_vector")]
-pub mod postgres_vector_store;
-pub mod traits;
+mod postgres_vector_store;
+mod traits;
+
+#[cfg(feature = "pg_vector")]
+pub use postgres_vector_store::{PgVectorError, PostgresVectorStore};
+pub use traits::EmbeddingStore;

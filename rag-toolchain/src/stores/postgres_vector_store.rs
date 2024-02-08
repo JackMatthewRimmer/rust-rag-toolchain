@@ -1,7 +1,6 @@
 use crate::clients::AsyncEmbeddingClient;
-use crate::common::embedding_shared::EmbeddingModel;
-use crate::common::types::{Chunk, Embedding};
-use crate::retrievers::postgres_vector_retriever::PostgresVectorRetriever;
+use crate::common::{Chunk, Embedding, EmbeddingModel};
+use crate::retrievers::PostgresVectorRetriever;
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -269,7 +268,7 @@ impl Display for PgVectorError {
 #[cfg(all(test, feature = "pg_vector"))]
 mod tests {
     use super::*;
-    use crate::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
+    use crate::common::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[tokio::test]
     async fn test_throws_correct_errors() {

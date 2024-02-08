@@ -136,7 +136,7 @@ impl OpenAIHttpClient {
 mod open_ai_core_tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
-    use serde::{de::IntoDeserializer, Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     const ERROR_RESPONSE: &'static str = r#"
     {

@@ -1,5 +1,4 @@
-use crate::common::embedding_shared::{EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
-use crate::common::types::{Chunk, Chunks};
+use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
 use std::num::NonZeroUsize;
 
 /// # TokenChunker
@@ -121,7 +120,7 @@ pub enum ChunkingError {
 mod tests {
 
     use super::*;
-    use crate::common::embedding_shared::OpenAIEmbeddingModel::TextEmbeddingAda002;
+    use crate::common::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     #[test]
     fn test_generate_chunks_with_valid_input() {

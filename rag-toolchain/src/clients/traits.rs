@@ -1,4 +1,4 @@
-use crate::common::types::{Chunk, Chunks, Embedding};
+use crate::common::{Chunk, Chunks, Embedding};
 use async_trait::async_trait;
 use std::error::Error;
 
