@@ -61,7 +61,7 @@ mod pg_vector {
         command.cmd = command_string;
 
         // Execute custom SQL commands to enable the extension
-        let output = container.exec(command);
+        let _output = container.exec(command);
 
         let case1 = test_store_persists();
         let case2 = test_batch_store_persists();
