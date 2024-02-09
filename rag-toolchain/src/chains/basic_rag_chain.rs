@@ -104,6 +104,8 @@ where
 
 #[cfg(test)]
 mod basic_rag_chain_tests {
+    use crate::retrievers;
+
     use super::*;
     use async_trait::async_trait;
     use std::vec;
@@ -124,10 +126,13 @@ mod basic_rag_chain_tests {
     #[tokio::test]
     async fn test_chain_succeeds() {
         let system_prompt = PromptMessage::SystemMessage("you are a study buddy".into());
+        let chat_client = MockChatClient::new();
+        let retriever = MockRetriever::new();
+
         let chain: BasicRAGChain<MockChatClient, MockRetriever> = BasicRAGChain::builder()
             .system_prompt(system_prompt)
-            .chat_client(MockChatClient {})
-            .retriever(MockRetriever::new())
+            .chat_client(chat_client)
+            .retriever(retriever)
             .build();
 
         let user_message = PromptMessage::HumanMessage(
@@ -176,13 +181,35 @@ mod basic_rag_chain_tests {
             text: &str,
             top_k: NonZeroU32,
         ) -> Result<Vec<Chunk>, Self::ErrorType> {
-            assert_eq!(self.expected_text.unwrap(), text);
+            assert_eq!(self.expected_text.clone().unwrap(), text);
             assert_eq!(self.expected_top_k.unwrap(), top_k);
-            Ok(self.should_return.unwrap())
+            Ok(self.should_return.clone().unwrap())
         }
     }
 
-    pub struct MockChatClient {}
+    pub struct MockChatClient {
+        expected_prompt_message: Option<Vec<PromptMessage>>,
+        should_return: Option<PromptMessage>,
+    }
+
+    impl MockChatClient {
+        fn new() -> Self {
+            MockChatClient {
+                expected_prompt_message: None,
+                should_return: None,
+            }
+        }
+
+        fn mock_invoke(
+            &mut self,
+            prompt_messages: Vec<PromptMessage>,
+            should_return: PromptMessage,
+        ) {
+            self.expected_prompt_message = Some(prompt_messages);
+            self.should_return = Some(should_return);
+        }
+    }
+
     #[async_trait]
     impl AsyncChatClient for MockChatClient {
         type ErrorType = std::io::Error;
@@ -190,7 +217,8 @@ mod basic_rag_chain_tests {
             &self,
             prompt_messages: Vec<PromptMessage>,
         ) -> Result<PromptMessage, Self::ErrorType> {
-            Ok(PromptMessage::AIMessage("mocked response".into()))
+            assert_eq!(self.expected_prompt_message.unwrap(), prompt_messages);
+            Ok(self.should_return.unwrap())
         }
     }
 }
