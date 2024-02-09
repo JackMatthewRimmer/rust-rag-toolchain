@@ -6,11 +6,13 @@
 ///
 /// It firstly upserts the first two items of the test data into the vector databse. it is expected that when retrieving
 /// based of the third item of the test data that the second item is returned. as that is the most similar text
+///
+/// Due to the nature of test containers we have to run each test all from the same function to allow them to all use the same
+/// container.
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
     use async_trait::async_trait;
-    use lazy_static::lazy_static;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
@@ -21,41 +23,54 @@ mod pg_vector {
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
     use std::num::NonZeroU32;
-    use std::sync::{Mutex, Once};
-    use testcontainers::{clients::Cli, core::WaitFor, Container, GenericImage};
+    use testcontainers::{
+        clients::Cli,
+        core::{ExecCommand, WaitFor},
+        GenericImage,
+    };
 
-    lazy_static! {
-        static ref DOCKER: Cli = Cli::default();
-        static ref CONTAINER: Mutex<Option<Container<'static, GenericImage>>> = Mutex::new(None);
-        static ref CONTAINER_INITIALIZED: Once = Once::new();
+    fn get_image() -> GenericImage {
+        GenericImage::new("ankane/pgvector", "latest")
+            .with_wait_for(WaitFor::message_on_stdout(
+                "database system is ready to accept connections",
+            ))
+            .with_env_var("POSTGRES_USER", "postgres")
+            .with_env_var("POSTGRES_PASSWORD", "postgres")
+            .with_env_var("POSTGRES_DB", "test_db")
+            .with_exposed_port(5432)
     }
 
-    fn initialize_container() {
-        CONTAINER_INITIALIZED.call_once(|| {
-            let container = DOCKER.run(
-                GenericImage::new("ankane/pgvector", "latest")
-                    .with_wait_for(WaitFor::message_on_stdout(
-                        "database system is ready to accept connections",
-                    ))
-                    .with_env_var("POSTGRES_USER", "postgres")
-                    .with_env_var("POSTGRES_PASSWORD", "postgres")
-                    .with_env_var("POSTGRES_DB", "test_db")
-                    .with_exposed_port(5432),
-            );
-            let host = format!("{}:{}", "localhost", container.get_host_port_ipv4(5432));
-            std::env::set_var("POSTGRES_USER", "postgres");
-            std::env::set_var("POSTGRES_PASSWORD", "postgres");
-            std::env::set_var("POSTGRES_HOST", host);
-            std::env::set_var("POSTGRES_DATABASE", "test_db");
-            let mut lock = CONTAINER.lock().unwrap();
-            *lock = Some(container);
-        });
+    fn set_env_vars(port: u16) {
+        let host = format!("{}:{}", "localhost", port);
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", host);
+        std::env::set_var("POSTGRES_DATABASE", "test_db");
     }
 
     #[tokio::test]
+    async fn run_integration_tests() {
+        let docker = Cli::default();
+        let image = get_image();
+        let container = docker.run(image);
+        set_env_vars(container.get_host_port_ipv4(5432));
+
+        let command_string =
+            format!(r#"psql -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS vector;""#);
+        let mut command: ExecCommand = ExecCommand::default();
+        command.cmd = command_string;
+
+        // Execute custom SQL commands to enable the extension
+        let output = container.exec(command);
+
+        let case1 = test_store_persists();
+        let case2 = test_batch_store_persists();
+        let case3 = test_retriever_returns_correct_data();
+
+        let _ = tokio::join!(case1, case2, case3);
+    }
+
     async fn test_store_persists() {
-        initialize_container();
-        let _unused = CONTAINER.lock().unwrap();
         const TABLE_NAME: &str = "test_db_1";
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
@@ -75,10 +90,7 @@ mod pg_vector {
         .await;
     }
 
-    #[tokio::test]
     async fn test_batch_store_persists() {
-        initialize_container();
-        let _unused = CONTAINER.lock().unwrap();
         const TABLE_NAME: &str = "test_db_2";
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
@@ -101,10 +113,7 @@ mod pg_vector {
         }
     }
 
-    #[tokio::test]
     async fn test_retriever_returns_correct_data() {
-        initialize_container();
-        let _unused = CONTAINER.lock().unwrap();
         const TABLE_NAME: &str = "test_db_3";
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await

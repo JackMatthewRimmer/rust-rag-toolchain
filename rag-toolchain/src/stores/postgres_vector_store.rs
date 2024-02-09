@@ -1,6 +1,6 @@
 use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding, EmbeddingModel};
-use crate::retrievers::{PostgresRetrieverError, PostgresVectorRetriever};
+use crate::retrievers::PostgresVectorRetriever;
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -68,11 +68,6 @@ impl PostgresVectorStore {
         let pool = PostgresVectorStore::connect(&connection_string)
             .await
             .map_err(PgVectorError::ConnectionError)?;
-
-        // enable extension
-        PostgresVectorStore::enable_extension(pool.clone())
-            .await
-            .map_err(PgVectorError::TableCreationError)?;
 
         // Create the table
         PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
@@ -146,12 +141,6 @@ impl PostgresVectorStore {
             table_name, vector_dimension
         );
         sqlx::query(&query).execute(&pool).await
-    }
-
-    async fn enable_extension(pool: Pool<Postgres>) -> Result<(), SqlxError> {
-        let query: String = "CREATE EXTENSION IF NOT EXISTS vector".into();
-        sqlx::query(&query).execute(&pool).await?;
-        Ok(())
     }
 }
 
