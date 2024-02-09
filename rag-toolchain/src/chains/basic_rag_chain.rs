@@ -8,12 +8,15 @@ use std::{
     fmt::{Display, Formatter},
     num::NonZeroU32,
 };
+use typed_builder::TypedBuilder;
 
+#[derive(TypedBuilder)]
 pub struct BasicRAGChain<T, U>
 where
     T: AsyncChatClient,
     U: AsyncRetriever,
 {
+    #[builder(default, setter(strip_option))]
     system_prompt: Option<PromptMessage>,
     chat_client: T,
     retriever: U,
@@ -95,6 +98,53 @@ where
         match self {
             Self::ChatClientError(e) => std::fmt::Display::fmt(&e, f),
             Self::RetrieverError(e) => std::fmt::Display::fmt(&e, f),
+        }
+    }
+}
+
+#[cfg(test)]
+mod basic_rag_chain_tests {
+    use std::vec;
+
+    use super::*;
+    use async_trait::async_trait;
+
+    #[test]
+    fn build_prompt_gives_correct_output() {
+        const USER_MESSAGE: &str = "can you explain the data to me";
+        let user_prompt: PromptMessage = PromptMessage::HumanMessage(USER_MESSAGE.into());
+        let chunks = vec![Chunk::from("data point 1"), Chunk::from("data point 2")];
+        let response: String =
+            BasicRAGChain::<MockChatClient, MockRetriever>::build_prompt(user_prompt, chunks);
+
+        let expected_response: &str = "can you explain the data to me\nHere is some supporting information:\ndata point 1\ndata point 2\n";
+        println!("{}", expected_response);
+        assert_eq!(expected_response, response);
+    }
+
+    pub struct MockRetriever {}
+    #[async_trait]
+    impl AsyncRetriever for MockRetriever {
+        type ErrorType = std::io::Error;
+
+        async fn retrieve(
+            &self,
+            text: &str,
+            top_k: NonZeroU32,
+        ) -> Result<Vec<Chunk>, Self::ErrorType> {
+            Ok(vec![])
+        }
+    }
+
+    pub struct MockChatClient {}
+    #[async_trait]
+    impl AsyncChatClient for MockChatClient {
+        type ErrorType = std::io::Error;
+        async fn invoke(
+            &self,
+            prompt_messages: Vec<PromptMessage>,
+        ) -> Result<PromptMessage, Self::ErrorType> {
+            Ok(PromptMessage::AIMessage("mocked response".into()))
         }
     }
 }
