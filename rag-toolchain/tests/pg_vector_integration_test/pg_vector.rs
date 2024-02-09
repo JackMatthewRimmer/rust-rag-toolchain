@@ -6,10 +6,12 @@
 ///
 /// It firstly upserts the first two items of the test data into the vector databse. it is expected that when retrieving
 /// based of the third item of the test data that the second item is returned. as that is the most similar text
+///
+/// Due to the nature of test containers we have to run each test all from the same function to allow them to all use the same
+/// container.
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-
     use async_trait::async_trait;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
@@ -19,16 +21,58 @@ mod pg_vector {
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
-    use sqlx::postgres::PgRow;
-    use sqlx::{Pool, Postgres, Row};
+    use sqlx::{postgres::PgRow, Pool, Postgres, Row};
     use std::num::NonZeroU32;
+    use testcontainers::{
+        clients::Cli,
+        core::{ExecCommand, WaitFor},
+        GenericImage,
+    };
+
+    fn get_image() -> GenericImage {
+        GenericImage::new("ankane/pgvector", "latest")
+            .with_wait_for(WaitFor::message_on_stdout(
+                "database system is ready to accept connections",
+            ))
+            .with_env_var("POSTGRES_USER", "postgres")
+            .with_env_var("POSTGRES_PASSWORD", "postgres")
+            .with_env_var("POSTGRES_DB", "test_db")
+            .with_exposed_port(5432)
+    }
+
+    fn set_env_vars(port: u16) {
+        let host = format!("{}:{}", "localhost", port);
+        std::env::set_var("POSTGRES_USER", "postgres");
+        std::env::set_var("POSTGRES_PASSWORD", "postgres");
+        std::env::set_var("POSTGRES_HOST", host);
+        std::env::set_var("POSTGRES_DATABASE", "test_db");
+    }
 
     #[tokio::test]
+    async fn run_integration_tests() {
+        let docker = Cli::default();
+        let image = get_image();
+        let container = docker.run(image);
+        set_env_vars(container.get_host_port_ipv4(5432));
+
+        let command_string =
+            format!(r#"psql -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS vector;""#);
+        let mut command: ExecCommand = ExecCommand::default();
+        command.cmd = command_string;
+
+        // Execute custom SQL commands to enable the extension
+        let _output = container.exec(command);
+
+        let case1 = test_store_persists();
+        let case2 = test_batch_store_persists();
+        let case3 = test_retriever_returns_correct_data();
+
+        let _ = tokio::join!(case1, case2, case3);
+    }
+
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
-        with_env_vars();
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
-
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
@@ -46,10 +90,8 @@ mod pg_vector {
         .await;
     }
 
-    #[tokio::test]
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
-        with_env_vars();
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
@@ -71,10 +113,8 @@ mod pg_vector {
         }
     }
 
-    #[tokio::test]
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-        with_env_vars();
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
@@ -125,13 +165,6 @@ mod pg_vector {
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
         assert_eq!(row.embedding, embeddings);
-    }
-
-    fn with_env_vars() {
-        std::env::set_var("POSTGRES_USER", "postgres");
-        std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        std::env::set_var("POSTGRES_HOST", "localhost");
-        std::env::set_var("POSTGRES_DATABASE", "pg_vector");
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
