@@ -26,7 +26,7 @@ pg_vector = ["dep:pgvector"]
 criterion = "0.5.1"
 mockito = "1.2.0"
 testcontainers = "0.15.0"
-lazy_static = "1.4.0"
+mockall = { version = "0.12.1" }
 
 [[bench]]
 name = "generate_chunks"

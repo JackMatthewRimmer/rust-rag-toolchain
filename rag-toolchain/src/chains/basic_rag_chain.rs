@@ -104,10 +104,9 @@ where
 
 #[cfg(test)]
 mod basic_rag_chain_tests {
-    use std::vec;
-
     use super::*;
     use async_trait::async_trait;
+    use std::vec;
 
     #[test]
     fn build_prompt_gives_correct_output() {
@@ -122,7 +121,52 @@ mod basic_rag_chain_tests {
         assert_eq!(expected_response, response);
     }
 
-    pub struct MockRetriever {}
+    #[tokio::test]
+    async fn test_chain_succeeds() {
+        let system_prompt = PromptMessage::SystemMessage("you are a study buddy".into());
+        let chain: BasicRAGChain<MockChatClient, MockRetriever> = BasicRAGChain::builder()
+            .system_prompt(system_prompt)
+            .chat_client(MockChatClient {})
+            .retriever(MockRetriever::new())
+            .build();
+
+        let user_message = PromptMessage::HumanMessage(
+            "please tell me about my lecture on operating systems".into(),
+        );
+
+        let result = chain
+            .invoke_chain(user_message, NonZeroU32::new(2).unwrap())
+            .await
+            .unwrap();
+    }
+
+    pub struct MockRetriever {
+        expected_text: Option<String>,
+        expected_top_k: Option<NonZeroU32>,
+        should_return: Option<Vec<Chunk>>,
+    }
+
+    impl MockRetriever {
+        fn new() -> Self {
+            MockRetriever {
+                expected_text: None,
+                expected_top_k: None,
+                should_return: None,
+            }
+        }
+
+        fn mock_retrieve(
+            &mut self,
+            text: impl Into<String>,
+            top_k: NonZeroU32,
+            should_return: Vec<Chunk>,
+        ) {
+            self.expected_text = Some(text.into());
+            self.expected_top_k = Some(top_k);
+            self.should_return = Some(should_return)
+        }
+    }
+
     #[async_trait]
     impl AsyncRetriever for MockRetriever {
         type ErrorType = std::io::Error;
@@ -132,7 +176,9 @@ mod basic_rag_chain_tests {
             text: &str,
             top_k: NonZeroU32,
         ) -> Result<Vec<Chunk>, Self::ErrorType> {
-            Ok(vec![])
+            assert_eq!(self.expected_text.unwrap(), text);
+            assert_eq!(self.expected_top_k.unwrap(), top_k);
+            Ok(self.should_return.unwrap())
         }
     }
 
