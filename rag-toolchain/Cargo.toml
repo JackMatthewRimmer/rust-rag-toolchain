@@ -23,10 +23,10 @@ default = ["pg_vector"]
 pg_vector = ["dep:pgvector"]
 
 [dev-dependencies]
+mockall = "0.12.1"
 criterion = "0.5.1"
 mockito = "1.2.0"
 testcontainers = "0.15.0"
-mockall = { version = "0.12.1" }
 
 [[bench]]
 name = "generate_chunks"

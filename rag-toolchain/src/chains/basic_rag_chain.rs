@@ -104,10 +104,10 @@ where
 
 #[cfg(test)]
 mod basic_rag_chain_tests {
-    use crate::retrievers;
-
     use super::*;
     use async_trait::async_trait;
+    use mockall::predicate::eq;
+    use mockall::*;
     use std::vec;
 
     #[test]
@@ -116,7 +116,10 @@ mod basic_rag_chain_tests {
         let user_prompt: PromptMessage = PromptMessage::HumanMessage(USER_MESSAGE.into());
         let chunks = vec![Chunk::from("data point 1"), Chunk::from("data point 2")];
         let response: String =
-            BasicRAGChain::<MockChatClient, MockRetriever>::build_prompt(user_prompt, chunks);
+            BasicRAGChain::<MockAsyncChatClient, MockAsyncRetriever>::build_prompt(
+                user_prompt,
+                chunks,
+            );
 
         let expected_response: &str = "can you explain the data to me\nHere is some supporting information:\ndata point 1\ndata point 2\n";
         println!("{}", expected_response);
@@ -125,100 +128,67 @@ mod basic_rag_chain_tests {
 
     #[tokio::test]
     async fn test_chain_succeeds() {
-        let system_prompt = PromptMessage::SystemMessage("you are a study buddy".into());
-        let chat_client = MockChatClient::new();
-        let retriever = MockRetriever::new();
-
-        let chain: BasicRAGChain<MockChatClient, MockRetriever> = BasicRAGChain::builder()
-            .system_prompt(system_prompt)
-            .chat_client(chat_client)
-            .retriever(retriever)
-            .build();
-
-        let user_message = PromptMessage::HumanMessage(
-            "please tell me about my lecture on operating systems".into(),
+        const SYSTEM_MESSAGE: &str = "you are a study buddy";
+        const USER_MESSAGE: &str = "please tell me about my lecture on operating systems";
+        const RAG_CHUNK_1: &str = "data point 1";
+        const RAG_CHUNK_2: &str = "data point 2";
+        let expected_user_message: String = format!(
+            "{}\n{}\n{}\n{}\n",
+            USER_MESSAGE, "Here is some supporting information:", RAG_CHUNK_1, RAG_CHUNK_2
         );
+
+        let system_prompt = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());
+        let mut chat_client = MockAsyncChatClient::new();
+        let mut retriever = MockAsyncRetriever::new();
+
+        retriever
+            .expect_retrieve()
+            .with(eq(USER_MESSAGE), eq(NonZeroU32::new(2).unwrap()))
+            .returning(|_, _| Ok(vec![Chunk::from(RAG_CHUNK_1), Chunk::from(RAG_CHUNK_2)]));
+
+        chat_client
+            .expect_invoke()
+            .with(eq(vec![
+                system_prompt.clone(),
+                PromptMessage::HumanMessage(expected_user_message.into()),
+            ]))
+            .returning(|_| Ok(PromptMessage::AIMessage("mocked response".into())));
+
+        let chain: BasicRAGChain<MockAsyncChatClient, MockAsyncRetriever> =
+            BasicRAGChain::builder()
+                .system_prompt(system_prompt)
+                .chat_client(chat_client)
+                .retriever(retriever)
+                .build();
+
+        let user_message = PromptMessage::HumanMessage(USER_MESSAGE.into());
 
         let result = chain
             .invoke_chain(user_message, NonZeroU32::new(2).unwrap())
             .await
             .unwrap();
+
+        assert_eq!(PromptMessage::AIMessage("mocked response".into()), result)
     }
 
-    pub struct MockRetriever {
-        expected_text: Option<String>,
-        expected_top_k: Option<NonZeroU32>,
-        should_return: Option<Vec<Chunk>>,
-    }
-
-    impl MockRetriever {
-        fn new() -> Self {
-            MockRetriever {
-                expected_text: None,
-                expected_top_k: None,
-                should_return: None,
-            }
-        }
-
-        fn mock_retrieve(
-            &mut self,
-            text: impl Into<String>,
-            top_k: NonZeroU32,
-            should_return: Vec<Chunk>,
-        ) {
-            self.expected_text = Some(text.into());
-            self.expected_top_k = Some(top_k);
-            self.should_return = Some(should_return)
+    mock! {
+        AsyncRetriever {}
+        #[async_trait]
+        impl AsyncRetriever for AsyncRetriever {
+            type ErrorType = std::io::Error;
+            async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, <Self as AsyncRetriever>::ErrorType>;
         }
     }
 
-    #[async_trait]
-    impl AsyncRetriever for MockRetriever {
-        type ErrorType = std::io::Error;
-
-        async fn retrieve(
-            &self,
-            text: &str,
-            top_k: NonZeroU32,
-        ) -> Result<Vec<Chunk>, Self::ErrorType> {
-            assert_eq!(self.expected_text.clone().unwrap(), text);
-            assert_eq!(self.expected_top_k.unwrap(), top_k);
-            Ok(self.should_return.clone().unwrap())
-        }
-    }
-
-    pub struct MockChatClient {
-        expected_prompt_message: Option<Vec<PromptMessage>>,
-        should_return: Option<PromptMessage>,
-    }
-
-    impl MockChatClient {
-        fn new() -> Self {
-            MockChatClient {
-                expected_prompt_message: None,
-                should_return: None,
-            }
-        }
-
-        fn mock_invoke(
-            &mut self,
-            prompt_messages: Vec<PromptMessage>,
-            should_return: PromptMessage,
-        ) {
-            self.expected_prompt_message = Some(prompt_messages);
-            self.should_return = Some(should_return);
-        }
-    }
-
-    #[async_trait]
-    impl AsyncChatClient for MockChatClient {
-        type ErrorType = std::io::Error;
-        async fn invoke(
-            &self,
-            prompt_messages: Vec<PromptMessage>,
-        ) -> Result<PromptMessage, Self::ErrorType> {
-            assert_eq!(self.expected_prompt_message.unwrap(), prompt_messages);
-            Ok(self.should_return.unwrap())
+    mock! {
+        AsyncChatClient {}
+        #[async_trait]
+        impl AsyncChatClient for AsyncChatClient {
+            type ErrorType = std::io::Error;
+            async fn invoke(
+                &self,
+                prompt_messages: Vec<PromptMessage>,
+            ) -> Result<PromptMessage, <Self as AsyncChatClient>::ErrorType>;
         }
     }
 }
