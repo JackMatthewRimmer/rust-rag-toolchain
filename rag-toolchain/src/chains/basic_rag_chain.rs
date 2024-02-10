@@ -43,7 +43,7 @@ where
     T: AsyncChatClient,
     U: AsyncRetriever,
 {
-    async fn invoke_chain(
+    pub async fn invoke_chain(
         &self,
         user_message: PromptMessage,
         top_k: NonZeroU32,

@@ -12,6 +12,10 @@ required-features = ["pg_vector"]
 name = "open_ai_chat_completion_example"
 path = "examples/open_ai_chat_completions/main.rs"
 
+[[example]]
+name = "basic_rag_chain_example"
+path = "examples/basic_rag_chain/main.rs"
+
 # For integration tests
 # cargo test --test *
 
