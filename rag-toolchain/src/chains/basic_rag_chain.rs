@@ -10,6 +10,14 @@ use std::{
 };
 use typed_builder::TypedBuilder;
 
+/// # BasicRAGChain
+///
+/// This struct allows for easily executing RAG given a single user prompt.
+/// the current implementation relies on async chat clients and async retrievers.
+/// we use generics in order to preserve error types via associated types.
+///
+/// * `T` - The type of the chat client to be used
+/// * `U` - The type of the retriever to be used
 #[derive(TypedBuilder)]
 pub struct BasicRAGChain<T, U>
 where
@@ -27,6 +35,17 @@ where
     T: AsyncChatClient,
     U: AsyncRetriever,
 {
+    /// # build_prompt
+    ///
+    /// function to builder the user prompt from the original user prompt and the retrieved
+    /// supporting chunks.
+    ///
+    /// # Arguments
+    /// * `base_message` - the original user prompt
+    /// * `chunks` - the supporting chunks retrieved from the retriever
+    ///
+    /// # Returns
+    /// [`String`] - the new user prompt
     fn build_prompt(base_message: PromptMessage, chunks: Vec<Chunk>) -> String {
         let mut builder: String = String::new();
         builder.push_str(&base_message.content());
@@ -43,6 +62,32 @@ where
     T: AsyncChatClient,
     U: AsyncRetriever,
 {
+    /// # invoke_chain
+    ///
+    /// function to execute the RAG chain given a user prompt and a top_k value.
+    /// we take the supplied user prompt and retrieve supporting chunks from the retriever.
+    /// those chunks are then used to build a new prompt which is then sent to the chat client.
+    /// the new prompt then becomes:
+    ///
+    /// user prompt
+    ///
+    /// Here is some supporting information:
+    ///
+    /// chunk1
+    ///
+    /// chunk2
+    ///
+    /// ...
+    ///
+    /// # Arguments
+    /// * `user_message` - the user prompt, this will be used to retrieve supporting chunks
+    /// * `top_k` - the number of supporting chunks to retrieve
+    ///
+    /// # Errors
+    /// * [`BasicRagChainError`] - if the chat client or retriever fails.
+    ///
+    /// # Returns
+    /// [`PromptMessage`] - the response from the chat client
     pub async fn invoke_chain(
         &self,
         user_message: PromptMessage,
@@ -73,6 +118,14 @@ where
     }
 }
 
+/// # BasicRagChainError
+///
+/// This enum represents the possible errors that can occur when using the BasicRAGChain.
+/// It is parametrized over the error types of the chat client and the retriever. this way
+/// concrete types are preserved and can be handled accordingly.
+///
+/// * `T` - The error type of the chat client
+/// * `U` - The error type of the retriever
 #[derive(Debug, PartialEq)]
 pub enum BasicRagChainError<T, U>
 where
