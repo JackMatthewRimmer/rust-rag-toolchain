@@ -1,3 +1,4 @@
+pub mod chains;
 pub mod chunkers;
 pub mod clients;
 pub mod common;

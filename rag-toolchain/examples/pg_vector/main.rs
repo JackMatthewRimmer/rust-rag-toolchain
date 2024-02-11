@@ -8,7 +8,7 @@ async fn main() {
     std::env::set_var("POSTGRES_USER", "postgres");
     std::env::set_var("POSTGRES_PASSWORD", "postgres");
     std::env::set_var("POSTGRES_HOST", "localhost");
-    std::env::set_var("POSTGRES_DATABASE", "pg_vector");
+    std::env::set_var("POSTGRES_DATABASE", "postgres");
 
     // Given our text, we want to split it into chunks, Usually this would be done for larger texts
     // But has been done here for demonstration purposes
