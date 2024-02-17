@@ -13,17 +13,20 @@
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
     use async_trait::async_trait;
+    use mockito::Mock;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
+    use rag_toolchain::common::OpenAIEmbeddingModel;
     use rag_toolchain::common::{
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{
-        DistanceFunction, EmbeddingStore, NoIndex, PostgresVectorStore, HNSW, IVFFLAT,
+        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW, IVFFLAT,
     };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
+    use std::fmt::format;
     use std::num::NonZeroU32;
     use testcontainers::{
         clients::Cli,
@@ -65,91 +68,152 @@ mod pg_vector {
         // Execute custom SQL commands to enable the extension
         let _output = container.exec(command);
 
-        let case1 = test_store_persists();
-        let case2 = test_batch_store_persists();
-        let case3 = test_retriever_returns_correct_data();
+        let case1 = run_hnsw_tests();
+        let case2 = run_no_index_tests();
+        //let case3 = test_retriever_returns_correct_data();
 
-        let _ = tokio::join!(case1, case2, case3);
+        let _ = tokio::join!(case1, case2);
     }
 
-    async fn test_store_persists() {
-        const TABLE_NAME: &str = "test_db_1";
-        let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
-        let pg_vector = PostgresVectorStore::<HNSW>::try_new(
-            TABLE_NAME,
-            TextEmbeddingAda002,
+    async fn run_hnsw_tests() {
+        let distance_functions: Vec<DistanceFunction> = vec![
             DistanceFunction::Cosine,
+            DistanceFunction::InnerProduct,
+            DistanceFunction::L2,
+        ];
+        for func in distance_functions.clone() {
+            let table_name: String = format!("hnsw_table_1_{}", func);
+            let hnsw: PostgresVectorStore<HNSW> = PostgresVectorStore::<HNSW>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+            )
+            .await
+            .unwrap();
+            test_store_persists("hnsw_table_1", hnsw).await;
+        }
+
+        for func in distance_functions.clone() {
+            let table_name: String = format!("hnsw_table_2_{}", func);
+            let hnsw: PostgresVectorStore<HNSW> = PostgresVectorStore::<HNSW>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+            )
+            .await
+            .unwrap();
+            test_batch_store_persists("hnsw_table_2", hnsw).await;
+        }
+
+        for func in distance_functions {
+            let table_name: String = format!("hnsw_table_3_{}", func);
+            let embedding_client = MockEmbeddingClient::new();
+            let hnsw: PostgresVectorStore<HNSW> = PostgresVectorStore::<HNSW>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+            )
+            .await
+            .unwrap();
+            let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+                hnsw.as_retriever(embedding_client);
+            test_retriever_returns_correct_data(hnsw, retriever).await;
+        }
+    }
+
+    async fn run_no_index_tests() {
+        let distance_functions: Vec<DistanceFunction> = vec![
+            DistanceFunction::Cosine,
+            DistanceFunction::InnerProduct,
+            DistanceFunction::L2,
+        ];
+
+        let table_name: String = format!("no_index_table_1");
+        let no_index: PostgresVectorStore<NoIndex> = PostgresVectorStore::<NoIndex>::try_new(
+            &table_name,
+            OpenAIEmbeddingModel::TextEmbeddingAda002,
         )
         .await
         .unwrap();
-        let _result = pg_vector
+        test_store_persists("hnsw_table_1", no_index).await;
+
+        let table_name: String = format!("no_index_table_2");
+        let no_index: PostgresVectorStore<NoIndex> = PostgresVectorStore::<NoIndex>::try_new(
+            &table_name,
+            OpenAIEmbeddingModel::TextEmbeddingAda002,
+        )
+        .await
+        .unwrap();
+        test_batch_store_persists(&table_name, no_index).await;
+
+        for func in distance_functions {
+            let table_name: String = format!("no_index_table_3_{}", func);
+            let embedding_client = MockEmbeddingClient::new();
+            let no_index: PostgresVectorStore<NoIndex> = PostgresVectorStore::<NoIndex>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+            )
+            .await
+            .unwrap();
+            let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+                no_index.as_retriever(embedding_client, func);
+            test_retriever_returns_correct_data(no_index, retriever).await;
+        }
+    }
+
+    async fn test_store_persists<T>(table_name: &str, store: PostgresVectorStore<T>)
+    where
+        T: IndexTypes,
+    {
+        let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
+        let _result = store
             .store((test_chunk.clone(), test_embedding.clone()))
             .await
             .map_err(|_| panic!("panic"));
         assert_row(
-            &pg_vector.get_pool(),
+            &store.get_pool(),
             1,
             test_chunk.into(),
             test_embedding.into(),
-            TABLE_NAME,
+            table_name,
         )
         .await;
     }
 
-    async fn test_batch_store_persists() {
-        const TABLE_NAME: &str = "test_db_2";
-        let pg_vector = PostgresVectorStore::<IVFFLAT>::try_new(
-            TABLE_NAME,
-            TextEmbeddingAda002,
-            DistanceFunction::InnerProduct,
-            100,
-        )
-        .await
-        .unwrap();
+    async fn test_batch_store_persists<T>(table_name: &str, store: PostgresVectorStore<T>)
+    where
+        T: IndexTypes,
+    {
         let input: Vec<(Chunk, Embedding)> = read_test_data();
-        let _result = pg_vector
+        let _result = store
             .store_batch(input.clone())
             .await
             .map_err(|_| panic!("panic"));
 
         for (i, (chunk, embedding)) in input.iter().enumerate() {
             assert_row(
-                &pg_vector.get_pool(),
+                &store.get_pool(),
                 (i + 1) as i32,
                 chunk.clone().into(),
                 embedding.clone().into(),
-                TABLE_NAME,
+                table_name,
             )
             .await;
         }
     }
 
-    async fn test_retriever_returns_correct_data() {
-        const TABLE_NAME: &str = "test_db_3";
-        let pg_vector = PostgresVectorStore::<NoIndex>::try_new(TABLE_NAME, TextEmbeddingAda002)
-            .await
-            .unwrap();
+    async fn test_retriever_returns_correct_data<T>(
+        store: PostgresVectorStore<T>,
+        retriever: PostgresVectorRetriever<MockEmbeddingClient>,
+    ) where
+        T: IndexTypes,
+    {
         let input: Vec<(Chunk, Embedding)> = read_test_data();
         let data_to_store: Vec<(Chunk, Embedding)> = input[0..2].to_vec();
-        let _result = pg_vector
+        let _result = store
             .store_batch(data_to_store.clone())
             .await
             .map_err(|_| panic!("panic"));
-
-        for (i, (chunk, embedding)) in data_to_store.iter().enumerate() {
-            assert_row(
-                &pg_vector.get_pool(),
-                (i + 1) as i32,
-                chunk.clone().into(),
-                embedding.clone().into(),
-                TABLE_NAME,
-            )
-            .await;
-        }
-
-        let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
-        let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
-            pg_vector.as_retriever(mock_client, DistanceFunction::Cosine);
 
         let result: Chunk = retriever
             .retrieve(

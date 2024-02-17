@@ -422,6 +422,16 @@ impl DistanceFunction {
     }
 }
 
+impl Display for DistanceFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DistanceFunction::L2 => write!(f, "L2"),
+            DistanceFunction::Cosine => write!(f, "Cosine"),
+            DistanceFunction::InnerProduct => write!(f, "InnerProduct"),
+        }
+    }
+}
+
 /// # PgVectorError
 /// This Error enum wraps all the errors that can occur when using
 /// the PgVector struct with contextual meaning
