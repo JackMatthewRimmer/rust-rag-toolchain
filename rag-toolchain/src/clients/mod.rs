@@ -2,6 +2,7 @@ mod open_ai;
 mod traits;
 mod types;
 pub use self::open_ai::open_ai_chat_completions::OpenAIChatCompletionClient;
+pub use open_ai::OpenAIError;
 pub use self::open_ai::open_ai_embeddings::OpenAIEmbeddingClient;
 pub use self::open_ai::OpenAIModel;
 pub use self::traits::{AsyncChatClient, AsyncEmbeddingClient};

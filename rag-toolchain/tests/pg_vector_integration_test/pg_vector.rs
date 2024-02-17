@@ -19,7 +19,7 @@ mod pg_vector {
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
-    use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
+    use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore, IndexType, DistanceFunction};
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
     use std::num::NonZeroU32;
@@ -28,6 +28,8 @@ mod pg_vector {
         core::{ExecCommand, WaitFor},
         GenericImage,
     };
+
+    const INDEX_TYPE: IndexType = IndexType::HNSW(DistanceFunction::Cosine);
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
@@ -73,7 +75,7 @@ mod pg_vector {
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE))
             .await
             .unwrap();
         let _result = pg_vector
@@ -92,7 +94,7 @@ mod pg_vector {
 
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE))
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
@@ -115,7 +117,7 @@ mod pg_vector {
 
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
