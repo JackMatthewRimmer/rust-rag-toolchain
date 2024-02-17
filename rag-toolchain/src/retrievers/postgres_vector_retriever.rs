@@ -1,6 +1,7 @@
 use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
+use crate::stores::DistanceFunction;
 use async_trait::async_trait;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
@@ -21,6 +22,7 @@ where
     pub pool: Pool<Postgres>,
     table_name: String,
     embedding_client: T,
+    distance_function: DistanceFunction,
 }
 
 /// # PostgresVectorRetriever
@@ -37,11 +39,17 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     ///
     /// # Returns
     /// * A PostgresVectorRetriever
-    pub(crate) fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T) -> Self {
+    pub(crate) fn new(
+        pool: Pool<Postgres>,
+        table_name: String,
+        embedding_client: T,
+        distance_function: DistanceFunction,
+    ) -> Self {
         PostgresVectorRetriever {
             pool,
             table_name,
             embedding_client,
+            distance_function,
         }
     }
 }
@@ -75,6 +83,7 @@ where
     /// # Returns
     /// * A [`Vec<Chunk>`] which are the most similar to the input text.
     async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType> {
+        // Note inner product will have to be handled differently
         let k: u32 = top_k.get();
         let (_, embedding): (_, Embedding) = self
             .embedding_client

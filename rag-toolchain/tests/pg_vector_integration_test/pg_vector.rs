@@ -19,7 +19,9 @@ mod pg_vector {
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
-    use rag_toolchain::stores::{DistanceFunction, EmbeddingStore, IndexType, PostgresVectorStore};
+    use rag_toolchain::stores::{
+        DistanceFunction, EmbeddingStore, NoIndex, PostgresVectorStore, HNSW, IVFFLAT,
+    };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
     use std::num::NonZeroU32;
@@ -28,8 +30,6 @@ mod pg_vector {
         core::{ExecCommand, WaitFor},
         GenericImage,
     };
-
-    const INDEX_TYPE: IndexType = IndexType::HNSW(DistanceFunction::Cosine);
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
@@ -75,10 +75,13 @@ mod pg_vector {
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
         let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
-        let pg_vector =
-            PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE))
-                .await
-                .unwrap();
+        let pg_vector = PostgresVectorStore::<HNSW>::try_new(
+            TABLE_NAME,
+            TextEmbeddingAda002,
+            DistanceFunction::Cosine,
+        )
+        .await
+        .unwrap();
         let _result = pg_vector
             .store((test_chunk.clone(), test_embedding.clone()))
             .await
@@ -95,10 +98,14 @@ mod pg_vector {
 
     async fn test_batch_store_persists() {
         const TABLE_NAME: &str = "test_db_2";
-        let pg_vector =
-            PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE))
-                .await
-                .unwrap();
+        let pg_vector = PostgresVectorStore::<IVFFLAT>::try_new(
+            TABLE_NAME,
+            TextEmbeddingAda002,
+            DistanceFunction::InnerProduct,
+            100,
+        )
+        .await
+        .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
         let _result = pg_vector
             .store_batch(input.clone())
@@ -119,10 +126,9 @@ mod pg_vector {
 
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-        let pg_vector =
-            PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE))
-                .await
-                .unwrap();
+        let pg_vector = PostgresVectorStore::<NoIndex>::try_new(TABLE_NAME, TextEmbeddingAda002)
+            .await
+            .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
         let data_to_store: Vec<(Chunk, Embedding)> = input[0..2].to_vec();
         let _result = pg_vector
@@ -143,7 +149,7 @@ mod pg_vector {
 
         let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
         let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
-            pg_vector.as_retriever(mock_client);
+            pg_vector.as_retriever(mock_client, DistanceFunction::Cosine);
 
         let result: Chunk = retriever
             .retrieve(

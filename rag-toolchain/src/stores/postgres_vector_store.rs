@@ -10,6 +10,21 @@ use std::env::{self, VarError};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+pub trait IndexTypes: Send + Sync {}
+#[derive(Debug, Clone)]
+pub struct IVFFLAT {
+    distance_function: DistanceFunction,
+}
+impl IndexTypes for IVFFLAT {}
+#[derive(Debug, Clone)]
+pub struct HNSW {
+    distance_function: DistanceFunction,
+}
+impl IndexTypes for HNSW {}
+#[derive(Debug, Clone)]
+pub struct NoIndex {}
+impl IndexTypes for NoIndex {}
+
 use dotenv::dotenv;
 
 /// # PostgresVectorStore
@@ -29,31 +44,30 @@ use dotenv::dotenv;
 ///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
-#[derive(Debug)]
-pub struct PostgresVectorStore {
+#[derive(Debug, Clone)]
+pub struct PostgresVectorStore<T>
+where
+    T: IndexTypes,
+{
     /// We make the pool public incase users want to
     /// do extra operations on the database
     pool: Pool<Postgres>,
     table_name: String,
+    index_type: T,
 }
 
-impl PostgresVectorStore {
-    /// # try_new
-    /// # Arguments
-    /// * `table_name` - The name of the table to store the embeddings in.
-    ///
-    /// # Errors
-    /// * [`PostgresVectorError::EnvVarError`] if the required environment variables are not set
-    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
-    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
-    ///
-    /// # Returns
-    /// [`PostgresVectorStore`] if the connection and table creation are successful
-    pub async fn try_new(
+impl<T> PostgresVectorStore<T>
+where
+    T: IndexTypes,
+{
+    pub fn get_pool(&self) -> Pool<Postgres> {
+        self.pool.clone()
+    }
+
+    async fn connect_and_create_table(
         table_name: &str,
         embedding_model: impl EmbeddingModel,
-        index_type: Option<IndexType>,
-    ) -> Result<Self, PostgresVectorError> {
+    ) -> Result<Pool<Postgres>, PostgresVectorError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
         let password: String = env::var("POSTGRES_PASSWORD")?;
@@ -66,7 +80,7 @@ impl PostgresVectorStore {
             format!("postgres://{}:{}@{}/{}", username, password, host, db_name);
 
         // Connect to the database
-        let pool = PostgresVectorStore::connect(&connection_string)
+        let pool = Self::connect(&connection_string)
             .await
             .map_err(PostgresVectorError::ConnectionError)?;
 
@@ -75,23 +89,7 @@ impl PostgresVectorStore {
             .await
             .map_err(PostgresVectorError::TableCreationError)?;
 
-        Self::enable_enable_index(&pool, table_name, index_type.clone()).await?;
-
-        Ok(PostgresVectorStore {
-            pool,
-            table_name: table_name.into(),
-        })
-    }
-
-    pub fn get_pool(&self) -> Pool<Postgres> {
-        self.pool.clone()
-    }
-
-    pub fn as_retriever<T: AsyncEmbeddingClient>(
-        &self,
-        embedding_client: T,
-    ) -> PostgresVectorRetriever<T> {
-        PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client)
+        Ok(pool)
     }
 
     /// # connect
@@ -143,69 +141,13 @@ impl PostgresVectorStore {
         );
         sqlx::query(&query).execute(&pool).await
     }
-
-    async fn enable_enable_index(
-        pool: &Pool<Postgres>,
-        table_name: &str,
-        index_type: Option<IndexType>,
-    ) -> Result<(), PostgresVectorError> {
-        match index_type {
-            Some(IndexType::HNSW(distance_function)) => {
-                Self::enable_hnsw_index(pool, table_name, distance_function.clone())
-                    .await
-                    .map_err(PostgresVectorError::TableCreationError)?;
-                Ok(())
-            }
-            Some(IndexType::IVFFflat(distance_function, number_of_lists)) => {
-                Self::enable_ivfflat_index(
-                    pool,
-                    table_name,
-                    distance_function.clone(),
-                    number_of_lists,
-                )
-                .await
-                .map_err(PostgresVectorError::TableCreationError)?;
-                Ok(())
-            }
-            None => Ok(()),
-        }
-    }
-
-    async fn enable_hnsw_index(
-        pool: &Pool<Postgres>,
-        table_name: &str,
-        distance_function: DistanceFunction,
-    ) -> Result<PgQueryResult, SqlxError> {
-        let query: String = format!(
-            "
-         CREATE INDEX ON {} USING hnsw (embedding {});
-        ",
-            table_name,
-            distance_function.to_sql_string()
-        );
-        sqlx::query(&query).execute(pool).await
-    }
-
-    async fn enable_ivfflat_index(
-        pool: &Pool<Postgres>,
-        table_name: &str,
-        distance_function: DistanceFunction,
-        number_of_lists: u32,
-    ) -> Result<PgQueryResult, SqlxError> {
-        let query: String = format!(
-            "
-         CREATE INDEX ON {} USING ivfflat (embedding {}) WITH (lists = {});
-        ",
-            table_name,
-            distance_function.to_sql_string(),
-            number_of_lists
-        );
-        sqlx::query(&query).execute(pool).await
-    }
 }
 
 #[async_trait]
-impl EmbeddingStore for PostgresVectorStore {
+impl<T> EmbeddingStore for PostgresVectorStore<T>
+where
+    T: IndexTypes,
+{
     type ErrorType = PostgresVectorError;
     /// # store
     ///
@@ -281,17 +223,178 @@ impl EmbeddingStore for PostgresVectorStore {
     }
 }
 
-/// # IndexType
-///
-/// represents the type of index we will enable on
-/// the table including your vectors. See
-/// <https://github.com/pgvector/pgvector> for more information
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IndexType {
-    /// HNSW with the given distance function
-    HNSW(DistanceFunction),
-    /// IVFFlat with the given number of lists
-    IVFFflat(DistanceFunction, u32),
+impl PostgresVectorStore<NoIndex> {
+    /// # try_new
+    ///
+    /// This function is used to create a new instance of the PostgresVectorStore
+    ///
+    /// # Arguments
+    /// * `table_name` - The name of the table to store the embeddings in
+    /// * `embedding_model` - The embedding model to use to store the embeddings
+    ///
+    /// # Errors
+    /// * [`PostgresVectorError::EnvVarError`] if the environment variables are not set
+    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
+    ///
+    /// # Returns
+    /// * [`PostgresVectorStore`] if the store is created successfully
+    pub async fn try_new(
+        table_name: &str,
+        embedding_model: impl EmbeddingModel,
+    ) -> Result<PostgresVectorStore<NoIndex>, PostgresVectorError> {
+        let pool = Self::connect_and_create_table(table_name, embedding_model).await?;
+        Ok(PostgresVectorStore {
+            pool,
+            table_name: table_name.to_string(),
+            index_type: NoIndex {},
+        })
+    }
+
+    pub fn as_retriever<G: AsyncEmbeddingClient>(
+        &self,
+        embedding_client: G,
+        distance_function: DistanceFunction,
+    ) -> PostgresVectorRetriever<G> {
+        PostgresVectorRetriever::new(
+            self.pool.clone(),
+            self.table_name.clone(),
+            embedding_client,
+            distance_function,
+        )
+    }
+}
+
+impl PostgresVectorStore<HNSW> {
+    /// # try_new
+    ///
+    /// This function is used to create a new instance of the PostgresVectorStore
+    ///
+    /// # Arguments
+    /// * `table_name` - The name of the table to store the embeddings in
+    /// * `embedding_model` - The embedding model to use to store the embeddings
+    /// * `index_type` - The type of index to enable on the table
+    ///
+    /// # Errors
+    /// * [`PostgresVectorError::EnvVarError`] if the environment variables are not set
+    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
+    ///
+    /// # Returns
+    /// * [`PostgresVectorStore`] if the store is created successfully
+    pub async fn try_new(
+        table_name: &str,
+        embedding_model: impl EmbeddingModel,
+        distance_function: DistanceFunction,
+    ) -> Result<PostgresVectorStore<HNSW>, PostgresVectorError> {
+        let pool = Self::connect_and_create_table(table_name, embedding_model).await?;
+        Self::enable_hnsw_index(&pool, table_name, distance_function.clone())
+            .await
+            .map_err(PostgresVectorError::TableCreationError)?;
+        let store = PostgresVectorStore {
+            pool,
+            table_name: table_name.to_string(),
+            index_type: HNSW { distance_function },
+        };
+        Ok(store)
+    }
+
+    pub fn as_retriever<G: AsyncEmbeddingClient>(
+        &self,
+        embedding_client: G,
+    ) -> PostgresVectorRetriever<G> {
+        PostgresVectorRetriever::new(
+            self.pool.clone(),
+            self.table_name.clone(),
+            embedding_client,
+            self.index_type.distance_function.clone(),
+        )
+    }
+
+    async fn enable_hnsw_index(
+        pool: &Pool<Postgres>,
+        table_name: &str,
+        distance_function: DistanceFunction,
+    ) -> Result<PgQueryResult, SqlxError> {
+        let query: String = format!(
+            "
+         CREATE INDEX ON {} USING hnsw (embedding {});
+        ",
+            table_name,
+            distance_function.to_ddl_string()
+        );
+        sqlx::query(&query).execute(pool).await
+    }
+}
+
+impl PostgresVectorStore<IVFFLAT> {
+    /// # try_new
+    ///
+    /// This function is used to create a new instance of the PostgresVectorStore
+    ///
+    /// # Arguments
+    /// * `table_name` - The name of the table to store the embeddings in
+    /// * `embedding_model` - The embedding model to use to store the embeddings
+    /// * `index_type` - The type of index to enable on the table
+    ///
+    /// # Errors
+    /// * [`PostgresVectorError::EnvVarError`] if the environment variables are not set
+    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
+    ///
+    /// # Returns
+    /// * [`PostgresVectorStore`] if the store is created successfully
+    pub async fn try_new(
+        table_name: &str,
+        embedding_model: impl EmbeddingModel,
+        distance_function: DistanceFunction,
+        number_of_lists: u32,
+    ) -> Result<PostgresVectorStore<IVFFLAT>, PostgresVectorError> {
+        let pool = Self::connect_and_create_table(table_name, embedding_model).await?;
+        Self::enable_ivfflat_index(
+            &pool,
+            table_name,
+            distance_function.clone(),
+            number_of_lists,
+        )
+        .await
+        .map_err(PostgresVectorError::TableCreationError)?;
+        let store = PostgresVectorStore {
+            pool,
+            table_name: table_name.to_string(),
+            index_type: IVFFLAT { distance_function },
+        };
+        Ok(store)
+    }
+
+    pub fn as_retriever<G: AsyncEmbeddingClient>(
+        &self,
+        embedding_client: G,
+    ) -> PostgresVectorRetriever<G> {
+        PostgresVectorRetriever::new(
+            self.pool.clone(),
+            self.table_name.clone(),
+            embedding_client,
+            self.index_type.distance_function.clone(),
+        )
+    }
+
+    async fn enable_ivfflat_index(
+        pool: &Pool<Postgres>,
+        table_name: &str,
+        distance_function: DistanceFunction,
+        number_of_lists: u32,
+    ) -> Result<PgQueryResult, SqlxError> {
+        let query: String = format!(
+            "
+         CREATE INDEX ON {} USING ivfflat (embedding {}) WITH (lists = {});
+        ",
+            table_name,
+            distance_function.to_ddl_string(),
+            number_of_lists
+        );
+        sqlx::query(&query).execute(pool).await
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,11 +405,19 @@ pub enum DistanceFunction {
 }
 
 impl DistanceFunction {
-    pub fn to_sql_string(&self) -> &str {
+    pub fn to_ddl_string(&self) -> &str {
         match self {
             DistanceFunction::L2 => "vector_l2_ops",
             DistanceFunction::Cosine => "vector_cosine_ops",
             DistanceFunction::InnerProduct => "vector_ip_ops",
+        }
+    }
+
+    pub fn to_sql_string(&self) -> &str {
+        match self {
+            DistanceFunction::L2 => "<->",
+            DistanceFunction::Cosine => "<=>",
+            DistanceFunction::InnerProduct => "<#>",
         }
     }
 }
@@ -361,35 +472,33 @@ mod tests {
     use super::*;
     use crate::common::OpenAIEmbeddingModel::TextEmbeddingAda002;
 
-    const INDEX_TYPE: IndexType = IndexType::HNSW(DistanceFunction::Cosine);
-
     #[tokio::test]
     async fn test_throws_correct_errors() {
-        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002, Some(INDEX_TYPE))
+        let result = PostgresVectorStore::<NoIndex>::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_USER", "postgres");
-        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002, Some(INDEX_TYPE))
+        let result = PostgresVectorStore::<NoIndex>::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
-        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002, Some(INDEX_TYPE))
+        let result = PostgresVectorStore::<NoIndex>::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_HOST", "localhost");
-        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002, Some(INDEX_TYPE))
+        let result = PostgresVectorStore::<NoIndex>::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_DATABASE", "postgres");
-        let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002, Some(INDEX_TYPE))
+        let result = PostgresVectorStore::<NoIndex>::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::ConnectionError(_)));

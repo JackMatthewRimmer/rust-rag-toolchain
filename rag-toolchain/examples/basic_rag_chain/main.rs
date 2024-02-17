@@ -5,7 +5,7 @@ use rag_toolchain::{
     },
     common::OpenAIEmbeddingModel::TextEmbeddingAda002,
     retrievers::PostgresVectorRetriever,
-    stores::{DistanceFunction, IndexType, PostgresVectorStore},
+    stores::{DistanceFunction, PostgresVectorStore, HNSW},
 };
 
 use std::num::NonZeroU32;
@@ -21,10 +21,10 @@ async fn main() {
     std::env::set_var("POSTGRES_HOST", "localhost");
     std::env::set_var("POSTGRES_DATABASE", "postgres");
 
-    let store: PostgresVectorStore = PostgresVectorStore::try_new(
+    let store: PostgresVectorStore<HNSW> = PostgresVectorStore::<HNSW>::try_new(
         "embeddings",
         TextEmbeddingAda002,
-        Some(IndexType::HNSW(DistanceFunction::Cosine)),
+        DistanceFunction::InnerProduct,
     )
     .await
     .unwrap();

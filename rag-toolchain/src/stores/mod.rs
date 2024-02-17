@@ -4,6 +4,6 @@ mod traits;
 
 #[cfg(feature = "pg_vector")]
 pub use postgres_vector_store::{
-    DistanceFunction, IndexType, PostgresVectorError, PostgresVectorStore,
+    DistanceFunction, NoIndex, PostgresVectorError, PostgresVectorStore, HNSW, IVFFLAT,
 };
 pub use traits::EmbeddingStore;
