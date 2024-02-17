@@ -21,7 +21,7 @@ mod pg_vector {
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{
-        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW
+        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW, IVFFLAT
     };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -68,9 +68,9 @@ mod pg_vector {
 
         let case1 = run_hnsw_tests();
         let case2 = run_no_index_tests();
-        //let case3 = test_retriever_returns_correct_data();
+        let case3 = run_ivfflat_tests();
 
-        let _ = tokio::join!(case1, case2);
+        let _ = tokio::join!(case1, case2, case3);
     }
 
     async fn run_hnsw_tests() {
@@ -156,6 +156,56 @@ mod pg_vector {
             let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
                 no_index.as_retriever(embedding_client, func);
             test_retriever_returns_correct_data(no_index, retriever).await;
+        }
+    }
+
+    async fn run_ivfflat_tests() {
+        let number_of_lists: u32 = 10;
+        let distance_functions: Vec<DistanceFunction> = vec![
+            DistanceFunction::Cosine,
+            DistanceFunction::InnerProduct,
+            DistanceFunction::L2,
+        ];
+        for func in distance_functions.clone() {
+            let table_name: String = format!("ivfflat_table_1_{}", func);
+            let hnsw: PostgresVectorStore<IVFFLAT> = PostgresVectorStore::<IVFFLAT>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+                number_of_lists
+            )
+            .await
+            .unwrap();
+            test_store_persists(&table_name, hnsw).await;
+        }
+
+        for func in distance_functions.clone() {
+            let table_name: String = format!("ivfflat_table_2_{}", func);
+            let hnsw: PostgresVectorStore<IVFFLAT> = PostgresVectorStore::<IVFFLAT>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+                number_of_lists
+            )
+            .await
+            .unwrap();
+            test_batch_store_persists(&table_name, hnsw).await;
+        }
+
+        for func in distance_functions {
+            let table_name: String = format!("ivfflat_table_3_{}", func);
+            let embedding_client = MockEmbeddingClient::new();
+            let hnsw: PostgresVectorStore<IVFFLAT> = PostgresVectorStore::<IVFFLAT>::try_new(
+                &table_name,
+                OpenAIEmbeddingModel::TextEmbeddingAda002,
+                func,
+                number_of_lists
+            )
+            .await
+            .unwrap();
+            let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+                hnsw.as_retriever(embedding_client);
+            test_retriever_returns_correct_data(hnsw, retriever).await;
         }
     }
 
