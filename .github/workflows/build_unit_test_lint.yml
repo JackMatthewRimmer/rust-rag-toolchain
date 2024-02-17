@@ -31,7 +31,7 @@ jobs:
       run: cargo test --lib
 
     - name: Run integration tests
-      run: cargo test --test mod
+      run: cargo test --test mod RUST_BACKTRACE=1
 
     - name: Run linter
       run: |
