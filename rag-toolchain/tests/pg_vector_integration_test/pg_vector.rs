@@ -13,12 +13,11 @@
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
     use async_trait::async_trait;
-    use mockito::Mock;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::OpenAIEmbeddingModel;
     use rag_toolchain::common::{
-        Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
+        Chunk, Chunks, Embedding,
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{
@@ -26,7 +25,6 @@ mod pg_vector {
     };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
-    use std::fmt::format;
     use std::num::NonZeroU32;
     use testcontainers::{
         clients::Cli,
@@ -90,7 +88,7 @@ mod pg_vector {
             )
             .await
             .unwrap();
-            test_store_persists("hnsw_table_1", hnsw).await;
+            test_store_persists(&table_name, hnsw).await;
         }
 
         for func in distance_functions.clone() {
@@ -102,7 +100,7 @@ mod pg_vector {
             )
             .await
             .unwrap();
-            test_batch_store_persists("hnsw_table_2", hnsw).await;
+            test_batch_store_persists(&table_name, hnsw).await;
         }
 
         for func in distance_functions {
@@ -135,7 +133,7 @@ mod pg_vector {
         )
         .await
         .unwrap();
-        test_store_persists("hnsw_table_1", no_index).await;
+        test_store_persists(&table_name, no_index).await;
 
         let table_name: String = format!("no_index_table_2");
         let no_index: PostgresVectorStore<NoIndex> = PostgresVectorStore::<NoIndex>::try_new(
