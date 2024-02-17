@@ -21,7 +21,7 @@ mod pg_vector {
     };
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{
-        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW, IVFFLAT,
+        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW
     };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -29,7 +29,7 @@ mod pg_vector {
     use testcontainers::{
         clients::Cli,
         core::{ExecCommand, WaitFor},
-        GenericImage,
+        GenericImage
     };
 
     fn get_image() -> GenericImage {
