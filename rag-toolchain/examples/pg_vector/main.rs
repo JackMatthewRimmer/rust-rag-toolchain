@@ -1,7 +1,7 @@
 use rag_toolchain::chunkers::TokenChunker;
 use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIEmbeddingClient};
 use rag_toolchain::common::{Chunk, Chunks, Embedding, OpenAIEmbeddingModel};
-use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore, IndexType, DistanceFunction};
+use rag_toolchain::stores::{DistanceFunction, EmbeddingStore, IndexType, PostgresVectorStore};
 
 #[tokio::main]
 async fn main() {
@@ -24,10 +24,13 @@ async fn main() {
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai
-    let store: PostgresVectorStore =
-        PostgresVectorStore::try_new("embeddings", OpenAIEmbeddingModel::TextEmbeddingAda002, Some(IndexType::HNSW(DistanceFunction::Cosine)))
-            .await
-            .unwrap();
+    let store: PostgresVectorStore = PostgresVectorStore::try_new(
+        "embeddings",
+        OpenAIEmbeddingModel::TextEmbeddingAda002,
+        Some(IndexType::HNSW(DistanceFunction::Cosine)),
+    )
+    .await
+    .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
     let client: OpenAIEmbeddingClient =
