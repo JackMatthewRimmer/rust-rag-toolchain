@@ -70,7 +70,7 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
                 DistanceFunction::L2.to_sql_string()
             ),
             DistanceFunction::InnerProduct => format!(
-                "SELECT content FROM {} ORDER BY (embedding {} $1::vector) * -1 LIMIT $2",
+                "SELECT content FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
                 &self.table_name,
                 DistanceFunction::InnerProduct.to_sql_string()
             ),
