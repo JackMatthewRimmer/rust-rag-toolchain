@@ -35,7 +35,6 @@ pub struct PostgresVectorStore {
     /// do extra operations on the database
     pool: Pool<Postgres>,
     table_name: String,
-    index_type: Option<IndexType>,
 }
 
 impl PostgresVectorStore {
@@ -72,14 +71,15 @@ impl PostgresVectorStore {
             .map_err(PostgresVectorError::ConnectionError)?;
 
         // Create the table
-        PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
+        Self::create_table(pool.clone(), table_name, embedding_diminsions)
             .await
             .map_err(PostgresVectorError::TableCreationError)?;
+
+        Self::enable_enable_index(&pool, table_name, index_type.clone()).await?;
 
         Ok(PostgresVectorStore {
             pool,
             table_name: table_name.into(),
-            index_type
         })
     }
 
@@ -143,6 +143,65 @@ impl PostgresVectorStore {
         );
         sqlx::query(&query).execute(&pool).await
     }
+
+    async fn enable_enable_index(
+        pool: &Pool<Postgres>,
+        table_name: &str,
+        index_type: Option<IndexType>,
+    ) -> Result<(), PostgresVectorError> {
+        match index_type {
+            Some(IndexType::HNSW(distance_function)) => {
+                Self::enable_hnsw_index(pool, table_name, distance_function.clone())
+                    .await
+                    .map_err(PostgresVectorError::TableCreationError)?;
+                Ok(())
+            }
+            Some(IndexType::IVFFflat(distance_function, number_of_lists)) => {
+                Self::enable_ivfflat_index(
+                    pool,
+                    table_name,
+                    distance_function.clone(),
+                    number_of_lists,
+                )
+                .await
+                .map_err(PostgresVectorError::TableCreationError)?;
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    }
+
+    async fn enable_hnsw_index(
+        pool: &Pool<Postgres>,
+        table_name: &str,
+        distance_function: DistanceFunction,
+    ) -> Result<PgQueryResult, SqlxError> {
+        let query: String = format!(
+            "
+         CREATE INDEX ON {} USING hnsw (embedding {});
+        ",
+            table_name,
+            distance_function.to_sql_string()
+        );
+        sqlx::query(&query).execute(pool).await
+    }
+
+    async fn enable_ivfflat_index(
+        pool: &Pool<Postgres>,
+        table_name: &str,
+        distance_function: DistanceFunction,
+        number_of_lists: u32,
+    ) -> Result<PgQueryResult, SqlxError> {
+        let query: String = format!(
+            "
+         CREATE INDEX ON {} USING ivfflat (embedding {}) WITH (lists = {});
+        ",
+            table_name,
+            distance_function.to_sql_string(),
+            number_of_lists
+        );
+        sqlx::query(&query).execute(pool).await
+    }
 }
 
 #[async_trait]
@@ -188,7 +247,10 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the transaction succeeds
-    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>) -> Result<(), PostgresVectorError> {
+    async fn store_batch(
+        &self,
+        embeddings: Vec<(Chunk, Embedding)>,
+    ) -> Result<(), PostgresVectorError> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -220,7 +282,7 @@ impl EmbeddingStore for PostgresVectorStore {
 }
 
 /// # IndexType
-/// 
+///
 /// represents the type of index we will enable on
 /// the table including your vectors. See
 /// <https://github.com/pgvector/pgvector> for more information
@@ -228,8 +290,8 @@ impl EmbeddingStore for PostgresVectorStore {
 pub enum IndexType {
     /// HNSW with the given distance function
     HNSW(DistanceFunction),
-    /// IVFFlat with the given number of lists 
-    IVFFflat(u32),
+    /// IVFFlat with the given number of lists
+    IVFFflat(DistanceFunction, u32),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -237,6 +299,16 @@ pub enum DistanceFunction {
     L2,
     Cosine,
     InnerProduct,
+}
+
+impl DistanceFunction {
+    pub fn to_sql_string(&self) -> &str {
+        match self {
+            DistanceFunction::L2 => "vector_l2_ops",
+            DistanceFunction::Cosine => "vector_cosine_ops",
+            DistanceFunction::InnerProduct => "vector_ip_ops",
+        }
+    }
 }
 
 /// # PgVectorError

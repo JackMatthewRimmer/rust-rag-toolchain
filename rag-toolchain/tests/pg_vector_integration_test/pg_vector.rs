@@ -117,7 +117,7 @@ mod pg_vector {
 
     async fn test_retriever_returns_correct_data() {
         const TABLE_NAME: &str = "test_db_3";
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002, Some(INDEX_TYPE)
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let input: Vec<(Chunk, Embedding)> = read_test_data();
