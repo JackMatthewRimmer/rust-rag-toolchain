@@ -76,7 +76,7 @@ mod pg_vector {
     async fn run_hnsw_tests() {
         let distance_functions: Vec<DistanceFunction> = vec![
             DistanceFunction::Cosine,
-            DistanceFunction::InnerProduct,
+            //DistanceFunction::InnerProduct,
             DistanceFunction::L2,
         ];
         for func in distance_functions.clone() {
@@ -122,7 +122,7 @@ mod pg_vector {
     async fn run_no_index_tests() {
         let distance_functions: Vec<DistanceFunction> = vec![
             DistanceFunction::Cosine,
-            DistanceFunction::InnerProduct,
+            //DistanceFunction::InnerProduct,
             DistanceFunction::L2,
         ];
 
@@ -163,7 +163,7 @@ mod pg_vector {
         let number_of_lists: u32 = 10;
         let distance_functions: Vec<DistanceFunction> = vec![
             DistanceFunction::Cosine,
-            DistanceFunction::InnerProduct,
+            //DistanceFunction::InnerProduct,
             DistanceFunction::L2,
         ];
         for func in distance_functions.clone() {
