@@ -38,7 +38,7 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     /// * `embedding_client` - An instance of a type which implements the AsyncEmbeddingClient trait.
     ///
     /// # Returns
-    /// * [`PostgresVectorRetriever`] 
+    /// * [`PostgresVectorRetriever`]
     pub(crate) fn new(
         pool: Pool<Postgres>,
         table_name: String,
@@ -54,22 +54,25 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     }
 
     /// # generate_sql_query
-    /// 
+    ///
     /// # Returns
     /// * [`String`] which is a sql query that can be used to retrieve similar text.
     fn generate_sql_query(&self) -> String {
         match self.distance_function {
             DistanceFunction::Cosine => format!(
                 "SELECT content FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
-                &self.table_name, DistanceFunction::Cosine.to_sql_string()
+                &self.table_name,
+                DistanceFunction::Cosine.to_sql_string()
             ),
             DistanceFunction::L2 => format!(
                 "SELECT content FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
-                &self.table_name, DistanceFunction::L2.to_sql_string()
+                &self.table_name,
+                DistanceFunction::L2.to_sql_string()
             ),
             DistanceFunction::InnerProduct => format!(
                 "SELECT content FROM {} ORDER BY (embedding {} $1::vector) * -1 LIMIT $2",
-                &self.table_name, DistanceFunction::InnerProduct.to_sql_string()
+                &self.table_name,
+                DistanceFunction::InnerProduct.to_sql_string()
             ),
         }
     }
@@ -112,7 +115,7 @@ where
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
 
-        let query: String = self.generate_sql_query(); 
+        let query: String = self.generate_sql_query();
         let similar_text: Vec<PgRow> = sqlx::query(&query)
             .bind(embedding.embedding().to_vec())
             .bind(k as i32)
