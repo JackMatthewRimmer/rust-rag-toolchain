@@ -16,12 +16,10 @@ mod pg_vector {
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::OpenAIEmbeddingModel;
-    use rag_toolchain::common::{
-        Chunk, Chunks, Embedding,
-    };
+    use rag_toolchain::common::{Chunk, Chunks, Embedding};
     use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
     use rag_toolchain::stores::{
-        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW, IVFFLAT
+        DistanceFunction, EmbeddingStore, IndexTypes, NoIndex, PostgresVectorStore, HNSW, IVFFLAT,
     };
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -29,7 +27,7 @@ mod pg_vector {
     use testcontainers::{
         clients::Cli,
         core::{ExecCommand, WaitFor},
-        GenericImage
+        GenericImage,
     };
 
     fn get_image() -> GenericImage {
@@ -172,7 +170,7 @@ mod pg_vector {
                 &table_name,
                 OpenAIEmbeddingModel::TextEmbeddingAda002,
                 func,
-                number_of_lists
+                number_of_lists,
             )
             .await
             .unwrap();
@@ -185,7 +183,7 @@ mod pg_vector {
                 &table_name,
                 OpenAIEmbeddingModel::TextEmbeddingAda002,
                 func,
-                number_of_lists
+                number_of_lists,
             )
             .await
             .unwrap();
@@ -199,7 +197,7 @@ mod pg_vector {
                 &table_name,
                 OpenAIEmbeddingModel::TextEmbeddingAda002,
                 func,
-                number_of_lists
+                number_of_lists,
             )
             .await
             .unwrap();
