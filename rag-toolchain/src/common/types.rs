@@ -36,7 +36,7 @@ impl Embedding {
     /// that can be converted into an Embedding
     ///
     /// # Arguments
-    /// * `Iterator<Item = T>` - iterator of items where T: Into<Embedding>
+    /// * `Iterator<Item = T>` - iterator of items where T: `Into<Embedding>`
     ///
     /// # Returns
     /// * `Vec<Embedding>` - vector of Embeddings
@@ -57,7 +57,7 @@ impl Embedding {
     /// of embeddings
     ///
     /// # Arguments
-    /// * `Vec<T>` - vector of items where T: Into<Embedding>
+    /// * `Vec<T>` - vector of items where T: `Into<Embedding>`
     ///
     /// # Returns
     /// * `Vec<Embedding>` - vector of Embeddings

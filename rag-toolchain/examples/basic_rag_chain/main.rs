@@ -4,7 +4,7 @@ use rag_toolchain::{
         OpenAIChatCompletionClient, OpenAIEmbeddingClient, OpenAIModel::Gpt3Point5, PromptMessage,
     },
     common::OpenAIEmbeddingModel::TextEmbeddingAda002,
-    retrievers::PostgresVectorRetriever,
+    retrievers::{PostgresVectorRetriever, DistanceFunction},
     stores::PostgresVectorStore,
 };
 
@@ -30,7 +30,7 @@ async fn main() {
         OpenAIEmbeddingClient::try_new(TextEmbeddingAda002).unwrap();
 
     let retriever: PostgresVectorRetriever<OpenAIEmbeddingClient> =
-        store.as_retriever(embedding_client);
+        store.as_retriever(embedding_client, DistanceFunction::Cosine);
 
     let chat_client: OpenAIChatCompletionClient =
         OpenAIChatCompletionClient::try_new(Gpt3Point5).unwrap();

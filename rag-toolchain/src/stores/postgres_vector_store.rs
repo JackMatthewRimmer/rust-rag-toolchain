@@ -12,10 +12,12 @@ use std::fmt::{Display, Formatter};
 
 use dotenv::dotenv;
 
-/// # PostgresVectorStore
+/// # [`PostgresVectorStore`]
 ///
 /// This struct is used to store and as a retriever information needed to connect to a Postgres database
-/// and should be passed to an embedding task as a destination for the data to be stored.
+/// and should be passed to an embedding task as a destination for the data to be stored. If a user
+/// wants to do additional operations such as setting an index on the create table they can use the connection
+/// pool which is accesible and work with that directly.
 ///
 /// If a table already exists with the same name, the table will be dropped and recreated.
 ///
@@ -38,21 +40,22 @@ pub struct PostgresVectorStore {
 }
 
 impl PostgresVectorStore {
-    /// # try_new
+    /// # [`PostgresVectorStore::try_new`] 
+    /// 
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
     ///
     /// # Errors
-    /// * [`PgVectorError::EnvVarError`] if the required environment variables are not set
-    /// * [`PgVectorError::ConnectionError`] if the connection to the database could not be established
-    /// * [`PgVectorError::TableCreationError`] if the table could not be created
+    /// * [`PostgresVectorError::EnvVarError`] if the required environment variables are not set
+    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
     ///
     /// # Returns
-    /// the constructed [`PgVector`] struct
+    /// [`PostgresVectorStore`] if the connection and table creation is successful
     pub async fn try_new(
         table_name: &str,
         embedding_model: impl EmbeddingModel,
-    ) -> Result<Self, PgVectorError> {
+    ) -> Result<Self, PostgresVectorError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
         let password: String = env::var("POSTGRES_PASSWORD")?;
@@ -67,12 +70,12 @@ impl PostgresVectorStore {
         // Connect to the database
         let pool = PostgresVectorStore::connect(&connection_string)
             .await
-            .map_err(PgVectorError::ConnectionError)?;
+            .map_err(PostgresVectorError::ConnectionError)?;
 
         // Create the table
         PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
             .await
-            .map_err(PgVectorError::TableCreationError)?;
+            .map_err(PostgresVectorError::TableCreationError)?;
 
         Ok(PostgresVectorStore {
             pool,
@@ -92,7 +95,7 @@ impl PostgresVectorStore {
         PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client, distance_function)
     }
 
-    /// # connect
+    /// # [`PostgresVectorStore::connect`]
     /// Allows us to check the connection to a database and store the connection pool
     ///
     /// # Arguments
@@ -103,8 +106,8 @@ impl PostgresVectorStore {
     /// * [`Error`] if the connection could not be established
     ///
     /// # Returns
-    /// * [`Pool<Postgres>`] which can be used to query the database
-    /// * [`Error`] if the connection could not be established
+    /// * [`Pool`] which can be used to query the database
+    /// * [`SqlxError`] if the connection could not be established
     async fn connect(connection_string: &str) -> Result<Pool<Postgres>, SqlxError> {
         let pool: Pool<Postgres> = PgPoolOptions::new()
             .max_connections(5)
@@ -113,7 +116,7 @@ impl PostgresVectorStore {
         Ok(pool)
     }
 
-    /// # create_table
+    /// # [`PostgresVectorStore::create_table`]
     /// We call the create table automatically when the struct is created
     ///
     /// # Arguments
@@ -126,7 +129,7 @@ impl PostgresVectorStore {
     ///
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
-    /// * [`Error`] if the table could not be created
+    /// * [`SqlxError`] if the table could not be created
     async fn create_table(
         pool: Pool<Postgres>,
         table_name: &str,
@@ -147,19 +150,18 @@ impl PostgresVectorStore {
 
 #[async_trait]
 impl EmbeddingStore for PostgresVectorStore {
-    type ErrorType = PgVectorError;
-    /// # store
-    ///
+    type ErrorType = PostgresVectorError;
+    /// # [`PostgresVectorStore::store`]
+    /// 
     /// # Arguments
     /// * `embeddings` - A tuple containing the content and the embedding to store
     ///
     /// # Errors
-    /// * [`PgVectorError::InsertError`] if the insert fails
+    /// * [`PostgresVectorError::InsertError`] if the insert fails
     ///
     /// # Returns
-    /// * [`Ok(())`] if the insert succeeds
-    /// * [`PgVectorError::InsertError`] if the insert fails
-    async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PgVectorError> {
+    /// * [`()`] if the insert succeeds
+    async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PostgresVectorError> {
         let (content, embedding) = embeddings;
         let text: String = content.into();
         let vector: Vec<f32> = embedding.into();
@@ -175,22 +177,21 @@ impl EmbeddingStore for PostgresVectorStore {
             .bind(vector)
             .execute(&self.pool)
             .await
-            .map_err(PgVectorError::InsertError)?;
+            .map_err(PostgresVectorError::InsertError)?;
         Ok(())
     }
 
-    /// # store_batch
+    /// # [`PostgresVectorStore::store_batch`]
     ///
     /// # Arguments
     /// * `embeddings` - A vector of tuples containing the content and the embedding to store
     ///
     /// # Errors
-    /// * [`PgVectorError::TransactionError`] if the transaction fails
+    /// * [`PostgresVectorError::TransactionError`] if the transaction fails
     ///
     /// # Returns
-    /// * [`Ok(())`] if the transaction succeeds
-    /// * [`PgVectorError::TransactionError`] if the transaction fails
-    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>) -> Result<(), PgVectorError> {
+    /// * [`()`] if the transaction succeeds
+    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>) -> Result<(), PostgresVectorError> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
@@ -201,7 +202,7 @@ impl EmbeddingStore for PostgresVectorStore {
             .pool
             .begin()
             .await
-            .map_err(PgVectorError::TransactionError)?;
+            .map_err(PostgresVectorError::TransactionError)?;
 
         for (content, embedding) in embeddings {
             let text: String = content.into();
@@ -211,55 +212,55 @@ impl EmbeddingStore for PostgresVectorStore {
                 .bind(vector)
                 .execute(&mut *transaction)
                 .await
-                .map_err(PgVectorError::InsertError)?;
+                .map_err(PostgresVectorError::InsertError)?;
         }
         transaction
             .commit()
             .await
-            .map_err(PgVectorError::TransactionError)?;
+            .map_err(PostgresVectorError::TransactionError)?;
         Ok(())
     }
 }
 
-/// # PgVectorError
+/// # [`PostgresVectorError`]
 /// This Error enum wraps all the errors that can occur when using
 /// the PgVector struct with contextual meaning
 #[derive(Debug)]
-pub enum PgVectorError {
+pub enum PostgresVectorError {
     /// Error when an environment variable is not set
     EnvVarError(VarError),
     /// Error when the connection to the database could not be established
     ConnectionError(SqlxError),
     /// Error when the table could not be created
     TableCreationError(SqlxError),
-    /// Error when calling [`PgVector::store()`] fails
+    /// Error when calling [`PostgresVectorStore::store()`] fails
     InsertError(SqlxError),
-    /// Error when calling [`PgVector::store_batch()`] fails
+    /// Error when calling [`PostgresVectorStore::store_batch()`] fails
     TransactionError(SqlxError),
 }
-impl Error for PgVectorError {}
-impl From<VarError> for PgVectorError {
+impl Error for PostgresVectorError {}
+impl From<VarError> for PostgresVectorError {
     fn from(error: VarError) -> Self {
-        PgVectorError::EnvVarError(error)
+        PostgresVectorError::EnvVarError(error)
     }
 }
 
-impl Display for PgVectorError {
+impl Display for PostgresVectorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            PgVectorError::EnvVarError(error) => {
+            PostgresVectorError::EnvVarError(error) => {
                 write!(f, "Environment variable error: {}", error)
             }
-            PgVectorError::ConnectionError(error) => {
+            PostgresVectorError::ConnectionError(error) => {
                 write!(f, "Connection error: {}", error)
             }
-            PgVectorError::TableCreationError(error) => {
+            PostgresVectorError::TableCreationError(error) => {
                 write!(f, "Table creation error: {}", error)
             }
-            PgVectorError::InsertError(error) => {
+            PostgresVectorError::InsertError(error) => {
                 write!(f, "Upsert error: {}", error)
             }
-            PgVectorError::TransactionError(error) => {
+            PostgresVectorError::TransactionError(error) => {
                 write!(f, "Transaction error: {}", error)
             }
         }
@@ -276,30 +277,30 @@ mod tests {
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PgVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_USER", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PgVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PgVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_HOST", "localhost");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PgVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_DATABASE", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PgVectorError::ConnectionError(_)));
+        assert!(matches!(result, PostgresVectorError::ConnectionError(_)));
     }
 }
