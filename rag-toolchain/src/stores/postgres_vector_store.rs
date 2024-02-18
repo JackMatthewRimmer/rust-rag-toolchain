@@ -1,6 +1,6 @@
 use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding, EmbeddingModel};
-use crate::retrievers::PostgresVectorRetriever;
+use crate::retrievers::{PostgresVectorRetriever, DistanceFunction};
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -87,8 +87,9 @@ impl PostgresVectorStore {
     pub fn as_retriever<T: AsyncEmbeddingClient>(
         &self,
         embedding_client: T,
+        distance_function: DistanceFunction,
     ) -> PostgresVectorRetriever<T> {
-        PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client)
+        PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client, distance_function)
     }
 
     /// # connect

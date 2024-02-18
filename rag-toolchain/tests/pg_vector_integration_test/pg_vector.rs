@@ -18,7 +18,7 @@ mod pg_vector {
     use rag_toolchain::common::{
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
-    use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever};
+    use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever, DistanceFunction};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -28,6 +28,12 @@ mod pg_vector {
         core::{ExecCommand, WaitFor},
         GenericImage,
     };
+
+    const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
+        DistanceFunction::Cosine,
+        DistanceFunction::L2,
+        DistanceFunction::InnerProduct,
+    ];
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
@@ -136,22 +142,25 @@ mod pg_vector {
             .await;
         }
 
-        let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
-        let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
-            pg_vector.as_retriever(mock_client);
+        for distance_function in DISTANCE_FUNCTIONS {
+            let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
+            let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+                pg_vector.as_retriever(mock_client, distance_function.clone());
 
-        let result: Chunk = retriever
-            .retrieve(
-                "This sentence is similar to a foo bar sentence .",
-                NonZeroU32::new(1).unwrap(),
-            )
-            .await
-            .unwrap()
-            .get(0)
-            .unwrap()
-            .to_owned();
+            let result: Chunk = retriever
+                .retrieve(
+                    "This sentence is similar to a foo bar sentence .",
+                    NonZeroU32::new(1).unwrap(),
+                )
+                .await
+                .unwrap()
+                .get(0)
+                .unwrap()
+                .to_owned();
 
-        assert_eq!(result, input[1].0);
+            assert_eq!(result, input[1].0);
+        }
+
     }
 
     async fn assert_row(
