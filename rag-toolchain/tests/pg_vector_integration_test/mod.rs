@@ -1,1 +1,1 @@
-pub mod pg_vector;
+pub mod postgres_vector_retriever_integration_test;
