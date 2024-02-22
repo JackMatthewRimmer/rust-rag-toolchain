@@ -18,7 +18,7 @@ mod pg_vector {
     use rag_toolchain::common::{
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
-    use rag_toolchain::retrievers::{AsyncRetriever, PostgresVectorRetriever, DistanceFunction};
+    use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
@@ -160,7 +160,6 @@ mod pg_vector {
 
             assert_eq!(result, input[1].0);
         }
-
     }
 
     async fn assert_row(

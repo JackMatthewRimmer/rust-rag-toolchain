@@ -1,6 +1,6 @@
 use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding, EmbeddingModel};
-use crate::retrievers::{PostgresVectorRetriever, DistanceFunction};
+use crate::retrievers::{DistanceFunction, PostgresVectorRetriever};
 use crate::stores::traits::EmbeddingStore;
 use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
@@ -40,8 +40,8 @@ pub struct PostgresVectorStore {
 }
 
 impl PostgresVectorStore {
-    /// # [`PostgresVectorStore::try_new`] 
-    /// 
+    /// # [`PostgresVectorStore::try_new`]
+    ///
     /// # Arguments
     /// * `db_name` - The name of the table to store the embeddings in.
     ///
@@ -92,7 +92,12 @@ impl PostgresVectorStore {
         embedding_client: T,
         distance_function: DistanceFunction,
     ) -> PostgresVectorRetriever<T> {
-        PostgresVectorRetriever::new(self.pool.clone(), self.table_name.clone(), embedding_client, distance_function)
+        PostgresVectorRetriever::new(
+            self.pool.clone(),
+            self.table_name.clone(),
+            embedding_client,
+            distance_function,
+        )
     }
 
     /// # [`PostgresVectorStore::connect`]
@@ -152,7 +157,7 @@ impl PostgresVectorStore {
 impl EmbeddingStore for PostgresVectorStore {
     type ErrorType = PostgresVectorError;
     /// # [`PostgresVectorStore::store`]
-    /// 
+    ///
     /// # Arguments
     /// * `embeddings` - A tuple containing the content and the embedding to store
     ///
@@ -191,7 +196,10 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the transaction succeeds
-    async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>) -> Result<(), PostgresVectorError> {
+    async fn store_batch(
+        &self,
+        embeddings: Vec<(Chunk, Embedding)>,
+    ) -> Result<(), PostgresVectorError> {
         let query = format!(
             "
             INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",

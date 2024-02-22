@@ -4,7 +4,7 @@ use rag_toolchain::{
         OpenAIChatCompletionClient, OpenAIEmbeddingClient, OpenAIModel::Gpt3Point5, PromptMessage,
     },
     common::OpenAIEmbeddingModel::TextEmbeddingAda002,
-    retrievers::{PostgresVectorRetriever, DistanceFunction},
+    retrievers::{DistanceFunction, PostgresVectorRetriever},
     stores::PostgresVectorStore,
 };
 
