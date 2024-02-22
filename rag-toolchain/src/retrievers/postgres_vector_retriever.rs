@@ -21,7 +21,6 @@ where
     pub pool: Pool<Postgres>,
     table_name: String,
     embedding_client: T,
-    distance_function: DistanceFunction,
 }
 
 /// # PostgresVectorRetriever
@@ -38,12 +37,11 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     ///
     /// # Returns
     /// * A PostgresVectorRetriever
-    pub(crate) fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T, similarity_function: DistanceFunction) -> Self {
+    pub(crate) fn new(pool: Pool<Postgres>, table_name: String, embedding_client: T) -> Self {
         PostgresVectorRetriever {
             pool,
             table_name,
             embedding_client,
-            distance_function: similarity_function
         }
     }
 }
@@ -103,33 +101,6 @@ where
             .map(|row| Chunk::from(row.get::<String, _>("content")))
             .collect();
         Ok(n_rows)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DistanceFunction {
-    L2,
-    Cosine,
-    InnerProduct,
-}
-
-impl DistanceFunction {
-    pub fn to_sql_string(&self) -> &str {
-        match self {
-            DistanceFunction::L2 => "<->",
-            DistanceFunction::Cosine => "<=>",
-            DistanceFunction::InnerProduct => "<#>",
-        }
-    }
-}
-
-impl Display for DistanceFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DistanceFunction::L2 => write!(f, "L2"),
-            DistanceFunction::Cosine => write!(f, "Cosine"),
-            DistanceFunction::InnerProduct => write!(f, "InnerProduct"),
-        }
     }
 }
 
