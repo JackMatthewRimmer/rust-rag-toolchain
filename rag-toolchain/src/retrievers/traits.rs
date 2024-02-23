@@ -21,3 +21,15 @@ pub trait AsyncRetriever {
     type ErrorType: Error;
     async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType>;
 }
+
+#[cfg(test)]
+use mockall::*;
+#[cfg(test)]
+mock! {
+    pub AsyncRetriever {}
+    #[async_trait]
+    impl AsyncRetriever for AsyncRetriever {
+        type ErrorType = std::io::Error;
+        async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, <Self as AsyncRetriever>::ErrorType>;
+    }
+}

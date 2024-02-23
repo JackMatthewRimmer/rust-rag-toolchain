@@ -98,9 +98,8 @@ where
 #[cfg(test)]
 mod basic_rag_chain_tests {
     use super::*;
-    use async_trait::async_trait;
+    use crate::{clients::MockAsyncChatClient, retrievers::MockAsyncRetriever};
     use mockall::predicate::eq;
-    use mockall::*;
     use std::vec;
 
     #[tokio::test]
@@ -146,26 +145,5 @@ mod basic_rag_chain_tests {
             .unwrap();
 
         assert_eq!(PromptMessage::AIMessage("mocked response".into()), result)
-    }
-
-    mock! {
-        AsyncRetriever {}
-        #[async_trait]
-        impl AsyncRetriever for AsyncRetriever {
-            type ErrorType = std::io::Error;
-            async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, <Self as AsyncRetriever>::ErrorType>;
-        }
-    }
-
-    mock! {
-        AsyncChatClient {}
-        #[async_trait]
-        impl AsyncChatClient for AsyncChatClient {
-            type ErrorType = std::io::Error;
-            async fn invoke(
-                &self,
-                prompt_messages: Vec<PromptMessage>,
-            ) -> Result<PromptMessage, <Self as AsyncChatClient>::ErrorType>;
-        }
     }
 }

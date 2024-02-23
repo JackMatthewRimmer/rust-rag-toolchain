@@ -80,6 +80,6 @@ impl ChatHistoryBuffer {
     /// # get_messages
     /// return a reference to the messages in the buffer.
     fn get_messages(&self) -> Vec<PromptMessage> {
-        self.messages
+        self.messages.clone()
     }
 }
