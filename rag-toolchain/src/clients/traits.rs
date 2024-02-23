@@ -18,8 +18,6 @@ pub trait AsyncEmbeddingClient {
 
 /// # AsyncEmbeddingClient
 /// Trait for any client that generates chat completions asynchronously
-
-// TODO: multiple options here to allow for using an N parameter and such
 #[async_trait]
 pub trait AsyncChatClient {
     type ErrorType: Error;
