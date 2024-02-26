@@ -27,13 +27,13 @@ impl OpenAIEmbeddingClient {
     /// # [`OpenAIEmbeddingClient::try_new`]
     /// Constructor to create a new OpenAIEmbeddingClient.
     /// This will fail if the OPENAI_API_KEY environment variable is not set.
-    /// 
+    ///
     /// # Arguments
     /// * `embedding_model` - The model to use for the embeddings
     ///
     /// # Errors
     /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set.
-    /// 
+    ///
     /// # Returns
     /// * [`OpenAIEmbeddingClient`] - The newly created OpenAIEmbeddingClient
     pub fn try_new(
@@ -74,7 +74,7 @@ impl OpenAIEmbeddingClient {
 impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     type ErrorType = OpenAIError;
 
-    /// # [`OpenAIEmbeddingClient::generate_embeddings`] 
+    /// # [`OpenAIEmbeddingClient::generate_embeddings`]
     /// Function to generate embeddings for [`Chunks`].
     /// Allows you to get an embedding for multiple strings.
     ///
@@ -105,7 +105,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
         Ok(Self::handle_embedding_success_response(text, response))
     }
 
-    /// # 
+    /// #
     /// Function to generate an embedding for a [`Chunk`].
     /// Allows you to get an embedding for a single string.
     ///

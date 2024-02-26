@@ -103,7 +103,7 @@ mod chat_history_chain_tests {
     use mockall::predicate::eq;
     use std::vec;
 
-    lazy_static! [
+    lazy_static! {
         static ref SYSTEM_PROMPT: PromptMessage =
             PromptMessage::SystemMessage("system prompt".into());
         static ref USER_PROMPT_1: PromptMessage = PromptMessage::HumanMessage("user prompt".into());
@@ -111,7 +111,7 @@ mod chat_history_chain_tests {
             PromptMessage::HumanMessage("user prompt 2".into());
         static ref AI_RESPONSE: PromptMessage = PromptMessage::AIMessage("AI response".into());
         static ref AI_RESPONSE_2: PromptMessage = PromptMessage::AIMessage("AI response 2".into());
-    ];
+    }
 
     #[tokio::test]
     async fn test_chat_history_chain() {
