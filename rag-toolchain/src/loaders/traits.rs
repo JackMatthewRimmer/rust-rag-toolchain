@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::error::Error;
 
-/// # [`LoadSource`] 
+/// # [`LoadSource`]
 /// Trait that allows reading the raw text for an external source
 pub trait LoadSource {
     type ErrorType: Error;
@@ -9,7 +9,7 @@ pub trait LoadSource {
     fn load(&self) -> Result<Vec<String>, Self::ErrorType>;
 }
 
-/// # [`AsyncLoadSource`] 
+/// # [`AsyncLoadSource`]
 /// Async version of [`LoadSource`] to support loading raw text from an external source
 #[async_trait]
 pub trait AsyncLoadSource {

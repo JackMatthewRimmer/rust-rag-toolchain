@@ -9,7 +9,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
 
-/// # [`PostgresVectorRetriever`] 
+/// # [`PostgresVectorRetriever`]
 ///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 /// It is parameterized over a type T which implements the AsyncEmbeddingClient trait.

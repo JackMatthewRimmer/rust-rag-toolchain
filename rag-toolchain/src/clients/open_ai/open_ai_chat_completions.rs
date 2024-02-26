@@ -13,7 +13,7 @@ use super::model::errors::OpenAIError;
 
 const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
 
-/// # [`OpenAIChatCompletionClient`] 
+/// # [`OpenAIChatCompletionClient`]
 /// Allows for interacting with open ai models
 ///
 /// # Required Environment Variables
@@ -36,7 +36,7 @@ impl OpenAIChatCompletionClient {
         })
     }
 
-    /// # [`OpenAIChatCompletionClient::with_additional_config`] 
+    /// # [`OpenAIChatCompletionClient::with_additional_config`]
     ///
     /// This methods allows users to set additional parameters to be included
     /// in chat completion requests such as top_p, temperature, seed etc. Note
@@ -57,7 +57,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
     ///
     /// # Arguments
     /// * `prompt_messages` - the list of prompt messages that will be sent to the LLM.
-    /// 
+    ///
     /// # Errors
     /// * [`OpenAIError`] - if the chat client invocation fails.
     ///
@@ -129,7 +129,7 @@ mod chat_completion_client_test {
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 200, CHAT_COMPLETION_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap();
@@ -141,7 +141,7 @@ mod chat_completion_client_test {
 
     #[tokio::test]
     async fn test_error_response_maps_correctly() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 401, ERROR_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap_err();
@@ -168,9 +168,9 @@ mod chat_completion_client_test {
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    fn with_mocked_client() -> (OpenAIChatCompletionClient, ServerGuard) {
+    async fn with_mocked_client() -> (OpenAIChatCompletionClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
-        let server = Server::new();
+        let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIModel::Gpt3Point5;
         let mut client = OpenAIChatCompletionClient::try_new(model).unwrap();

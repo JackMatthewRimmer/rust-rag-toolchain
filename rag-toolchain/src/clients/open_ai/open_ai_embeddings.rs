@@ -183,7 +183,7 @@ mod embedding_client_tests {
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 200, EMBEDDING_RESPONSE);
         let expected_embedding = Embedding::from(vec![
             -0.006929283495992422,
@@ -210,7 +210,7 @@ mod embedding_client_tests {
 
     #[tokio::test]
     async fn test_400_gives_correct_error() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 400, ERROR_RESPONSE);
         let expected_response = OpenAIError::CODE400(OpenAIErrorBody {
             error: OpenAIErrorData {
@@ -248,9 +248,9 @@ mod embedding_client_tests {
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    fn with_mocked_client() -> (OpenAIEmbeddingClient, ServerGuard) {
+    async fn with_mocked_client() -> (OpenAIEmbeddingClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
-        let server = Server::new();
+        let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIEmbeddingModel::TextEmbeddingAda002;
         let mut client = OpenAIEmbeddingClient::try_new(model).unwrap();

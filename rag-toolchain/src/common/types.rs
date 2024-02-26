@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::sync::Arc;
 
 // ----------------- Embedding -----------------
-/// # [`Embedding`] 
+/// # [`Embedding`]
 /// Custom type that wraps a pointer to an embedding/vector.
 /// It is immutable and thread safe
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -11,7 +11,7 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    /// # [`Embedding::new`] 
+    /// # [`Embedding::new`]
     ///
     /// # Arguments
     /// * `Arc<[f32]>` - pointer to the embedding
@@ -22,7 +22,7 @@ impl Embedding {
         Self { embedding }
     }
 
-    /// # [`Embedding::embedding`] 
+    /// # [`Embedding::embedding`]
     ///
     /// # Returns
     /// * [`Arc<[f32]>`] - pointer to the embedding
@@ -30,7 +30,7 @@ impl Embedding {
         Arc::clone(&self.embedding)
     }
 
-    /// # [`Embedding::iter_to_vec`] 
+    /// # [`Embedding::iter_to_vec`]
     ///
     /// Helper function to generate a vector given an iterator of items
     /// that can be converted into an Embedding
@@ -51,7 +51,7 @@ impl Embedding {
         embedding
     }
 
-    /// # [`Embedding::from_vec`] 
+    /// # [`Embedding::from_vec`]
     ///
     /// Helper function to convert a vector of items into a vector
     /// of embeddings
@@ -93,7 +93,7 @@ impl From<Embedding> for Vec<f32> {
 
 // ----------------- Chunk ------------------
 #[derive(Debug, Clone, PartialEq, Serialize)]
-/// # [`Chunk`] 
+/// # [`Chunk`]
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe
 pub struct Chunk {
@@ -101,18 +101,18 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    /// # [`Chunk::new`] 
+    /// # [`Chunk::new`]
     ///
     /// # Arguments
     /// * `Arc<str>` - pointer to the chunk str
     ///
-    /// # Returns 
+    /// # Returns
     /// * [`Chunk`] - a new Chunk
     pub fn new(chunk: Arc<str>) -> Self {
         Self { chunk }
     }
 
-    /// # [`Chunk::chunk`] 
+    /// # [`Chunk::chunk`]
     ///
     /// # Returns
     /// * [`Arc<str>`] - pointer to the chunk str

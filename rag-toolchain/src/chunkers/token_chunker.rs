@@ -1,7 +1,7 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
 use std::num::NonZeroUsize;
 
-/// # [`TokenChunker`] 
+/// # [`TokenChunker`]
 /// Allows you to chunk text using token based chunking
 pub struct TokenChunker {
     /// chunk_size: The size in tokens of each chunk
@@ -13,7 +13,7 @@ pub struct TokenChunker {
 }
 
 impl TokenChunker {
-    /// # [`TokenChunker::try_new`] 
+    /// # [`TokenChunker::try_new`]
     ///
     /// # Arguments
     /// * `chunk_size` - The size in tokens of each chunk
@@ -41,7 +41,7 @@ impl TokenChunker {
         Ok(chunker)
     }
 
-    // # [`TokenChunker::validate_arguments`] 
+    // # [`TokenChunker::validate_arguments`]
     // function to validate arguments when [`TokenChunker::new`] is called
     //
     // # Arguments
@@ -75,7 +75,7 @@ impl TokenChunker {
         Ok(())
     }
 
-    /// # [`TokenChunker::generate_chunks`] 
+    /// # [`TokenChunker::generate_chunks`]
     /// function to generate chunks from raw text
     ///
     /// # Arguments
@@ -107,7 +107,7 @@ impl TokenChunker {
     }
 }
 
-/// # [`ChunkingError`] 
+/// # [`ChunkingError`]
 /// Custom error type representing errors that can occur during chunking
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChunkingError {
