@@ -11,7 +11,7 @@ use std::env::VarError;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 
-/// # OpenAIEmbeddingClient
+/// # [`OpenAIEmbeddingClient`]
 /// Allows for interacting with the OpenAI API to generate embeddings.
 /// You can either embed a single string or a batch of strings.
 ///
@@ -24,6 +24,18 @@ pub struct OpenAIEmbeddingClient {
 }
 
 impl OpenAIEmbeddingClient {
+    /// # [`OpenAIEmbeddingClient::try_new`]
+    /// Constructor to create a new OpenAIEmbeddingClient.
+    /// This will fail if the OPENAI_API_KEY environment variable is not set.
+    /// 
+    /// # Arguments
+    /// * `embedding_model` - The model to use for the embeddings
+    ///
+    /// # Errors
+    /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set.
+    /// 
+    /// # Returns
+    /// * [`OpenAIEmbeddingClient`] - The newly created OpenAIEmbeddingClient
     pub fn try_new(
         embedding_model: OpenAIEmbeddingModel,
     ) -> Result<OpenAIEmbeddingClient, VarError> {
@@ -35,16 +47,16 @@ impl OpenAIEmbeddingClient {
         })
     }
 
-    // # handle_success_response
-    // Takes a successful response and maps it into a vector of string embedding pairs
-    // assumption made the two iters will zip up 1:1 (as this should be the case)
-    //
-    // # Arguments
-    // `input_text` - The input text that was sent to OpenAI
-    // `response` - The deserialized response from OpenAI
-    //
-    // # Returns
-    // `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
+    /// # [`OpenAIEmbeddingClient::handle_embedding_success_response`]
+    /// Takes a successful response and maps it into a vector of string embedding pairs
+    /// assumption made the two iters will zip up 1:1 (as this should be the case)
+    ///
+    /// # Arguments
+    /// `input_text` - The input text that was sent to OpenAI
+    /// `response` - The deserialized response from OpenAI
+    ///
+    /// # Returns
+    /// [`Vec<(String, Vec<f32>)>`] - A vector of string embedding pairs the can be stored
     fn handle_embedding_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
@@ -62,7 +74,7 @@ impl OpenAIEmbeddingClient {
 impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     type ErrorType = OpenAIError;
 
-    /// # generate_embeddings
+    /// # [`OpenAIEmbeddingClient::generate_embeddings`] 
     /// Function to generate embeddings for [`Chunks`].
     /// Allows you to get an embedding for multiple strings.
     ///
@@ -93,7 +105,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
         Ok(Self::handle_embedding_success_response(text, response))
     }
 
-    /// # generate_embedding
+    /// # 
     /// Function to generate an embedding for a [`Chunk`].
     /// Allows you to get an embedding for a single string.
     ///

@@ -17,7 +17,7 @@ impl<T> ChatHistoryChain<T>
 where
     T: AsyncChatClient,
 {
-    /// # new
+    /// # [`ChatHistoryChain::new`]
     ///
     /// This constructor to create a new ChatHistoryChain.
     ///
@@ -33,7 +33,7 @@ where
         }
     }
 
-    /// # invoke_chain
+    /// # [`ChatHistoryChain::invoke_chain`]
     ///
     /// function to execute the ChatHistoryChain given a new user prompt.
     /// Each time this method is invoked, the user message is added to the chat history.
@@ -66,7 +66,7 @@ where
     }
 }
 
-/// # ChatHistoryBuffer
+/// # [`ChatHistoryBuffer`]
 ///
 /// This struct is used to store the chat history of the conversation.
 /// Internal buffer we will hide from the user.
@@ -103,7 +103,7 @@ mod chat_history_chain_tests {
     use mockall::predicate::eq;
     use std::vec;
 
-    lazy_static! {
+    lazy_static! [
         static ref SYSTEM_PROMPT: PromptMessage =
             PromptMessage::SystemMessage("system prompt".into());
         static ref USER_PROMPT_1: PromptMessage = PromptMessage::HumanMessage("user prompt".into());
@@ -111,7 +111,7 @@ mod chat_history_chain_tests {
             PromptMessage::HumanMessage("user prompt 2".into());
         static ref AI_RESPONSE: PromptMessage = PromptMessage::AIMessage("AI response".into());
         static ref AI_RESPONSE_2: PromptMessage = PromptMessage::AIMessage("AI response 2".into());
-    };
+    ];
 
     #[tokio::test]
     async fn test_chat_history_chain() {
