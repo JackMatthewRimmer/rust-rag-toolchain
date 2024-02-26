@@ -1,7 +1,7 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
 use std::num::NonZeroUsize;
 
-/// # TokenChunker
+/// # [`TokenChunker`] 
 /// Allows you to chunk text using token based chunking
 pub struct TokenChunker {
     /// chunk_size: The size in tokens of each chunk
@@ -13,7 +13,7 @@ pub struct TokenChunker {
 }
 
 impl TokenChunker {
-    /// # try_new
+    /// # [`TokenChunker::try_new`] 
     ///
     /// # Arguments
     /// * `chunk_size` - The size in tokens of each chunk
@@ -25,7 +25,7 @@ impl TokenChunker {
     /// * [`ChunkingError::ChunkOverlapTooLarge`] - Chunk overlap must be smaller than chunk size
     ///
     /// # Returns
-    /// * `Result<TokenChunker, ChunkingError>` - The token chunker
+    /// * [`TokenChunker`] - The token chunker
     pub fn try_new(
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
@@ -41,7 +41,7 @@ impl TokenChunker {
         Ok(chunker)
     }
 
-    // # validate_arguments
+    // # [`TokenChunker::validate_arguments`] 
     // function to validate arguments when [`TokenChunker::new`] is called
     //
     // # Arguments
@@ -54,7 +54,7 @@ impl TokenChunker {
     // * [`ChunkingError::ChunkOverlapTooLarge`] - Chunk overlap must be smaller than chunk size
     //
     // # Returns
-    // `Result<(), ChunkingError>` - Result indicating whether the arguments are valid
+    // [`()`] - Result indicating whether the arguments are valid
     fn validate_arguments(
         chunk_size: usize,
         chunk_overlap: usize,
@@ -75,7 +75,7 @@ impl TokenChunker {
         Ok(())
     }
 
-    /// # generate_chunks
+    /// # [`TokenChunker::generate_chunks`] 
     /// function to generate chunks from raw text
     ///
     /// # Arguments
@@ -85,7 +85,7 @@ impl TokenChunker {
     /// * [`ChunkingError::TokenizationError`] - Unable to tokenize text
     ///
     /// # Returns
-    /// `Result<Chunks, ChunkingError>` - The generated chunks
+    /// [`Chunks`] - The generated chunks
     pub fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, ChunkingError> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
@@ -107,7 +107,7 @@ impl TokenChunker {
     }
 }
 
-/// # ChunkingError
+/// # [`ChunkingError`] 
 /// Custom error type representing errors that can occur during chunking
 #[derive(Debug, PartialEq, Eq)]
 pub enum ChunkingError {

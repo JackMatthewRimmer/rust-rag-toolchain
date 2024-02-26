@@ -3,7 +3,7 @@ use std::{
     fmt::{Display, Formatter},
 };
 
-/// # RagChainError
+/// # [`RagChainError`] 
 ///
 /// This enum represents the possible errors that can occur when using the BasicRAGChain.
 /// It is parametrized over the error types of the chat client and the retriever. this way
@@ -40,7 +40,7 @@ where
     }
 }
 
-/// # ChainError
+/// # [`ChainError`] 
 ///
 /// This enum represents the possible errors that can occur when using the ChatHistoryChain.
 /// It is parametrized over the error type of the chat client. this way concrete error types are

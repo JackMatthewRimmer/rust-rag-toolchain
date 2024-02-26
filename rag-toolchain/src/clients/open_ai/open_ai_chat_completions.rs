@@ -13,7 +13,7 @@ use super::model::errors::OpenAIError;
 
 const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
 
-/// # OpenAIChatCompletionClient
+/// # [`OpenAIChatCompletionClient`] 
 /// Allows for interacting with open ai models
 ///
 /// # Required Environment Variables
@@ -36,7 +36,7 @@ impl OpenAIChatCompletionClient {
         })
     }
 
-    /// # with_additional_config
+    /// # [`OpenAIChatCompletionClient::with_additional_config`] 
     ///
     /// This methods allows users to set additional parameters to be included
     /// in chat completion requests such as top_p, temperature, seed etc. Note
@@ -51,6 +51,18 @@ impl OpenAIChatCompletionClient {
 impl AsyncChatClient for OpenAIChatCompletionClient {
     type ErrorType = OpenAIError;
 
+    /// # [`OpenAIChatCompletionClient::invoke`]
+    ///
+    /// function to execute the ChatCompletion given a list of prompt messages.
+    ///
+    /// # Arguments
+    /// * `prompt_messages` - the list of prompt messages that will be sent to the LLM.
+    /// 
+    /// # Errors
+    /// * [`OpenAIError`] - if the chat client invocation fails.
+    ///
+    /// # Returns
+    /// [`PromptMessage::AIMessage`] - the response from the chat client.
     async fn invoke(
         &self,
         prompt_messages: Vec<PromptMessage>,

@@ -1,7 +1,7 @@
 use crate::loaders::traits::LoadSource;
 use std::fs::read_to_string;
 
-/// # SingleFileSource
+/// # [`SingleFileSource`] 
 /// Reads a single file and returns the contents as a vector with one file
 /// which is the file contents
 pub struct SingleFileSource {

@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::sync::Arc;
 
 // ----------------- Embedding -----------------
-/// # Embedding
+/// # [`Embedding`] 
 /// Custom type that wraps a pointer to an embedding/vector.
 /// It is immutable and thread safe
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -11,26 +11,26 @@ pub struct Embedding {
 }
 
 impl Embedding {
-    /// # new
+    /// # [`Embedding::new`] 
     ///
     /// # Arguments
     /// * `Arc<[f32]>` - pointer to the embedding
     ///
     /// # Returns
-    /// * `Embedding` - a new Embedding
+    /// * [`Embedding`] - a new Embedding
     pub fn new(embedding: Arc<[f32]>) -> Self {
         Self { embedding }
     }
 
-    /// # embedding
+    /// # [`Embedding::embedding`] 
     ///
     /// # Returns
-    /// * `Arc<[f32]>` - pointer to the embedding
+    /// * [`Arc<[f32]>`] - pointer to the embedding
     pub fn embedding(&self) -> Arc<[f32]> {
         Arc::clone(&self.embedding)
     }
 
-    /// # iter_to_vec
+    /// # [`Embedding::iter_to_vec`] 
     ///
     /// Helper function to generate a vector given an iterator of items
     /// that can be converted into an Embedding
@@ -39,7 +39,7 @@ impl Embedding {
     /// * `Iterator<Item = T>` - iterator of items where T: `Into<Embedding>`
     ///
     /// # Returns
-    /// * `Vec<Embedding>` - vector of Embeddings
+    /// * [`Vec<Embedding>`] - vector of Embeddings
     pub fn iter_to_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
     where
         T: Into<Self>,
@@ -51,7 +51,7 @@ impl Embedding {
         embedding
     }
 
-    /// # from_vec
+    /// # [`Embedding::from_vec`] 
     ///
     /// Helper function to convert a vector of items into a vector
     /// of embeddings
@@ -60,7 +60,7 @@ impl Embedding {
     /// * `Vec<T>` - vector of items where T: `Into<Embedding>`
     ///
     /// # Returns
-    /// * `Vec<Embedding>` - vector of Embeddings
+    /// * [`Vec<Embedding>`] - vector of Embeddings
     pub fn from_vec<T>(vec: Vec<T>) -> Vec<Self>
     where
         T: Into<Self>,
@@ -93,7 +93,7 @@ impl From<Embedding> for Vec<f32> {
 
 // ----------------- Chunk ------------------
 #[derive(Debug, Clone, PartialEq, Serialize)]
-/// # Chunk
+/// # [`Chunk`] 
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe
 pub struct Chunk {
@@ -101,21 +101,21 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    /// # new
+    /// # [`Chunk::new`] 
     ///
     /// # Arguments
     /// * `Arc<str>` - pointer to the chunk str
     ///
-    /// # Returns
-    /// * `Chunk` - a new Chunk
+    /// # Returns 
+    /// * [`Chunk`] - a new Chunk
     pub fn new(chunk: Arc<str>) -> Self {
         Self { chunk }
     }
 
-    /// # chunk
+    /// # [`Chunk::chunk`] 
     ///
     /// # Returns
-    /// * `Arc<str>` - pointer to the chunk str
+    /// * [`Arc<str>`] - pointer to the chunk str
     pub fn chunk(&self) -> Arc<str> {
         Arc::clone(&self.chunk)
     }

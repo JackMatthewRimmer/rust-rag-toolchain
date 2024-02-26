@@ -4,7 +4,7 @@ use std::error::Error;
 
 use super::types::PromptMessage;
 
-/// # AsyncEmbeddingClient
+/// # [`AsyncEmbeddingClient`] 
 /// Trait for any client that generates embeddings asynchronously
 #[async_trait]
 pub trait AsyncEmbeddingClient {
@@ -16,7 +16,7 @@ pub trait AsyncEmbeddingClient {
     ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
 }
 
-/// # AsyncEmbeddingClient
+/// # [`AsyncChatClient`] 
 /// Trait for any client that generates chat completions asynchronously
 #[async_trait]
 pub trait AsyncChatClient {

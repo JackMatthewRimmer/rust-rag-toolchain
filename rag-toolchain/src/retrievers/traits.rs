@@ -14,7 +14,7 @@ Probably best to just offer all of these as separate methods
 
  */
 
-/// # EmbeddingRetriever
+/// # [`AsyncRetriever`] 
 /// Trait for stores that allow for similar text to be retrieved using embeddings
 #[async_trait]
 pub trait AsyncRetriever {

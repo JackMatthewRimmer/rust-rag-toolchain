@@ -15,8 +15,7 @@ pub struct OpenAIHttpClient {
 }
 
 impl OpenAIHttpClient {
-    /// # try_new
-    /// Create a new OpenAIClient.
+    /// # [`OpenAIHttpClient::try_new`] 
     /// Must have the OPENAI_API_KEY environment variable set
     ///
     /// # Arguments
@@ -27,7 +26,7 @@ impl OpenAIHttpClient {
     /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set
     ///
     /// # Returns
-    /// * [`OpenAIClient`] - The OpenAIClient
+    /// * [`OpenAIHttpClient`] - The newly created OpenAIHttpClient 
     pub fn try_new() -> Result<OpenAIHttpClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
@@ -38,23 +37,22 @@ impl OpenAIHttpClient {
         Ok(OpenAIHttpClient { api_key, client })
     }
 
-    // # send_reqest
-    // Sends a request to the OpenAI API and returns the response
-    //
-    // # Arguments
-    // * `body` - The body of the request
-    // * `url` - The url to send the request to
-    //
-    // # Errors
-    // * [`OpenAIError::ErrorSendingRequest`] - if request.send() errors
-    // * [`OpenAIError::ErrorGettingResponseBody`] - if response.text() errors
-    // * [`OpenAIError::ErrorDeserializingResponseBody`] - if serde_json::from_str() errors
-    // * [`OpenAIError`] - if the response code is not 200 this can be any of the associates status
-    //    code errors or variatn of `OpenAIError::UNDEFINED`
-    //
-    // # Returns
-    // * `EmbeddingResponse` - The deserialized response from OpenAI
-
+    /// # [`OpenAIHttpClient::send_request`] 
+    /// Sends a request to the OpenAI API and returns the response
+    ///
+    /// # Arguments
+    /// * `body` - The body of the request
+    /// * `url` - The url to send the request to
+    ///
+    /// # Errors
+    /// * [`OpenAIError::ErrorSendingRequest`] - if request.send() errors
+    /// * [`OpenAIError::ErrorGettingResponseBody`] - if response.text() errors
+    /// * [`OpenAIError::ErrorDeserializingResponseBody`] - if serde_json::from_str() errors
+    /// * [`OpenAIError`] - if the response code is not 200 this can be any of the associates status
+    ///    code errors or variatn of `OpenAIError::UNDEFINED`
+    ///
+    /// # Returns
+    /// [`U`] - The deserialized response from OpenAI
     pub async fn send_request<T, U>(&self, body: T, url: &str) -> Result<U, OpenAIError>
     where
         T: Serialize,
@@ -83,7 +81,7 @@ impl OpenAIHttpClient {
         })
     }
 
-    /// # build_request
+    /// # [`OpenAIHttpClient::build_requeset`] 
     ///
     /// Helper method to build a request with the correct headers and body
     fn build_requeset<T>(&self, request_body: T, url: &str) -> RequestBuilder
@@ -98,15 +96,15 @@ impl OpenAIHttpClient {
             .json(&request_body)
     }
 
-    // # handle_error_response
-
-    // Explicit error mapping between response codes and error types
-    //
-    // # Arguments
-    // `response` - The reqwest response from OpenAI
-    //
-    // # Returns
-    // `OpenAIError` - The error type that maps to the response code
+    /// # [`OpenAIHttpClient::handle_error_response`] 
+    ///
+    /// Explicit error mapping between response codes and error types
+    ///
+    /// # Arguments
+    /// `response` - The reqwest response from OpenAI
+    ///
+    /// # Returns
+    /// [`OpenAIError`] - The error type that maps to the response code
     async fn handle_error_response(response: Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();

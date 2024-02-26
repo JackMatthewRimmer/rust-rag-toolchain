@@ -5,7 +5,7 @@ use crate::{clients::PromptMessage, common::Chunks};
 /// will be refactored into this module. Any function that is not taking a reference
 /// to &self should be placed here.
 
-/// # build_prompt
+/// # [`build_prompt`] 
 ///
 /// function to builder the user prompt from the original user prompt and the retrieved
 /// supporting chunks.
