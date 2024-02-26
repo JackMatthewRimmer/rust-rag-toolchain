@@ -1,4 +1,4 @@
-/// # PromptMessage
+/// # [`PromptMessage`]
 /// This enum is used to represent the different types of messages that can be sent to the LLM.
 /// we will map the PromptMessage within the client into the compatible format.
 #[derive(Debug, PartialEq, Eq, Clone)]

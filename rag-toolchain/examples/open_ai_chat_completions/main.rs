@@ -6,6 +6,8 @@ use rag_toolchain::clients::{
 
 #[tokio::main]
 async fn main() {
+    // Create a new OpenAIChatCompletionClient
+    // This examples shows the ability to add additional config to the client
     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
     let mut client: OpenAIChatCompletionClient =
         OpenAIChatCompletionClient::try_new(model).unwrap();
@@ -20,6 +22,7 @@ async fn main() {
     let user_message: PromptMessage =
         PromptMessage::HumanMessage("What is the weather like today ?".into());
 
+    // We invoke the chat client with a list of messages
     let reply = client
         .invoke(vec![system_message, user_message])
         .await

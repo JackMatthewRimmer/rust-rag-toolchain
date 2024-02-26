@@ -11,7 +11,7 @@ use std::env::VarError;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 
-/// # OpenAIEmbeddingClient
+/// # [`OpenAIEmbeddingClient`]
 /// Allows for interacting with the OpenAI API to generate embeddings.
 /// You can either embed a single string or a batch of strings.
 ///
@@ -24,6 +24,18 @@ pub struct OpenAIEmbeddingClient {
 }
 
 impl OpenAIEmbeddingClient {
+    /// # [`OpenAIEmbeddingClient::try_new`]
+    /// Constructor to create a new OpenAIEmbeddingClient.
+    /// This will fail if the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Arguments
+    /// * `embedding_model` - The model to use for the embeddings
+    ///
+    /// # Errors
+    /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// * [`OpenAIEmbeddingClient`] - The newly created OpenAIEmbeddingClient
     pub fn try_new(
         embedding_model: OpenAIEmbeddingModel,
     ) -> Result<OpenAIEmbeddingClient, VarError> {
@@ -35,16 +47,16 @@ impl OpenAIEmbeddingClient {
         })
     }
 
-    // # handle_success_response
-    // Takes a successful response and maps it into a vector of string embedding pairs
-    // assumption made the two iters will zip up 1:1 (as this should be the case)
-    //
-    // # Arguments
-    // `input_text` - The input text that was sent to OpenAI
-    // `response` - The deserialized response from OpenAI
-    //
-    // # Returns
-    // `Vec<(String, Vec<f32>)>` - A vector of string embedding pairs the can be stored
+    /// # [`OpenAIEmbeddingClient::handle_embedding_success_response`]
+    /// Takes a successful response and maps it into a vector of string embedding pairs
+    /// assumption made the two iters will zip up 1:1 (as this should be the case)
+    ///
+    /// # Arguments
+    /// `input_text` - The input text that was sent to OpenAI
+    /// `response` - The deserialized response from OpenAI
+    ///
+    /// # Returns
+    /// [`Vec<(String, Vec<f32>)>`] - A vector of string embedding pairs the can be stored
     fn handle_embedding_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
@@ -62,7 +74,7 @@ impl OpenAIEmbeddingClient {
 impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     type ErrorType = OpenAIError;
 
-    /// # generate_embeddings
+    /// # [`OpenAIEmbeddingClient::generate_embeddings`]
     /// Function to generate embeddings for [`Chunks`].
     /// Allows you to get an embedding for multiple strings.
     ///
@@ -93,7 +105,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
         Ok(Self::handle_embedding_success_response(text, response))
     }
 
-    /// # generate_embedding
+    /// #
     /// Function to generate an embedding for a [`Chunk`].
     /// Allows you to get an embedding for a single string.
     ///
@@ -171,7 +183,7 @@ mod embedding_client_tests {
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 200, EMBEDDING_RESPONSE);
         let expected_embedding = Embedding::from(vec![
             -0.006929283495992422,
@@ -198,7 +210,7 @@ mod embedding_client_tests {
 
     #[tokio::test]
     async fn test_400_gives_correct_error() {
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 400, ERROR_RESPONSE);
         let expected_response = OpenAIError::CODE400(OpenAIErrorBody {
             error: OpenAIErrorData {
@@ -236,9 +248,9 @@ mod embedding_client_tests {
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    fn with_mocked_client() -> (OpenAIEmbeddingClient, ServerGuard) {
+    async fn with_mocked_client() -> (OpenAIEmbeddingClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
-        let server = Server::new();
+        let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIEmbeddingModel::TextEmbeddingAda002;
         let mut client = OpenAIEmbeddingClient::try_new(model).unwrap();

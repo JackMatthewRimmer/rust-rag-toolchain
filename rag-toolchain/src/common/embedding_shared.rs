@@ -3,7 +3,7 @@ use tiktoken_rs::tokenizer::Tokenizer;
 use tiktoken_rs::CoreBPE;
 
 // ---------------------- Embedding Models ----------------------
-/// # EmbeddingModel
+/// # [`EmbeddingModel`]
 /// This trait is used for methods to understand the requirements
 /// set out by which embedding model is being used such as embedding
 /// dimensions and max tokens
@@ -11,7 +11,7 @@ pub trait EmbeddingModel {
     fn metadata(&self) -> EmbeddingModelMetadata;
 }
 
-/// # EmbeddingModelMetadata
+/// # [`EmbeddingModelMetadata`]
 /// Struct to contain all of the relevant metadata for an embedding model
 pub struct EmbeddingModelMetadata {
     // The dimension of the vectors produced by the embedding model
@@ -22,7 +22,7 @@ pub struct EmbeddingModelMetadata {
     pub tokenizer: Box<dyn TokenizerWrapper>,
 }
 
-/// # TokenizerWrapper
+/// # [`TokenizerWrapper`]
 /// We wrap the tokenizer for a specific embedding model to allow
 /// for a common interface for tokenization
 pub trait TokenizerWrapper {
@@ -32,7 +32,7 @@ pub trait TokenizerWrapper {
 // -------------------------------------------------------------
 
 // ------------------ OpenAI Embedding Models ------------------
-/// # OpenAIEmbeddingModel
+/// # [`OpenAIEmbeddingModel`]
 /// Top level enum to hold all OpenAI embedding model variants
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "snake_case")]

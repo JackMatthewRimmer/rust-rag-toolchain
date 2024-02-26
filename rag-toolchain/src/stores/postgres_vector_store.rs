@@ -31,7 +31,7 @@ use dotenv::dotenv;
 ///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PostgresVectorStore {
     /// We make the pool public incase users want to
     /// do extra operations on the database
@@ -61,7 +61,6 @@ impl PostgresVectorStore {
         let password: String = env::var("POSTGRES_PASSWORD")?;
         let host: String = env::var("POSTGRES_HOST")?;
         let db_name: String = env::var("POSTGRES_DATABASE")?;
-        let table_name: &str = table_name;
 
         let embedding_diminsions = embedding_model.metadata().dimensions;
         let connection_string =
@@ -83,10 +82,62 @@ impl PostgresVectorStore {
         })
     }
 
+    /// # [`PostgresVectorStore::try_new_with_pool`]
+    ///
+    /// This function allows us to create a new PostgresVectorStore with a pre-existing connection pool
+    /// this is more useful in cases where we want to have multiple stores for different tables all sharing
+    /// the same connection pool.
+    ///
+    /// # Arguments
+    /// * `pool` - The connection pool to use to connect to the database
+    /// * `table_name` - The name of the table to store the embeddings in
+    /// * `embedding_model` - The embedding model to use to store the embeddings
+    ///
+    /// # Errors
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
+    ///
+    /// # Returns
+    /// [`PostgresVectorStore`] if the table creation is successful
+    pub async fn try_new_with_pool(
+        pool: Pool<Postgres>,
+        table_name: &str,
+        embedding_model: impl EmbeddingModel,
+    ) -> Result<Self, PostgresVectorError> {
+        let embedding_diminsions = embedding_model.metadata().dimensions;
+
+        // Create the table
+        PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
+            .await
+            .map_err(PostgresVectorError::TableCreationError)?;
+
+        Ok(PostgresVectorStore {
+            pool,
+            table_name: table_name.into(),
+        })
+    }
+
+    /// # [`PostgresVectorStore::get_pool`]
+    ///
+    /// Getter for the internal connection pool
+    ///
+    /// # Returns
+    /// [`Pool`] - The connection pool
     pub fn get_pool(&self) -> Pool<Postgres> {
         self.pool.clone()
     }
 
+    /// # [`PostgresVectorStore::as_retriever`]
+    ///
+    /// This function allows us to convert the store into a retriever.
+    /// Note that the returned retriever is bound to the same table as the store.
+    ///
+    /// # Arguments
+    /// * `embedding_client` - The client we use to embed income text before the
+    ///                        similarity search
+    /// * `distance_function` - The distance function to use to compare the embeddings
+    ///
+    /// # Returns
+    /// [`PostgresVectorRetriever`] - The retriever that can be used to search for similar text
     pub fn as_retriever<T: AsyncEmbeddingClient>(
         &self,
         embedding_client: T,

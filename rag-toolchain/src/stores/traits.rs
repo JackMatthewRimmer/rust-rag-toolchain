@@ -14,3 +14,17 @@ pub trait EmbeddingStore {
     async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
         -> Result<(), Self::ErrorType>;
 }
+
+#[cfg(test)]
+use mockall::*;
+#[cfg(test)]
+mock! {
+    pub EmbeddingStore {}
+    #[async_trait]
+    impl EmbeddingStore for EmbeddingStore {
+        type ErrorType = std::io::Error;
+        async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), <Self as EmbeddingStore>::ErrorType>;
+        async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
+            -> Result<(), <Self as EmbeddingStore>::ErrorType>;
+    }
+}

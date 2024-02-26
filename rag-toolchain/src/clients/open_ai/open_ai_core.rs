@@ -15,8 +15,7 @@ pub struct OpenAIHttpClient {
 }
 
 impl OpenAIHttpClient {
-    /// # try_new
-    /// Create a new OpenAIClient.
+    /// # [`OpenAIHttpClient::try_new`]
     /// Must have the OPENAI_API_KEY environment variable set
     ///
     /// # Arguments
@@ -27,7 +26,7 @@ impl OpenAIHttpClient {
     /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set
     ///
     /// # Returns
-    /// * [`OpenAIClient`] - The OpenAIClient
+    /// * [`OpenAIHttpClient`] - The newly created OpenAIHttpClient
     pub fn try_new() -> Result<OpenAIHttpClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("OPENAI_API_KEY".into()) {
@@ -38,23 +37,22 @@ impl OpenAIHttpClient {
         Ok(OpenAIHttpClient { api_key, client })
     }
 
-    // # send_reqest
-    // Sends a request to the OpenAI API and returns the response
-    //
-    // # Arguments
-    // * `body` - The body of the request
-    // * `url` - The url to send the request to
-    //
-    // # Errors
-    // * [`OpenAIError::ErrorSendingRequest`] - if request.send() errors
-    // * [`OpenAIError::ErrorGettingResponseBody`] - if response.text() errors
-    // * [`OpenAIError::ErrorDeserializingResponseBody`] - if serde_json::from_str() errors
-    // * [`OpenAIError`] - if the response code is not 200 this can be any of the associates status
-    //    code errors or variatn of `OpenAIError::UNDEFINED`
-    //
-    // # Returns
-    // * `EmbeddingResponse` - The deserialized response from OpenAI
-
+    /// # [`OpenAIHttpClient::send_request`]
+    /// Sends a request to the OpenAI API and returns the response
+    ///
+    /// # Arguments
+    /// * `body` - The body of the request
+    /// * `url` - The url to send the request to
+    ///
+    /// # Errors
+    /// * [`OpenAIError::ErrorSendingRequest`] - if request.send() errors
+    /// * [`OpenAIError::ErrorGettingResponseBody`] - if response.text() errors
+    /// * [`OpenAIError::ErrorDeserializingResponseBody`] - if serde_json::from_str() errors
+    /// * [`OpenAIError`] - if the response code is not 200 this can be any of the associates status
+    ///    code errors or variatn of `OpenAIError::UNDEFINED`
+    ///
+    /// # Returns
+    /// [`U`] - The deserialized response from OpenAI
     pub async fn send_request<T, U>(&self, body: T, url: &str) -> Result<U, OpenAIError>
     where
         T: Serialize,
@@ -83,7 +81,7 @@ impl OpenAIHttpClient {
         })
     }
 
-    /// # build_request
+    /// # [`OpenAIHttpClient::build_requeset`]
     ///
     /// Helper method to build a request with the correct headers and body
     fn build_requeset<T>(&self, request_body: T, url: &str) -> RequestBuilder
@@ -98,15 +96,15 @@ impl OpenAIHttpClient {
             .json(&request_body)
     }
 
-    // # handle_error_response
-
-    // Explicit error mapping between response codes and error types
-    //
-    // # Arguments
-    // `response` - The reqwest response from OpenAI
-    //
-    // # Returns
-    // `OpenAIError` - The error type that maps to the response code
+    /// # [`OpenAIHttpClient::handle_error_response`]
+    ///
+    /// Explicit error mapping between response codes and error types
+    ///
+    /// # Arguments
+    /// `response` - The reqwest response from OpenAI
+    ///
+    /// # Returns
+    /// [`OpenAIError`] - The error type that maps to the response code
     async fn handle_error_response(response: Response) -> OpenAIError {
         // Map response objects into some form of enum error
         let status_code = response.status().as_u16();
@@ -149,45 +147,45 @@ mod open_ai_core_tests {
     }
     "#;
 
-    #[test]
-    fn status_400_maps_correctly() {
+    #[tokio::test]
+    async fn status_400_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE400(expected_error_body);
-        assert_status_mapping(400, expected_error);
+        assert_status_mapping(400, expected_error).await;
     }
 
-    #[test]
-    fn status_401_maps_correctly() {
+    #[tokio::test]
+    async fn status_401_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE401(expected_error_body);
-        assert_status_mapping(401, expected_error);
+        assert_status_mapping(401, expected_error).await;
     }
 
-    #[test]
-    fn status_429_maps_correctly() {
+    #[tokio::test]
+    async fn status_429_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE429(expected_error_body);
-        assert_status_mapping(429, expected_error);
+        assert_status_mapping(429, expected_error).await;
     }
 
-    #[test]
-    fn status_500_maps_correctly() {
+    #[tokio::test]
+    async fn status_500_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE500(expected_error_body);
-        assert_status_mapping(500, expected_error);
+        assert_status_mapping(500, expected_error).await;
     }
 
-    #[test]
-    fn status_503_maps_correctly() {
+    #[tokio::test]
+    async fn status_503_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = OpenAIError::CODE503(expected_error_body);
-        assert_status_mapping(503, expected_error);
+        assert_status_mapping(503, expected_error).await;
     }
 
-    #[test]
-    fn undefined_maps_correctly() {
+    #[tokio::test]
+    async fn undefined_maps_correctly() {
         let expected_error = OpenAIError::Undefined(404, ERROR_RESPONSE.into());
-        assert_status_mapping(404, expected_error);
+        assert_status_mapping(404, expected_error).await;
     }
 
     #[tokio::test]
@@ -197,7 +195,7 @@ mod open_ai_core_tests {
         let body = RequestBody {
             message: "hello".into(),
         };
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, status_code.into(), response_body);
         let error = client
             .send_request::<RequestBody, RequestBody>(body, &server.url())
@@ -213,15 +211,15 @@ mod open_ai_core_tests {
     }
 
     // Helper method to assert all known status codes are mapped correctly
-    fn assert_status_mapping(status_code: usize, expected_error: OpenAIError) {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+    async fn assert_status_mapping(status_code: usize, expected_error: OpenAIError) {
         let body = RequestBody {
             message: "hello".into(),
         };
-        let (client, mut server) = with_mocked_client();
+        let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, status_code, ERROR_RESPONSE);
-        let error = rt
-            .block_on(client.send_request::<RequestBody, RequestBody>(body, &server.url()))
+        let error: OpenAIError = client
+            .send_request::<RequestBody, RequestBody>(body, &server.url())
+            .await
             .unwrap_err();
         mock.assert();
         assert_eq!(expected_error, error);
@@ -244,9 +242,9 @@ mod open_ai_core_tests {
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    fn with_mocked_client() -> (OpenAIHttpClient, ServerGuard) {
+    async fn with_mocked_client() -> (OpenAIHttpClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
-        let server = Server::new();
+        let server = Server::new_async().await;
         let client = OpenAIHttpClient::try_new().unwrap();
         (client, server)
     }
