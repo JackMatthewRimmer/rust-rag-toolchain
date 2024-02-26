@@ -28,7 +28,7 @@ where
 ///
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
-    /// # try_new
+    /// # [`PostgresVectorRetriever::new`]
     /// This new function should be called the a vectors stores as_retriver() function.
     ///
     /// # Arguments
@@ -53,9 +53,6 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     }
 }
 
-/// # AsyncRetriever
-///
-/// This trait is implemented for PostgresVectorRetriever.
 #[async_trait]
 impl<T> AsyncRetriever for PostgresVectorRetriever<T>
 where
@@ -65,7 +62,7 @@ where
     // We parameterize over the error type of the embedding client.
     type ErrorType = PostgresRetrieverError<T::ErrorType>;
 
-    /// # retrieve
+    /// # [`PostgresVectorRetriever::retrieve`]
     ///
     /// Implementation of the retrieve function for PostgresVectorRetriever.
     /// This is currently doing a cosine similarity search. We intend to support
@@ -138,7 +135,7 @@ impl Display for DistanceFunction {
     }
 }
 
-/// # PostgresRetrieverError
+/// # [`PostgresRetrieverError`]
 ///
 /// This error is generic as it is parameterized over the error type of the embedding client.
 /// This allows us to avoid dynamic dispatched error types.

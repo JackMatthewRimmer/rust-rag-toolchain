@@ -54,3 +54,10 @@ mock! {
         ) -> Result<PromptMessage, <Self as AsyncChatClient>::ErrorType>;
     }
 }
+
+#[cfg(test)]
+impl Clone for MockAsyncChatClient {
+    fn clone(&self) -> Self {
+        MockAsyncChatClient::new()
+    }
+}

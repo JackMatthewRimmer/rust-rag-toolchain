@@ -48,15 +48,22 @@ where
     /// # Returns
     /// * [`PromptMessage::AIMessage`] - the response from the chat client.
     pub async fn invoke_chain(
-        &self,
+        &mut self,
         user_message: PromptMessage,
     ) -> Result<PromptMessage, ChainError<T::ErrorType>> {
         let history: Vec<PromptMessage> = self.chat_history_buffer.get_messages();
-        let history_with_prompt = history.into_iter().chain(once(user_message)).collect();
-        self.chat_client
+        let history_with_prompt = history
+            .into_iter()
+            .chain(once(user_message.clone()))
+            .collect();
+        let response = self
+            .chat_client
             .invoke(history_with_prompt)
             .await
-            .map_err(ChainError::ChatClientError)
+            .map_err(ChainError::ChatClientError)?;
+        self.chat_history_buffer.append(user_message);
+        self.chat_history_buffer.append(response.clone());
+        Ok(response)
     }
 }
 
@@ -70,16 +77,74 @@ struct ChatHistoryBuffer {
 }
 
 impl ChatHistoryBuffer {
-    /// # new
+    /// # [`ChatHistoryBuffer::new`]
     /// we start a chat history buffer with a system prompt.
     fn new(system_prompt: PromptMessage) -> Self {
         ChatHistoryBuffer {
             messages: vec![system_prompt],
         }
     }
-    /// # get_messages
+    /// # [`ChatHistoryBuffer::get_messages`]
     /// return a reference to the messages in the buffer.
     fn get_messages(&self) -> Vec<PromptMessage> {
         self.messages.clone()
+    }
+
+    /// # [`ChatHistoryBuffer::append`]
+    fn append(&mut self, message: PromptMessage) {
+        self.messages.push(message);
+    }
+}
+
+#[cfg(test)]
+mod chat_history_chain_tests {
+    use super::*;
+    use crate::clients::MockAsyncChatClient;
+    use lazy_static::lazy_static;
+    use mockall::predicate::eq;
+    use std::vec;
+
+    lazy_static! [
+        static ref SYSTEM_PROMPT: PromptMessage =
+            PromptMessage::SystemMessage("system prompt".into());
+        static ref USER_PROMPT_1: PromptMessage = PromptMessage::HumanMessage("user prompt".into());
+        static ref USER_PROMPT_2: PromptMessage =
+            PromptMessage::HumanMessage("user prompt 2".into());
+        static ref AI_RESPONSE: PromptMessage = PromptMessage::AIMessage("AI response".into());
+        static ref AI_RESPONSE_2: PromptMessage = PromptMessage::AIMessage("AI response 2".into());
+    ];
+
+    #[tokio::test]
+    async fn test_chat_history_chain() {
+        let mut chat_client = MockAsyncChatClient::new();
+        chat_client
+            .expect_invoke()
+            .with(eq(vec![SYSTEM_PROMPT.clone(), USER_PROMPT_1.clone()]))
+            .times(1)
+            .returning(|_| Ok(AI_RESPONSE.clone()));
+
+        chat_client
+            .expect_invoke()
+            .with(eq(vec![
+                SYSTEM_PROMPT.clone(),
+                USER_PROMPT_1.clone(),
+                AI_RESPONSE.clone(),
+                USER_PROMPT_2.clone(),
+            ]))
+            .times(1)
+            .returning(|_| Ok(AI_RESPONSE_2.clone()));
+
+        let mut chat_history_chain = ChatHistoryChain::new(chat_client, SYSTEM_PROMPT.clone());
+        let result = chat_history_chain
+            .invoke_chain(USER_PROMPT_1.clone())
+            .await
+            .unwrap();
+        assert_eq!(result, AI_RESPONSE.clone());
+
+        chat_history_chain
+            .invoke_chain(USER_PROMPT_2.clone())
+            .await
+            .unwrap();
+        assert_eq!(result, AI_RESPONSE.clone());
     }
 }

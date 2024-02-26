@@ -5,15 +5,10 @@ use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("POSTGRES_USER", "postgres");
-    std::env::set_var("POSTGRES_PASSWORD", "postgres");
-    std::env::set_var("POSTGRES_HOST", "localhost");
-    std::env::set_var("POSTGRES_DATABASE", "postgres");
-
-    // Given our text, we want to split it into chunks, Usually this would be done for larger texts
-    // But has been done here for demonstration purposes
+    // We read in the text from a file
     let text = std::fs::read_to_string("examples/pg_vector/example_text.txt").unwrap();
     println!("Text: {}", text);
+    // Create a new chunker and generate the chunks
     let chunker = TokenChunker::try_new(
         std::num::NonZeroUsize::new(50).unwrap(),
         25,
@@ -35,6 +30,6 @@ async fn main() {
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
     println!("Embeddings: {:?}", embeddings);
 
-    // Insert the embeddings into the store this will be a better interface in the future
+    // Insert the embeddings into the store
     store.store_batch(embeddings).await.unwrap();
 }

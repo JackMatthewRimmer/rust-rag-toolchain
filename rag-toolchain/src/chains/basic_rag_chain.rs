@@ -7,7 +7,7 @@ use crate::{
 use std::num::NonZeroU32;
 use typed_builder::TypedBuilder;
 
-/// # BasicRAGChain
+/// # [`BasicRAGChain`]
 ///
 /// This struct allows for easily executing RAG given a single user prompt.
 /// the current implementation relies on async chat clients and async retrievers.
@@ -39,7 +39,7 @@ where
     T: AsyncChatClient,
     U: AsyncRetriever,
 {
-    /// # invoke_chain
+    /// # [`BasicRAGChain::invoke_chain`]
     ///
     /// function to execute the RAG chain given a user prompt and a top_k value.
     /// we take the supplied user prompt and retrieve supporting chunks from the retriever.
@@ -61,7 +61,7 @@ where
     /// * `top_k` - the number of supporting chunks to retrieve
     ///
     /// # Errors
-    /// * [`BasicRagChainError`] - if the chat client or retriever fails.
+    /// * [`RagChainError`] - if the chat client or retriever fails.
     ///
     /// # Returns
     /// [`PromptMessage`] - the response from the chat client
