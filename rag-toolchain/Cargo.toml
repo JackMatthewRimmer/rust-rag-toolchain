@@ -16,6 +16,10 @@ path = "examples/open_ai_chat_completions/main.rs"
 name = "basic_rag_chain_example"
 path = "examples/basic_rag_chain/main.rs"
 
+[[example]]
+name = "chat_history_chain_example"
+path = "examples/chat_history_chain_example/main.rs"
+
 # For integration tests
 # cargo test --test *
 
