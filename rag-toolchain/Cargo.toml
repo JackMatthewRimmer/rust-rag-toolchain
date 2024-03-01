@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/JackMatthewRimmer/rust-rag-toolchain"
 description = "is a Rust native library designed to empower developers with seamless access to common Gen AI workflows."
-readme = "./README"
+readme = "README"
 license = "MIT"
 
 [[example]]
