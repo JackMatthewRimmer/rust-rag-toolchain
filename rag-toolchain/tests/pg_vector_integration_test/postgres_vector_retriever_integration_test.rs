@@ -12,7 +12,9 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-    use async_trait::async_trait;
+    use lazy_static::lazy_static;
+    use mockall::predicate::always;
+    use mockall::*;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
@@ -34,6 +36,10 @@ mod pg_vector {
         DistanceFunction::L2,
         DistanceFunction::InnerProduct,
     ];
+
+    lazy_static! {
+        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
+    }
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
@@ -101,13 +107,12 @@ mod pg_vector {
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(Chunk, Embedding)> = read_test_data();
         let _result = pg_vector
-            .store_batch(input.clone())
+            .store_batch(TEST_DATA.clone())
             .await
             .map_err(|_| panic!("panic"));
 
-        for (i, (chunk, embedding)) in input.iter().enumerate() {
+        for (i, (chunk, embedding)) in TEST_DATA.iter().enumerate() {
             assert_row(
                 &pg_vector.get_pool(),
                 (i + 1) as i32,
@@ -143,8 +148,13 @@ mod pg_vector {
         }
 
         for distance_function in DISTANCE_FUNCTIONS {
-            let mock_client: MockEmbeddingClient = MockEmbeddingClient::new();
-            let retriever: PostgresVectorRetriever<MockEmbeddingClient> =
+            let test_data = TEST_DATA[2].clone();
+            let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
+            mock_client
+                .expect_generate_embedding()
+                .with(always())
+                .returning(move |_| Ok(test_data.clone()));
+            let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
                 pg_vector.as_retriever(mock_client, distance_function.clone());
 
             let result: Chunk = retriever
@@ -214,30 +224,15 @@ mod pg_vector {
         input_data
     }
 
-    pub struct MockEmbeddingClient {
-        input_data: Vec<(Chunk, Embedding)>,
-    }
-    impl MockEmbeddingClient {
-        pub fn new() -> Self {
-            MockEmbeddingClient {
-                input_data: read_test_data(),
-            }
-        }
-    }
-    #[async_trait]
-    impl AsyncEmbeddingClient for MockEmbeddingClient {
-        type ErrorType = std::io::Error;
-        async fn generate_embedding(
-            &self,
-            _text: Chunk,
-        ) -> Result<(Chunk, Embedding), Self::ErrorType> {
-            Ok(self.input_data[2].clone())
-        }
-        async fn generate_embeddings(
-            &self,
-            _text: Chunks,
-        ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType> {
-            unimplemented!()
+    mock! {
+        pub AsyncEmbeddingClient {}
+        impl AsyncEmbeddingClient for AsyncEmbeddingClient {
+            type ErrorType = std::io::Error;
+            async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), <Self as AsyncEmbeddingClient>::ErrorType>;
+            async fn generate_embeddings(
+                &self,
+                text: Chunks,
+            ) -> Result<Vec<(Chunk, Embedding)>, <Self as AsyncEmbeddingClient>::ErrorType>;
         }
     }
 }

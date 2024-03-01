@@ -2,6 +2,10 @@
 name = "rag-toolchain"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/JackMatthewRimmer/rust-rag-toolchain"
+description = "is a Rust native library designed to empower developers with seamless access to common Gen AI workflows."
+readme = "./README"
+license = "MIT"
 
 [[example]]
 name = "pg_vector_example"
@@ -49,7 +53,6 @@ typed-builder = "0.18.0"
 sqlx = { version = "0.7.3", features = ["postgres", "runtime-tokio-rustls"] }
 tokio = { version = "1.36", features = ["full"] }
 reqwest = { version = "0.11", features = ["json"] }
-async-trait = "0.1.74"
 lazy_static = "1.4.0"
 
 # Postgres Vector

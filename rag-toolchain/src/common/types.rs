@@ -92,7 +92,7 @@ impl From<Embedding> for Vec<f32> {
 // ---------------------------------------------
 
 // ----------------- Chunk ------------------
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Eq)]
 /// # [`Chunk`]
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe

@@ -1,30 +1,31 @@
 use crate::common::{Chunk, Chunks, Embedding};
-use async_trait::async_trait;
 use std::error::Error;
+use std::future::Future;
 
 use super::types::PromptMessage;
 
 /// # [`AsyncEmbeddingClient`]
 /// Trait for any client that generates embeddings asynchronously
-#[async_trait]
 pub trait AsyncEmbeddingClient {
     type ErrorType: Error;
-    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType>;
-    async fn generate_embeddings(
+    fn generate_embedding(
+        &self,
+        text: Chunk,
+    ) -> impl Future<Output = Result<(Chunk, Embedding), Self::ErrorType>> + Send;
+    fn generate_embeddings(
         &self,
         text: Chunks,
-    ) -> Result<Vec<(Chunk, Embedding)>, Self::ErrorType>;
+    ) -> impl Future<Output = Result<Vec<(Chunk, Embedding)>, Self::ErrorType>> + Send;
 }
 
 /// # [`AsyncChatClient`]
 /// Trait for any client that generates chat completions asynchronously
-#[async_trait]
 pub trait AsyncChatClient {
     type ErrorType: Error;
-    async fn invoke(
+    fn invoke(
         &self,
         prompt_messages: Vec<PromptMessage>,
-    ) -> Result<PromptMessage, Self::ErrorType>;
+    ) -> impl Future<Output = Result<PromptMessage, Self::ErrorType>> + Send;
 }
 
 #[cfg(test)]
@@ -32,7 +33,6 @@ use mockall::*;
 #[cfg(test)]
 mock! {
     pub AsyncEmbeddingClient {}
-    #[async_trait]
     impl AsyncEmbeddingClient for AsyncEmbeddingClient {
         type ErrorType = std::io::Error;
         async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), <Self as AsyncEmbeddingClient>::ErrorType>;
@@ -45,7 +45,6 @@ mock! {
 #[cfg(test)]
 mock! {
     pub AsyncChatClient {}
-    #[async_trait]
     impl AsyncChatClient for AsyncChatClient {
         type ErrorType = std::io::Error;
         async fn invoke(

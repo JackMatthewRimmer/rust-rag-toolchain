@@ -1,7 +1,6 @@
 use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
-use async_trait::async_trait;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres, Row};
@@ -50,7 +49,6 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     }
 }
 
-#[async_trait]
 impl<T> AsyncRetriever for PostgresVectorRetriever<T>
 where
     T: AsyncEmbeddingClient + Sync,

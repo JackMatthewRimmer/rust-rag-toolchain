@@ -2,7 +2,6 @@ use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Embedding, EmbeddingModel};
 use crate::retrievers::{DistanceFunction, PostgresVectorRetriever};
 use crate::stores::traits::EmbeddingStore;
-use async_trait::async_trait;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
@@ -204,7 +203,6 @@ impl PostgresVectorStore {
     }
 }
 
-#[async_trait]
 impl EmbeddingStore for PostgresVectorStore {
     type ErrorType = PostgresVectorError;
     /// # [`PostgresVectorStore::store`]

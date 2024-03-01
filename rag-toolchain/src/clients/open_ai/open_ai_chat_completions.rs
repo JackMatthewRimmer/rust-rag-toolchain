@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use serde_json::{Map, Value};
 use std::env::VarError;
 
@@ -47,7 +46,6 @@ impl OpenAIChatCompletionClient {
     }
 }
 
-#[async_trait]
 impl AsyncChatClient for OpenAIChatCompletionClient {
     type ErrorType = OpenAIError;
 
