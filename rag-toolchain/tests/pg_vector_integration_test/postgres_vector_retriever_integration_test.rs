@@ -12,7 +12,6 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-    use mockito::Mock;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
