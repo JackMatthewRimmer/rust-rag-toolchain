@@ -8,7 +8,10 @@ use super::types::PromptMessage;
 /// Trait for any client that generates embeddings asynchronously
 pub trait AsyncEmbeddingClient {
     type ErrorType: Error;
-    fn generate_embedding(&self, text: Chunk) -> impl Future<Output = Result<(Chunk, Embedding), Self::ErrorType>> + Send;
+    fn generate_embedding(
+        &self,
+        text: Chunk,
+    ) -> impl Future<Output = Result<(Chunk, Embedding), Self::ErrorType>> + Send;
     fn generate_embeddings(
         &self,
         text: Chunks,

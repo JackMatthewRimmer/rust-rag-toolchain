@@ -1,6 +1,6 @@
 use crate::common::{Chunk, Embedding};
-use std::future::Future;
 use std::error::Error;
+use std::future::Future;
 
 /// # EmbeddingStore
 /// Trait for struct that allows embeddings to be wrote to an
@@ -9,9 +9,14 @@ pub trait EmbeddingStore {
     // The custom error type for the store
     type ErrorType: Error;
     /// Takes an embedding and writes it to an external source
-    fn store(&self, embedding: (Chunk, Embedding)) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
-    fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
-        -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
+    fn store(
+        &self,
+        embedding: (Chunk, Embedding),
+    ) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
+    fn store_batch(
+        &self,
+        embeddings: Vec<(Chunk, Embedding)>,
+    ) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
 }
 
 #[cfg(test)]

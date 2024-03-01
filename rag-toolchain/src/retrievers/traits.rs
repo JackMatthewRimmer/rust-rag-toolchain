@@ -1,6 +1,6 @@
 use crate::common::Chunk;
-use std::{error::Error, num::NonZeroU32};
 use std::future::Future;
+use std::{error::Error, num::NonZeroU32};
 
 /*
 
@@ -18,7 +18,11 @@ Probably best to just offer all of these as separate methods
 /// Trait for stores that allow for similar text to be retrieved using embeddings
 pub trait AsyncRetriever {
     type ErrorType: Error;
-    fn retrieve(&self, text: &str, top_k: NonZeroU32) -> impl Future<Output = Result<Vec<Chunk>, Self::ErrorType>> + Send;
+    fn retrieve(
+        &self,
+        text: &str,
+        top_k: NonZeroU32,
+    ) -> impl Future<Output = Result<Vec<Chunk>, Self::ErrorType>> + Send;
 }
 
 #[cfg(test)]

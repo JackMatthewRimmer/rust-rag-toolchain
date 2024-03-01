@@ -12,7 +12,9 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-    use mockall::predicate::{always, eq};
+    use lazy_static::lazy_static;
+    use mockall::predicate::always;
+    use mockall::*;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
@@ -28,8 +30,6 @@ mod pg_vector {
         core::{ExecCommand, WaitFor},
         GenericImage,
     };
-    use lazy_static::lazy_static;
-    use mockall::*;
 
     const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
         DistanceFunction::Cosine,
@@ -39,12 +39,6 @@ mod pg_vector {
 
     lazy_static! {
         static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
-        static ref EMEBDDING_CLIENT: MockAsyncEmbeddingClient = {
-            let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::default();
-            let test_data = TEST_DATA.clone();
-            mock_client.expect_generate_embedding().returning(move |_| Ok(test_data[2].clone()));
-            mock_client
-        };
     }
 
     fn get_image() -> GenericImage {
@@ -86,7 +80,6 @@ mod pg_vector {
         let case3 = test_retriever_returns_correct_data();
 
         let _ = tokio::join!(case1, case2, case3);
-
     }
 
     async fn test_store_persists() {
@@ -155,9 +148,12 @@ mod pg_vector {
         }
 
         for distance_function in DISTANCE_FUNCTIONS {
-            let test_data = TEST_DATA.clone();
+            let test_data = TEST_DATA[2].clone();
             let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
-            mock_client.expect_generate_embedding().with(always()).returning(move|_| Ok(test_data[2].clone()));
+            mock_client
+                .expect_generate_embedding()
+                .with(always())
+                .returning(move |_| Ok(test_data.clone()));
             let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
                 pg_vector.as_retriever(mock_client, distance_function.clone());
 
@@ -227,7 +223,6 @@ mod pg_vector {
         }
         input_data
     }
-
 
     mock! {
         pub AsyncEmbeddingClient {}
