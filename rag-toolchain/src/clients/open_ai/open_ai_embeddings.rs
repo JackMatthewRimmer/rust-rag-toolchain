@@ -5,8 +5,6 @@ use crate::clients::open_ai::model::errors::OpenAIError;
 use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
 use crate::clients::traits::AsyncEmbeddingClient;
 use crate::common::{Chunk, Chunks, Embedding, OpenAIEmbeddingModel};
-
-use async_trait::async_trait;
 use std::env::VarError;
 
 const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
@@ -70,7 +68,6 @@ impl OpenAIEmbeddingClient {
     }
 }
 
-#[async_trait]
 impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     type ErrorType = OpenAIError;
 
