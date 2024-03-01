@@ -12,7 +12,7 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-    use mockall::predicate::eq;
+    use mockall::predicate::{always, eq};
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
@@ -155,8 +155,11 @@ mod pg_vector {
         }
 
         for distance_function in DISTANCE_FUNCTIONS {
+            let test_data = TEST_DATA.clone();
+            let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
+            mock_client.expect_generate_embedding().with(always()).returning(move|_| Ok(test_data[2].clone()));
             let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
-                pg_vector.as_retriever(EMEBDDING_CLIENT.clone(), distance_function.clone());
+                pg_vector.as_retriever(mock_client, distance_function.clone());
 
             let result: Chunk = retriever
                 .retrieve(
@@ -235,12 +238,6 @@ mod pg_vector {
                 &self,
                 text: Chunks,
             ) -> Result<Vec<(Chunk, Embedding)>, <Self as AsyncEmbeddingClient>::ErrorType>;
-        }
-    }
-
-    impl Clone for MockAsyncEmbeddingClient {
-        fn clone(&self) -> Self {
-            MockAsyncEmbeddingClient::new()
         }
     }
 }
