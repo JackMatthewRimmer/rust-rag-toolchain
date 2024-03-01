@@ -12,7 +12,6 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
-    use mockall::predicate::always;
     use mockall::predicate::eq;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
@@ -41,10 +40,9 @@ mod pg_vector {
     lazy_static! {
         static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
         static ref EMEBDDING_CLIENT: MockAsyncEmbeddingClient = {
-            let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
+            let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::default();
             let test_data = TEST_DATA.clone();
-            let chunk: Chunk = Chunk::from("This sentence is similar to a foo bar sentence .");
-            mock_client.expect_generate_embedding().with(eq(chunk)).returning(move |_| Ok(test_data[2].clone()));
+            mock_client.expect_generate_embedding().returning(move |_| Ok(test_data[2].clone()));
             mock_client
         };
     }
