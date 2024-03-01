@@ -3,7 +3,8 @@ name = "rag-toolchain"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/JackMatthewRimmer/rust-rag-toolchain"
-description = "A high level Gen AI library to get started with RAG and other workflows possible with Gen AI"
+description = "is a Rust native library designed to empower developers with seamless access to common Gen AI workflows. The library not only facilitates retrieval of information from a vector database but also enables the generation of embeddings."
+readme = "./README"
 license = "MIT"
 
 [[example]]

@@ -12,6 +12,7 @@
 
 #[cfg(all(test, feature = "pg_vector"))]
 mod pg_vector {
+    use mockall::predicate::always;
     use pgvector::Vector;
     use rag_toolchain::clients::AsyncEmbeddingClient;
     use rag_toolchain::common::{
@@ -41,7 +42,7 @@ mod pg_vector {
         static ref EMEBDDING_CLIENT: MockAsyncEmbeddingClient = {
             let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
             let test_data = TEST_DATA.clone();
-            mock_client.expect_generate_embedding().returning(move |_| Ok(test_data[2].clone()));
+            mock_client.expect_generate_embedding().with(always()).returning(move |_| Ok(test_data[2].clone()));
             mock_client
         };
     }
