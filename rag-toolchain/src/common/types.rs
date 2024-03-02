@@ -1,11 +1,11 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 // ----------------- Embedding -----------------
 /// # [`Embedding`]
 /// Custom type that wraps a pointer to an embedding/vector.
 /// It is immutable and thread safe
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Embedding {
     embedding: Arc<[f32]>,
 }
@@ -92,12 +92,13 @@ impl From<Embedding> for Vec<f32> {
 // ---------------------------------------------
 
 // ----------------- Chunk ------------------
-#[derive(Debug, Clone, PartialEq, Serialize, Eq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 /// # [`Chunk`]
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe
 pub struct Chunk {
     chunk: Arc<str>,
+    metadata: Option<serde_json::Value>,
 }
 
 impl Chunk {
@@ -108,8 +109,8 @@ impl Chunk {
     ///
     /// # Returns
     /// * [`Chunk`] - a new Chunk
-    pub fn new(chunk: Arc<str>) -> Self {
-        Self { chunk }
+    pub fn new(chunk: Arc<str>, metadata: Option<serde_json::Value>) -> Self {
+        Self { chunk, metadata }
     }
 
     /// # [`Chunk::chunk`]
@@ -118,6 +119,14 @@ impl Chunk {
     /// * [`Arc<str>`] - pointer to the chunk str
     pub fn chunk(&self) -> Arc<str> {
         Arc::clone(&self.chunk)
+    }
+
+    /// # [`Chunk::metadata`]
+    ///
+    /// # Returns
+    /// * [`Option<serde_json::Value>`] - metadata associated with the chunk
+    pub fn metadata(&self) -> Option<serde_json::Value> {
+        self.metadata.clone()
     }
 }
 
@@ -128,10 +137,12 @@ where
     fn from(chunk: T) -> Self {
         Self {
             chunk: chunk.into(),
+            metadata: None,
         }
     }
 }
 
+/// This will not include metadata
 impl From<Chunk> for String {
     fn from(chunk: Chunk) -> Self {
         chunk.chunk().to_string()

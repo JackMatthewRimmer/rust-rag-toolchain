@@ -1,4 +1,4 @@
-use crate::common::Chunk;
+use crate::common::Chunks;
 use std::future::Future;
 use std::{error::Error, num::NonZeroU32};
 
@@ -22,7 +22,7 @@ pub trait AsyncRetriever {
         &self,
         text: &str,
         top_k: NonZeroU32,
-    ) -> impl Future<Output = Result<Vec<Chunk>, Self::ErrorType>> + Send;
+    ) -> impl Future<Output = Result<Chunks, Self::ErrorType>> + Send;
 }
 
 #[cfg(test)]
@@ -32,6 +32,6 @@ mock! {
     pub AsyncRetriever {}
     impl AsyncRetriever for AsyncRetriever {
         type ErrorType = std::io::Error;
-        async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, <Self as AsyncRetriever>::ErrorType>;
+        async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Chunks, <Self as AsyncRetriever>::ErrorType>;
     }
 }

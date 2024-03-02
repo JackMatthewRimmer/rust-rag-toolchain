@@ -1,5 +1,5 @@
 use crate::clients::AsyncEmbeddingClient;
-use crate::common::{Chunk, Embedding};
+use crate::common::{Chunk, Chunks, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
@@ -72,8 +72,8 @@ where
     /// * [`PostgresRetrieverError::QueryError`] - If there is an error querying the database.
     ///
     /// # Returns
-    /// * A [`Vec<Chunk>`] which are the most similar to the input text.
-    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType> {
+    /// * A [`Chunks`] which are the most similar to the input text.
+    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Chunks, Self::ErrorType> {
         let k: u32 = top_k.get();
         let (_, embedding): (_, Embedding) = self
             .embedding_client
@@ -94,7 +94,7 @@ where
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
-        let n_rows: Vec<Chunk> = similar_text
+        let n_rows: Chunks = similar_text
             .iter()
             .take(k as usize)
             .map(|row| Chunk::from(row.get::<String, _>("content")))

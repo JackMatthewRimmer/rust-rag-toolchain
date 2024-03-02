@@ -93,7 +93,7 @@ impl TokenChunker {
         })?;
 
         let chunk_size: usize = self.chunk_size.into();
-        let mut chunks: Vec<Chunk> = Vec::new();
+        let mut chunks: Chunks = Chunks::new();
 
         let mut i = 0;
         while i < tokens.len() {

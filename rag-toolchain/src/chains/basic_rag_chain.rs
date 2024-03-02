@@ -1,7 +1,7 @@
 use crate::{
     chains::{utils::build_prompt, RagChainError},
     clients::{AsyncChatClient, PromptMessage},
-    common::Chunk,
+    common::Chunks,
     retrievers::AsyncRetriever,
 };
 use std::num::NonZeroU32;
@@ -71,7 +71,7 @@ where
         top_k: NonZeroU32,
     ) -> Result<PromptMessage, RagChainError<T::ErrorType, U::ErrorType>> {
         let content = user_message.content();
-        let chunks: Vec<Chunk> = self
+        let chunks: Chunks = self
             .retriever
             .retrieve(&content, top_k)
             .await
@@ -98,7 +98,7 @@ where
 #[cfg(test)]
 mod basic_rag_chain_tests {
     use super::*;
-    use crate::{clients::MockAsyncChatClient, retrievers::MockAsyncRetriever};
+    use crate::{clients::MockAsyncChatClient, common::Chunk, retrievers::MockAsyncRetriever};
     use mockall::predicate::eq;
     use std::vec;
 
