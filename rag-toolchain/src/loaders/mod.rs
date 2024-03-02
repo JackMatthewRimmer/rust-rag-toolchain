@@ -1,3 +1,6 @@
+/// # Loaders
+/// This modules aims to provide some easy methods of loading in
+/// input data to you Gen AI workflow.
 mod single_file_loader;
 mod traits;
 
