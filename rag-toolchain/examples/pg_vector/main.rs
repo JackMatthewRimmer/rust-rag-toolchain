@@ -5,7 +5,6 @@ use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
 
 #[tokio::main]
 async fn main() {
-
     const EMBEDDING_MODEL: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbedding3Small;
 
     // We read in the text from a file
@@ -22,14 +21,12 @@ async fn main() {
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai
-    let store: PostgresVectorStore =
-        PostgresVectorStore::try_new("embeddings", EMBEDDING_MODEL)
-            .await
-            .unwrap();
+    let store: PostgresVectorStore = PostgresVectorStore::try_new("embeddings", EMBEDDING_MODEL)
+        .await
+        .unwrap();
 
     // Create a new client and generate the embeddings for the chunks
-    let client: OpenAIEmbeddingClient =
-        OpenAIEmbeddingClient::try_new(EMBEDDING_MODEL).unwrap();
+    let client: OpenAIEmbeddingClient = OpenAIEmbeddingClient::try_new(EMBEDDING_MODEL).unwrap();
     let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
 
     // Insert the embeddings into the store

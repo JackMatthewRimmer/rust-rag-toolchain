@@ -52,19 +52,18 @@ impl EmbeddingModel for OpenAIEmbeddingModel {
             OpenAIEmbeddingModel::TextEmbeddingAda002 => EmbeddingModelMetadata {
                 dimensions: 1536,
                 max_tokens: 8192,
-                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase))
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
             },
             OpenAIEmbeddingModel::TextEmbedding3Small => EmbeddingModelMetadata {
                 dimensions: 1536,
                 max_tokens: 8192,
-                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase))
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
             },
             OpenAIEmbeddingModel::TextEmbedding3Large => EmbeddingModelMetadata {
                 dimensions: 3072,
                 max_tokens: 8192,
-                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase))
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
             },
-
         }
     }
 }
