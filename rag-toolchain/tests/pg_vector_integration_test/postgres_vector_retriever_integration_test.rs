@@ -23,6 +23,7 @@ mod pg_vector {
     use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
+    use sqlx::prelude::FromRow;
     use sqlx::{postgres::PgRow, Pool, Postgres, Row};
     use std::num::NonZeroU32;
     use testcontainers::{
@@ -191,14 +192,12 @@ mod pg_vector {
             table_name
         );
 
-        let query: PgRow = sqlx::query(&query).bind(id).fetch_one(pool).await.unwrap();
-        RowData {
-            id: query.get::<i32, _>("id"),
-            content: query.get::<String, _>("content"),
-            embedding: query.get::<Vector, _>("embedding").to_vec(),
-        }
+        sqlx::query_as::<_, RowData>(&query)
+            .bind(id).fetch_one(pool).await.unwrap()
     }
 
+
+    #[derive(FromRow)]
     struct RowData {
         id: i32,
         content: String,

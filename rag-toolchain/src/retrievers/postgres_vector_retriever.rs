@@ -1,5 +1,5 @@
 use crate::clients::AsyncEmbeddingClient;
-use crate::common::{Chunk, Chunks, Embedding};
+use crate::common::{Chunk, Embedding, Chunks};
 use crate::retrievers::traits::AsyncRetriever;
 use sqlx::postgres::PgRow;
 use sqlx::Error as SqlxError;
