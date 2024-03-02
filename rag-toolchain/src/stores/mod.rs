@@ -1,6 +1,6 @@
 /// # Stores
 /// What is a store ?
-/// 
+///
 /// A store in the context of this library is a place when you can stores
 /// embddings to any of our supported vector stores.
 ///
