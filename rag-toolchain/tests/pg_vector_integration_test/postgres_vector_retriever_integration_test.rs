@@ -24,7 +24,7 @@ mod pg_vector {
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
     use sqlx::prelude::FromRow;
-    use sqlx::{postgres::PgRow, Pool, Postgres, Row};
+    use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
     use testcontainers::{
         clients::Cli,
@@ -183,7 +183,7 @@ mod pg_vector {
         let row: RowData = query_row(pool, id, table_name).await;
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
-        assert_eq!(row.embedding, embeddings);
+        assert_eq!(row.embedding.to_vec(), embeddings);
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
@@ -193,15 +193,17 @@ mod pg_vector {
         );
 
         sqlx::query_as::<_, RowData>(&query)
-            .bind(id).fetch_one(pool).await.unwrap()
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .unwrap()
     }
-
 
     #[derive(FromRow)]
     struct RowData {
         id: i32,
         content: String,
-        embedding: Vec<f32>,
+        embedding: Vector,
     }
 
     fn read_test_data() -> Vec<(Chunk, Embedding)> {
