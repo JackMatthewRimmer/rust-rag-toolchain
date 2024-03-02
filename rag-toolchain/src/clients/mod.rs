@@ -1,3 +1,6 @@
+/// # Clients
+/// This module will contain all of the client code for different services
+/// that can be used to interact with Gen AI models.
 mod open_ai;
 mod traits;
 mod types;
