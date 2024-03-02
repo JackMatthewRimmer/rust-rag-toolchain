@@ -39,6 +39,10 @@ pub trait TokenizerWrapper {
 pub enum OpenAIEmbeddingModel {
     #[serde(rename = "text-embedding-ada-002")]
     TextEmbeddingAda002,
+    #[serde(rename = "text-embedding-3-small")]
+    TextEmbedding3Small,
+    #[serde(rename = "text-embedding-3-large")]
+    TextEmbedding3Large,
 }
 
 // Match the embedding model to the metadata
@@ -47,6 +51,16 @@ impl EmbeddingModel for OpenAIEmbeddingModel {
         match self {
             OpenAIEmbeddingModel::TextEmbeddingAda002 => EmbeddingModelMetadata {
                 dimensions: 1536,
+                max_tokens: 8192,
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
+            },
+            OpenAIEmbeddingModel::TextEmbedding3Small => EmbeddingModelMetadata {
+                dimensions: 1536,
+                max_tokens: 8192,
+                tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
+            },
+            OpenAIEmbeddingModel::TextEmbedding3Large => EmbeddingModelMetadata {
+                dimensions: 3072,
                 max_tokens: 8192,
                 tokenizer: Box::new(OpenAITokenizer::new(Tokenizer::Cl100kBase)),
             },

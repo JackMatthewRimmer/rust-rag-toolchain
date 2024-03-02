@@ -25,6 +25,7 @@ use dotenv::dotenv;
 /// * POSTGRES_USERNAME: The username to connect to the database with
 /// * POSTGRES_PASSWORD: The password to connect to the database with
 /// * POSTGRES_HOST: The host to connect to the database with
+/// * POSTGRES_DATABASE: The database to connect with
 ///
 /// Place these variables in a .env file in the root of your project.
 ///
