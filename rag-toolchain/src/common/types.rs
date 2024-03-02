@@ -96,6 +96,7 @@ impl From<Embedding> for Vec<f32> {
 /// # [`Chunk`]
 /// Custom type that wraps a pointer to a piece of text.
 /// It is immutable and thread safe
+// TODO: Dont need option here as serde_json::Value::Null is a thing
 pub struct Chunk {
     chunk: Arc<str>,
     metadata: Option<serde_json::Value>,
