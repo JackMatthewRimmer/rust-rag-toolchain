@@ -4,7 +4,7 @@ use crate::retrievers::{DistanceFunction, PostgresVectorRetriever};
 use crate::stores::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::Error as SqlxError;
-use sqlx::{Pool, Postgres};
+use sqlx::{postgres::PgArguments, Pool, Postgres};
 use std::env::{self, VarError};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -72,7 +72,7 @@ impl PostgresVectorStore {
             .map_err(PostgresVectorError::ConnectionError)?;
 
         // Create the table
-        PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
+        PostgresVectorStore::create_table(&pool, table_name, embedding_diminsions)
             .await
             .map_err(PostgresVectorError::TableCreationError)?;
 
@@ -106,7 +106,7 @@ impl PostgresVectorStore {
         let embedding_diminsions = embedding_model.metadata().dimensions;
 
         // Create the table
-        PostgresVectorStore::create_table(pool.clone(), table_name, embedding_diminsions)
+        PostgresVectorStore::create_table(&pool, table_name, embedding_diminsions)
             .await
             .map_err(PostgresVectorError::TableCreationError)?;
 
@@ -187,20 +187,38 @@ impl PostgresVectorStore {
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
     /// * [`SqlxError`] if the table could not be created
     async fn create_table(
-        pool: Pool<Postgres>,
+        pool: &Pool<Postgres>,
         table_name: &str,
         vector_dimension: usize,
     ) -> Result<PgQueryResult, SqlxError> {
-        let query = format!(
-            "
-            CREATE TABLE IF NOT EXISTS {} (
+        let statement = format!(
+            "CREATE TABLE IF NOT EXISTS {} (
                 id SERIAL PRIMARY KEY,
                 content TEXT NOT NULL,
-                embedding vector({}) 
+                embedding VECTOR({}) NOT NULL,
+                metadata JSONB
             )",
             table_name, vector_dimension
         );
-        sqlx::query(&query).execute(&pool).await
+        sqlx::query(&statement).execute(pool).await
+    }
+
+    fn insert_row_sql(table_name: &str) -> String {
+        format!(
+            "INSERT INTO {} (content, embedding, metadata) VALUES ($1, $2, $3)",
+            table_name
+        )
+    }
+
+    fn bind_to_query(
+        query: &str,
+        embedding: (Chunk, Embedding),
+    ) -> sqlx::query::Query<'_, Postgres, PgArguments> {
+        let (content, embedding) = embedding;
+        let text: String = content.clone().into();
+        let vector: Vec<f32> = embedding.clone().into();
+        let metadata = content.metadata();
+        sqlx::query(query).bind(text).bind(vector).bind(metadata)
     }
 }
 
@@ -217,19 +235,8 @@ impl EmbeddingStore for PostgresVectorStore {
     /// # Returns
     /// * [`()`] if the insert succeeds
     async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PostgresVectorError> {
-        let (content, embedding) = embeddings;
-        let text: String = content.into();
-        let vector: Vec<f32> = embedding.into();
-
-        let query = format!(
-            "
-            INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
-            &self.table_name
-        );
-
-        sqlx::query(&query)
-            .bind(text)
-            .bind(vector)
+        let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
+        Self::bind_to_query(&query, embeddings)
             .execute(&self.pool)
             .await
             .map_err(PostgresVectorError::InsertError)?;
@@ -250,12 +257,7 @@ impl EmbeddingStore for PostgresVectorStore {
         &self,
         embeddings: Vec<(Chunk, Embedding)>,
     ) -> Result<(), PostgresVectorError> {
-        let query = format!(
-            "
-            INSERT INTO {} (content, embedding) VALUES ($1, $2::vector)",
-            &self.table_name
-        );
-
+        let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
         let mut transaction = self
             .pool
             .begin()
@@ -272,6 +274,7 @@ impl EmbeddingStore for PostgresVectorStore {
                 .await
                 .map_err(PostgresVectorError::InsertError)?;
         }
+
         transaction
             .commit()
             .await

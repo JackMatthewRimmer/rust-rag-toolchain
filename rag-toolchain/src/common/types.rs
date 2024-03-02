@@ -99,7 +99,7 @@ impl From<Embedding> for Vec<f32> {
 // TODO: Dont need option here as serde_json::Value::Null is a thing
 pub struct Chunk {
     chunk: Arc<str>,
-    metadata: Option<serde_json::Value>,
+    metadata: serde_json::Value,
 }
 
 impl Chunk {
@@ -110,7 +110,7 @@ impl Chunk {
     ///
     /// # Returns
     /// * [`Chunk`] - a new Chunk
-    pub fn new(chunk: Arc<str>, metadata: Option<serde_json::Value>) -> Self {
+    pub fn new(chunk: Arc<str>, metadata: serde_json::Value) -> Self {
         Self { chunk, metadata }
     }
 
@@ -126,7 +126,7 @@ impl Chunk {
     ///
     /// # Returns
     /// * [`Option<serde_json::Value>`] - metadata associated with the chunk
-    pub fn metadata(&self) -> Option<serde_json::Value> {
+    pub fn metadata(&self) -> serde_json::Value {
         self.metadata.clone()
     }
 }
@@ -138,7 +138,7 @@ where
     fn from(chunk: T) -> Self {
         Self {
             chunk: chunk.into(),
-            metadata: None,
+            metadata: serde_json::Value::Null,
         }
     }
 }
