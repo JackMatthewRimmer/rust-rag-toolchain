@@ -42,10 +42,7 @@ mod pg_vector {
     // we can ensure that the metadata is being stored and retrieved correctly
     lazy_static! {
         static ref METADATA: Value = serde_json::json!({"test": "metadata"});
-        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data()
-            .into_iter()
-            .map(|(chunk, embedding)| (Chunk::new(chunk.chunk(), METADATA.clone()), embedding))
-            .collect();
+        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
     }
 
     fn get_image() -> GenericImage {
@@ -164,6 +161,7 @@ mod pg_vector {
             let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
                 pg_vector.as_retriever(mock_client, distance_function.clone());
 
+
             let result: Chunk = retriever
                 .retrieve(
                     "This sentence is similar to a foo bar sentence .",
@@ -174,7 +172,6 @@ mod pg_vector {
                 .get(0)
                 .unwrap()
                 .to_owned();
-
             assert_eq!(result, input[1].0);
         }
     }
@@ -229,7 +226,10 @@ mod pg_vector {
                 .into_iter()
                 .map(|x| x.as_f64().unwrap() as f32)
                 .collect();
-            input_data.push((Chunk::from(chunk), Embedding::from(embedding)))
+            input_data.push((
+                Chunk::new(chunk.into(), serde_json::json!({"test": "metadata"})),
+                Embedding::from(embedding),
+            ))
         }
         input_data
     }

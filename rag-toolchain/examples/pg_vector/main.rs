@@ -17,7 +17,13 @@ async fn main() {
         EMBEDDING_MODEL,
     )
     .unwrap();
-    let chunks: Chunks = chunker.generate_chunks(&text).unwrap();
+    let chunks: Chunks = chunker
+        .generate_chunks(&text)
+        .unwrap()
+        .into_iter()
+        .map(|chunk| Chunk::new(chunk.chunk(), serde_json::json!({"test": "metadata"})))
+        .collect();
+
     println!("Chunks: {:?}", chunks);
 
     // I would check your store initialized before sending of embeddings to openai
