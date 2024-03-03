@@ -9,7 +9,7 @@ async fn main() {
 
     // We read in the text from a file
     let text = std::fs::read_to_string("examples/pg_vector/example_text.txt").unwrap();
-    println!("Text: {}", text);
+
     // Create a new chunker and generate the chunks
     let chunker = TokenChunker::try_new(
         std::num::NonZeroUsize::new(50).unwrap(),
@@ -17,14 +17,7 @@ async fn main() {
         EMBEDDING_MODEL,
     )
     .unwrap();
-    let chunks: Chunks = chunker
-        .generate_chunks(&text)
-        .unwrap()
-        .into_iter()
-        .map(|chunk| Chunk::new(chunk.chunk(), serde_json::json!({"test": "metadata"})))
-        .collect();
-
-    println!("Chunks: {:?}", chunks);
+    let chunks: Chunks = chunker.generate_chunks(&text).unwrap();
 
     // I would check your store initialized before sending of embeddings to openai
     let store: PostgresVectorStore = PostgresVectorStore::try_new("embeddings", EMBEDDING_MODEL)
