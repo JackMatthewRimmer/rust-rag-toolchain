@@ -9,27 +9,19 @@ on:
     - main
 
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: Checkout code
+    - name: checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Rust
+    - name: set up rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-
-  build:
-    needs: setup
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rag-toolchain
-    steps:
     - name: Build project
       run: cargo build --verbose 
 
@@ -40,6 +32,11 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
     - name: Run tests
       run: cargo test --lib --verbose
 
@@ -50,6 +47,11 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1   
     - name: Run integration tests
       run: cargo test --test mod --verbose
 
@@ -60,10 +62,16 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
     - name: Run linter
       run: |
         cargo fmt -- --check
         cargo clippy -- -D warnings
+
   doc-test:
     needs: build
     runs-on: ubuntu-latest
@@ -71,5 +79,10 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
     - name: Run doc tests
       run: cargo test --doc --verbose
