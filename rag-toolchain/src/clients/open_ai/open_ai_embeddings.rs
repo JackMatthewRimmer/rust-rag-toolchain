@@ -27,7 +27,7 @@ impl OpenAIEmbeddingClient {
     /// This will fail if the OPENAI_API_KEY environment variable is not set.
     ///
     /// # Arguments
-    /// * `embedding_model` - The model to use for the embeddings
+    /// * `embedding_model`: [`OpenAIEmbeddingModel`] - The model to use for the embeddings
     ///
     /// # Errors
     /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set.
@@ -50,11 +50,11 @@ impl OpenAIEmbeddingClient {
     /// assumption made the two iters will zip up 1:1 (as this should be the case)
     ///
     /// # Arguments
-    /// `input_text` - The input text that was sent to OpenAI
-    /// `response` - The deserialized response from OpenAI
+    /// *`input_text`: [`Chunks`] - The input text that was sent to OpenAI
+    /// *`response`: [`EmbeddingResponse`] - The deserialized response from OpenAI
     ///
     /// # Returns
-    /// [`Vec<(String, Vec<f32>)>`] - A vector of string embedding pairs the can be stored
+    /// [`Vec<Embedding>`] - A vector of string embedding pairs the can be stored
     fn handle_embedding_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
@@ -77,13 +77,13 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     /// Allows you to get an embedding for multiple strings.
     ///
     /// # Arguments
-    /// * `text` - The text chunks/strings to generate an embeddings for.
+    /// * `text`: [`Chunk`] - The text chunks/strings to generate an embeddings for.
     ///
     /// # Errors
     /// * [`OpenAIError`] - If the request to OpenAI fails.
     ///  
     /// # Returns
-    /// * `Result<Vec<(Chunk, Embedding)>, OpenAIError>` - A result containing
+    /// * [`Vec<Embedding>`] - A result containing
     /// pairs of the original text and the embedding that was generated.
     async fn generate_embeddings(&self, text: Chunks) -> Result<Vec<Embedding>, OpenAIError> {
         let input_text: Vec<String> = text
@@ -100,19 +100,18 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
         Ok(Self::handle_embedding_success_response(text, response))
     }
 
-    /// #
+    /// # [`OpenAIEmbeddingClient::generate_embedding`]
     /// Function to generate an embedding for a [`Chunk`].
     /// Allows you to get an embedding for a single string.
     ///
     /// # Arguments
-    /// * `text` - The text chunk/string to generate an embedding for.
+    /// * `text`: [`Chunk`] - The text chunk/string to generate an embedding for.
     ///
     /// # Errors
     /// * [`OpenAIError`] - If the request to OpenAI fails.
     ///  
     /// # Returns
-    /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
-    /// a pair of the original text and the embedding that was generated.
+    /// * [`Embedding`] - the generated embedding 
     async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
             .input(text.content().to_string())
