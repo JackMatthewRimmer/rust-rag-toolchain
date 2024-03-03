@@ -264,12 +264,8 @@ impl EmbeddingStore for PostgresVectorStore {
             .await
             .map_err(PostgresVectorError::TransactionError)?;
 
-        for (content, embedding) in embeddings {
-            let text: String = content.into();
-            let vector: Vec<f32> = embedding.into();
-            sqlx::query(&query)
-                .bind(text)
-                .bind(vector)
+        for embedding in embeddings {
+            Self::bind_to_query(&query, embedding)
                 .execute(&mut *transaction)
                 .await
                 .map_err(PostgresVectorError::InsertError)?;
