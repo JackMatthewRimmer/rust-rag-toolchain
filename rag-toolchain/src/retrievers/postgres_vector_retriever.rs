@@ -98,7 +98,10 @@ where
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
-        Ok(similar_text.into_iter().map(|row| Chunk::from(row.content)).collect())
+        Ok(similar_text
+            .into_iter()
+            .map(|row| Chunk::from(row.content))
+            .collect())
     }
 }
 
