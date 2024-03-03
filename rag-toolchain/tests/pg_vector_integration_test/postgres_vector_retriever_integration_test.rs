@@ -38,8 +38,14 @@ mod pg_vector {
         DistanceFunction::InnerProduct,
     ];
 
+    // We read some test data in, each chunk has some constant metadata just so
+    // we can ensure that the metadata is being stored and retrieved correctly
     lazy_static! {
-        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
+        static ref METADATA: Value = serde_json::json!({"test": "metadata"});
+        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data()
+            .into_iter()
+            .map(|(chunk, embedding)| (Chunk::new(chunk.chunk(), METADATA.clone()), embedding))
+            .collect();
     }
 
     fn get_image() -> GenericImage {
@@ -184,6 +190,7 @@ mod pg_vector {
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
         assert_eq!(row.embedding.to_vec(), embeddings);
+        assert_eq!(row.metadata, *METADATA)
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
@@ -204,6 +211,8 @@ mod pg_vector {
         id: i32,
         content: String,
         embedding: Vector,
+        #[sqlx(json)]
+        metadata: Value,
     }
 
     fn read_test_data() -> Vec<(Chunk, Embedding)> {

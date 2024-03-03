@@ -100,7 +100,7 @@ where
 
         Ok(similar_text
             .into_iter()
-            .map(|row| Chunk::from(row.content))
+            .map(|row| Chunk::new(row.content.into(), row.metadata))
             .collect())
     }
 }
