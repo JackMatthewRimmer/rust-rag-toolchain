@@ -195,7 +195,7 @@ mod pg_vector {
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
         let query: String = format!(
-            "SELECT id, content, embedding FROM {} WHERE id = $1",
+            "SELECT id, content, embedding, metadata FROM {} WHERE id = $1",
             table_name
         );
 
