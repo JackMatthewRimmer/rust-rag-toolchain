@@ -11,11 +11,11 @@ pub trait AsyncEmbeddingClient {
     fn generate_embedding(
         &self,
         text: Chunk,
-    ) -> impl Future<Output = Result<(Chunk, Embedding), Self::ErrorType>> + Send;
+    ) -> impl Future<Output = Result<Embedding, Self::ErrorType>> + Send;
     fn generate_embeddings(
         &self,
         text: Chunks,
-    ) -> impl Future<Output = Result<Vec<(Chunk, Embedding)>, Self::ErrorType>> + Send;
+    ) -> impl Future<Output = Result<Vec<Embedding>, Self::ErrorType>> + Send;
 }
 
 /// # [`AsyncChatClient`]
@@ -35,11 +35,11 @@ mock! {
     pub AsyncEmbeddingClient {}
     impl AsyncEmbeddingClient for AsyncEmbeddingClient {
         type ErrorType = std::io::Error;
-        async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), <Self as AsyncEmbeddingClient>::ErrorType>;
+        async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, <Self as AsyncEmbeddingClient>::ErrorType>;
         async fn generate_embeddings(
             &self,
             text: Chunks,
-        ) -> Result<Vec<(Chunk, Embedding)>, <Self as AsyncEmbeddingClient>::ErrorType>;
+        ) -> Result<Vec<Embedding>, <Self as AsyncEmbeddingClient>::ErrorType>;
     }
 }
 #[cfg(test)]

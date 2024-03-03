@@ -1,6 +1,6 @@
 use rag_toolchain::chunkers::TokenChunker;
 use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIEmbeddingClient};
-use rag_toolchain::common::{Chunk, Chunks, Embedding, OpenAIEmbeddingModel};
+use rag_toolchain::common::{Chunks, Embedding, OpenAIEmbeddingModel};
 use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
 
 #[tokio::main]
@@ -26,7 +26,7 @@ async fn main() {
 
     // Create a new client and generate the embeddings for the chunks
     let client: OpenAIEmbeddingClient = OpenAIEmbeddingClient::try_new(EMBEDDING_MODEL).unwrap();
-    let embeddings: Vec<(Chunk, Embedding)> = client.generate_embeddings(chunks).await.unwrap();
+    let embeddings: Vec<Embedding> = client.generate_embeddings(chunks).await.unwrap();
 
     // Insert the embeddings into the store
     store.store_batch(embeddings).await.unwrap();

@@ -83,16 +83,18 @@ where
     /// * A [`Chunks`] which are the most similar to the input text.
     async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Chunks, Self::ErrorType> {
         let k: i32 = top_k.get() as i32;
-        let (_, embedding): (_, Embedding) = self
+        let chunk: Chunk = Chunk::new(text);
+        let embedding: Embedding = self
             .embedding_client
-            .generate_embedding(text.into())
+            .generate_embedding(chunk)
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
 
         let query: String = Self::select_row_sql(&self.table_name, self.distance_function.clone());
+        let vector: Vec<f32> = embedding.vector().into();
 
         let similar_text: Vec<PostgresRow> = sqlx::query_as::<_, PostgresRow>(&query)
-            .bind(embedding.embedding().to_vec())
+            .bind(vector)
             .bind(k)
             .fetch_all(&self.pool)
             .await
@@ -100,7 +102,7 @@ where
 
         Ok(similar_text
             .into_iter()
-            .map(|row| Chunk::new(row.content.into(), row.metadata))
+            .map(|row| Chunk::new_with_metadata(row.content, row.metadata))
             .collect())
     }
 }

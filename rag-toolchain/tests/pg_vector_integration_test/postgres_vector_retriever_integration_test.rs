@@ -42,7 +42,7 @@ mod pg_vector {
     // we can ensure that the metadata is being stored and retrieved correctly
     lazy_static! {
         static ref METADATA: Value = serde_json::json!({"test": "metadata"});
-        static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
+        static ref TEST_DATA: Vec<Embedding> = read_test_data();
     }
 
     fn get_image() -> GenericImage {
@@ -88,22 +88,15 @@ mod pg_vector {
 
     async fn test_store_persists() {
         const TABLE_NAME: &str = "test_db_1";
-        let (test_chunk, test_embedding): (Chunk, Embedding) = read_test_data()[0].clone();
+        let embedding: Embedding = read_test_data()[0].clone();
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let _result = pg_vector
-            .store((test_chunk.clone(), test_embedding.clone()))
+            .store(embedding.clone())
             .await
             .map_err(|_| panic!("panic"));
-        assert_row(
-            &pg_vector.get_pool(),
-            1,
-            test_chunk.into(),
-            test_embedding.into(),
-            TABLE_NAME,
-        )
-        .await;
+        assert_row(&pg_vector.get_pool(), 1, embedding, TABLE_NAME).await;
     }
 
     async fn test_batch_store_persists() {
@@ -116,12 +109,11 @@ mod pg_vector {
             .await
             .map_err(|_| panic!("panic"));
 
-        for (i, (chunk, embedding)) in TEST_DATA.iter().enumerate() {
+        for (i, embedding) in TEST_DATA.iter().enumerate() {
             assert_row(
                 &pg_vector.get_pool(),
                 (i + 1) as i32,
-                chunk.clone().into(),
-                embedding.clone().into(),
+                embedding.clone(),
                 TABLE_NAME,
             )
             .await;
@@ -133,19 +125,18 @@ mod pg_vector {
         let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
-        let input: Vec<(Chunk, Embedding)> = read_test_data();
-        let data_to_store: Vec<(Chunk, Embedding)> = input[0..2].to_vec();
+        let input: Vec<Embedding> = read_test_data();
+        let data_to_store: &[Embedding] = &input[0..2];
         let _result = pg_vector
-            .store_batch(data_to_store.clone())
+            .store_batch(data_to_store.to_vec())
             .await
             .map_err(|_| panic!("panic"));
 
-        for (i, (chunk, embedding)) in data_to_store.iter().enumerate() {
+        for (i, embedding) in data_to_store.iter().enumerate() {
             assert_row(
                 &pg_vector.get_pool(),
                 (i + 1) as i32,
-                chunk.clone().into(),
-                embedding.clone().into(),
+                embedding.clone(),
                 TABLE_NAME,
             )
             .await;
@@ -171,21 +162,20 @@ mod pg_vector {
                 .get(0)
                 .unwrap()
                 .to_owned();
-            assert_eq!(result, input[1].0);
+            assert_eq!(result, *input[1].chunk());
         }
     }
 
     async fn assert_row(
         pool: &Pool<Postgres>,
         id: i32,
-        text: String,
-        embeddings: Vec<f32>,
+        embedding: Embedding,
         table_name: &str,
     ) -> () {
         let row: RowData = query_row(pool, id, table_name).await;
         assert_eq!(row.id, id);
-        assert_eq!(row.content, text);
-        assert_eq!(row.embedding.to_vec(), embeddings);
+        assert_eq!(row.content, embedding.chunk().content());
+        assert_eq!(row.embedding.to_vec(), embedding.vector());
         assert_eq!(row.metadata, *METADATA)
     }
 
@@ -211,11 +201,11 @@ mod pg_vector {
         metadata: Value,
     }
 
-    fn read_test_data() -> Vec<(Chunk, Embedding)> {
+    fn read_test_data() -> Vec<Embedding> {
         let file_string =
             std::fs::read_to_string("tests/pg_vector_integration_test/test-data.json").unwrap();
         let json: Vec<Value> = serde_json::from_str(&file_string).unwrap();
-        let mut input_data: Vec<(Chunk, Embedding)> = Vec::new();
+        let mut input_data: Vec<Embedding> = Vec::new();
 
         for object in json {
             let chunk: String = object["chunk"].to_string();
@@ -225,10 +215,8 @@ mod pg_vector {
                 .into_iter()
                 .map(|x| x.as_f64().unwrap() as f32)
                 .collect();
-            input_data.push((
-                Chunk::new(chunk.into(), serde_json::json!({"test": "metadata"})),
-                Embedding::from(embedding),
-            ))
+            let chunk = Chunk::new_with_metadata(chunk, serde_json::json!({"test": "metadata"}));
+            input_data.push(Embedding::new(chunk, embedding))
         }
         input_data
     }
@@ -237,11 +225,11 @@ mod pg_vector {
         pub AsyncEmbeddingClient {}
         impl AsyncEmbeddingClient for AsyncEmbeddingClient {
             type ErrorType = std::io::Error;
-            async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), <Self as AsyncEmbeddingClient>::ErrorType>;
+            async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, <Self as AsyncEmbeddingClient>::ErrorType>;
             async fn generate_embeddings(
                 &self,
                 text: Chunks,
-            ) -> Result<Vec<(Chunk, Embedding)>, <Self as AsyncEmbeddingClient>::ErrorType>;
+            ) -> Result<Vec<Embedding>, <Self as AsyncEmbeddingClient>::ErrorType>;
         }
     }
 }

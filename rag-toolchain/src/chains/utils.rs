@@ -21,7 +21,7 @@ pub fn build_prompt(base_message: PromptMessage, chunks: Chunks) -> String {
     builder.push_str(&base_message.content());
     builder.push_str("\nHere is some supporting information:\n");
     for chunk in chunks {
-        builder.push_str(&format!("{}\n", chunk.chunk()))
+        builder.push_str(&format!("{}\n", chunk.content()))
     }
     builder
 }
@@ -36,7 +36,7 @@ mod chains_utils_tests {
     fn build_prompt_gives_correct_output() {
         const USER_MESSAGE: &str = "can you explain the data to me";
         let user_prompt: PromptMessage = PromptMessage::HumanMessage(USER_MESSAGE.into());
-        let chunks = vec![Chunk::from("data point 1"), Chunk::from("data point 2")];
+        let chunks = vec![Chunk::new("data point 1"), Chunk::new("data point 2")];
         let response = build_prompt(user_prompt, chunks);
         let expected_response: &str = "can you explain the data to me\nHere is some supporting information:\ndata point 1\ndata point 2\n";
         println!("{}", expected_response);

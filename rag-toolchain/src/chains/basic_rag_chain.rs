@@ -120,7 +120,7 @@ mod basic_rag_chain_tests {
         retriever
             .expect_retrieve()
             .with(eq(USER_MESSAGE), eq(NonZeroU32::new(2).unwrap()))
-            .returning(|_, _| Ok(vec![Chunk::from(RAG_CHUNK_1), Chunk::from(RAG_CHUNK_2)]));
+            .returning(|_, _| Ok(vec![Chunk::new(RAG_CHUNK_1), Chunk::new(RAG_CHUNK_2)]));
 
         chat_client
             .expect_invoke()

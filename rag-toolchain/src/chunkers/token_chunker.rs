@@ -98,7 +98,7 @@ impl TokenChunker {
         let mut i = 0;
         while i < tokens.len() {
             let end = std::cmp::min(i + chunk_size, tokens.len());
-            let chunk: Chunk = Chunk::from(tokens[i..end].to_vec().join("").trim());
+            let chunk: Chunk = Chunk::new(tokens[i..end].to_vec().join("").trim());
             chunks.push(chunk);
             i += chunk_size - self.chunk_overlap;
         }
@@ -130,7 +130,10 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
+        let chunks: Vec<String> = chunks
+            .into_iter()
+            .map(|chunk| chunk.content().to_string())
+            .collect();
         assert_eq!(chunks.len(), 5);
         assert_eq!(
             chunks,
@@ -146,7 +149,10 @@ mod tests {
         let chunker: TokenChunker =
             TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).unwrap();
         let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
-        let chunks: Vec<String> = chunks.into_iter().map(|chunk| chunk.into()).collect();
+        let chunks: Vec<String> = chunks
+            .into_iter()
+            .map(|chunk| chunk.content().to_string())
+            .collect();
         assert_eq!(chunks.len(), 0);
         assert_eq!(chunks, Vec::<String>::new());
     }

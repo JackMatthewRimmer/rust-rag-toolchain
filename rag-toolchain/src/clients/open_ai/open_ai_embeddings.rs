@@ -58,13 +58,14 @@ impl OpenAIEmbeddingClient {
     fn handle_embedding_success_response(
         input_text: Chunks,
         response: EmbeddingResponse,
-    ) -> Vec<(Chunk, Embedding)> {
+    ) -> Vec<Embedding> {
         // Map response objects into string embedding pairs
         let embedding_objects: Vec<EmbeddingObject> = response.data;
-
-        let embeddings: Vec<Embedding> =
-            Embedding::iter_to_vec(embedding_objects.iter().map(|obj| obj.embedding.clone()));
-        input_text.into_iter().zip(embeddings).collect()
+        embedding_objects
+            .into_iter()
+            .zip(input_text.into_iter())
+            .map(|(embedding_object, chunk)| Embedding::new(chunk, embedding_object.embedding))
+            .collect()
     }
 }
 
@@ -84,13 +85,10 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     /// # Returns
     /// * `Result<Vec<(Chunk, Embedding)>, OpenAIError>` - A result containing
     /// pairs of the original text and the embedding that was generated.
-    async fn generate_embeddings(
-        &self,
-        text: Chunks,
-    ) -> Result<Vec<(Chunk, Embedding)>, OpenAIError> {
+    async fn generate_embeddings(&self, text: Chunks) -> Result<Vec<Embedding>, OpenAIError> {
         let input_text: Vec<String> = text
             .iter()
-            .map(|chunk| (*chunk).chunk().to_string())
+            .map(|chunk| (*chunk).content().to_string())
             .collect();
 
         let request_body = BatchEmbeddingRequest::builder()
@@ -115,9 +113,9 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     /// # Returns
     /// * `Result<(Chunk, Embedding), OpenAIError>` - A result containing
     /// a pair of the original text and the embedding that was generated.
-    async fn generate_embedding(&self, text: Chunk) -> Result<(Chunk, Embedding), Self::ErrorType> {
+    async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
-            .input(text.clone().into())
+            .input(text.content().to_string())
             .model(self.embedding_model)
             .build();
         let response: EmbeddingResponse = self.client.send_request(request_body, &self.url).await?;
@@ -182,27 +180,27 @@ mod embedding_client_tests {
     async fn test_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client().await;
         let mock = with_mocked_request(&mut server, 200, EMBEDDING_RESPONSE);
-        let expected_embedding = Embedding::from(vec![
+        let expected_embedding = vec![
             -0.006929283495992422,
             -0.005336422007530928,
             -0.009327292,
             -0.024047505110502243,
-        ]);
+        ];
         // Test batch request
-        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let chunks: Chunks = vec![Chunk::new("Test-0"), Chunk::new("Test-1")];
         let response = client.generate_embeddings(chunks).await.unwrap();
         mock.assert();
-        for (i, (chunk, embedding)) in response.into_iter().enumerate() {
-            assert_eq!(chunk, Chunk::from(format!("Test-{}", i)));
-            assert_eq!(embedding, expected_embedding);
+        for (i, embedding) in response.into_iter().enumerate() {
+            assert_eq!(*embedding.chunk(), Chunk::new(format!("Test-{}", i)));
+            assert_eq!(embedding.vector(), expected_embedding);
         }
         // Test single request
         // This is not a great test as for a single request you would only get a vec of length 1
         // But the mocked response has two
-        let chunk = Chunk::from("Test-0");
+        let chunk = Chunk::new("Test-0");
         let response = client.generate_embedding(chunk).await.unwrap();
-        assert_eq!(response.0, Chunk::from("Test-0"));
-        assert_eq!(response.1, expected_embedding);
+        assert_eq!(*response.chunk(), Chunk::new("Test-0"));
+        assert_eq!(response.vector(), expected_embedding);
     }
 
     #[tokio::test]
@@ -218,12 +216,12 @@ mod embedding_client_tests {
             }
         });
         // Test batch request
-        let chunks: Chunks = Chunks::from(vec![Chunk::from("Test-0"), Chunk::from("Test-1")]);
+        let chunks: Chunks = vec![Chunk::new("Test-0"), Chunk::new("Test-1")];
         let response = client.generate_embeddings(chunks).await.unwrap_err();
         mock.assert();
         assert_eq!(response, expected_response);
         // Test single request
-        let chunk = Chunk::from("Test-0");
+        let chunk = Chunk::new("Test-0");
         let response = client.generate_embedding(chunk).await.unwrap_err();
         assert_eq!(response, expected_response);
     }
