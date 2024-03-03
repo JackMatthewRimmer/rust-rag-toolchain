@@ -13,6 +13,18 @@ const OPENAI_EMBEDDING_URL: &str = "https://api.openai.com/v1/embeddings";
 /// Allows for interacting with the OpenAI API to generate embeddings.
 /// You can either embed a single string or a batch of strings.
 ///
+/// # Examples
+/// ```
+/// use rag_toolchain::common::*;
+/// use rag_toolchain::clients::*;
+/// async fn generate_embedding() {
+///     let client: OpenAIEmbeddingClient = OpenAIEmbeddingClient::try_new(OpenAIEmbeddingModel::TextEmbeddingAda002).unwrap();
+///     let chunk: Chunk = Chunk::new("this would be the text you are embedding");
+///     let embedding: Embedding = client.generate_embedding(chunk).await.unwrap();
+///     // This would be the vector representation of the text
+///     let vector: Vec<f32> = embedding.vector();
+/// }
+/// ```
 /// # Required Environment Variables
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
 pub struct OpenAIEmbeddingClient {
