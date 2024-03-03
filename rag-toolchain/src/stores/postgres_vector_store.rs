@@ -234,9 +234,9 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the insert succeeds
-    async fn store(&self, embeddings: (Chunk, Embedding)) -> Result<(), PostgresVectorError> {
+    async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), PostgresVectorError> {
         let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
-        Self::bind_to_query(&query, embeddings)
+        Self::bind_to_query(&query, embedding)
             .execute(&self.pool)
             .await
             .map_err(PostgresVectorError::InsertError)?;
