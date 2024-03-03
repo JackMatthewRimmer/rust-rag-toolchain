@@ -161,7 +161,6 @@ mod pg_vector {
             let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
                 pg_vector.as_retriever(mock_client, distance_function.clone());
 
-
             let result: Chunk = retriever
                 .retrieve(
                     "This sentence is similar to a foo bar sentence .",
