@@ -63,7 +63,7 @@ impl OpenAIEmbeddingClient {
         let embedding_objects: Vec<EmbeddingObject> = response.data;
         embedding_objects
             .into_iter()
-            .zip(input_text.into_iter())
+            .zip(input_text)
             .map(|(embedding_object, chunk)| Embedding::new(chunk, embedding_object.embedding))
             .collect()
     }

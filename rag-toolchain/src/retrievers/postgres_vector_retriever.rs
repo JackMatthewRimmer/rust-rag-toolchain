@@ -91,7 +91,7 @@ where
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
 
         let query: String = Self::select_row_sql(&self.table_name, self.distance_function.clone());
-        let vector: Vec<f32> = embedding.vector().into();
+        let vector: Vec<f32> = embedding.vector();
 
         let similar_text: Vec<PostgresRow> = sqlx::query_as::<_, PostgresRow>(&query)
             .bind(vector)
