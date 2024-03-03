@@ -37,6 +37,9 @@ jobs:
 
     - name: set up rust
       uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
     - name: Run tests
       run: cargo test --lib --verbose
 
@@ -52,6 +55,9 @@ jobs:
 
     - name: set up rust
       uses: actions-rs/toolchain@v1   
+      with:
+        toolchain: stable
+
     - name: Run integration tests
       run: cargo test --test mod --verbose
 
@@ -67,6 +73,9 @@ jobs:
 
     - name: set up rust
       uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
     - name: Run linter
       run: |
         cargo fmt -- --check
@@ -84,5 +93,8 @@ jobs:
 
     - name: set up rust
       uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
     - name: Run doc tests
       run: cargo test --doc --verbose
