@@ -23,7 +23,8 @@ mod pg_vector {
     use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
-    use sqlx::{postgres::PgRow, Pool, Postgres, Row};
+    use sqlx::prelude::FromRow;
+    use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
     use testcontainers::{
         clients::Cli,
@@ -37,7 +38,10 @@ mod pg_vector {
         DistanceFunction::InnerProduct,
     ];
 
+    // We read some test data in, each chunk has some constant metadata just so
+    // we can ensure that the metadata is being stored and retrieved correctly
     lazy_static! {
+        static ref METADATA: Value = serde_json::json!({"test": "metadata"});
         static ref TEST_DATA: Vec<(Chunk, Embedding)> = read_test_data();
     }
 
@@ -167,7 +171,6 @@ mod pg_vector {
                 .get(0)
                 .unwrap()
                 .to_owned();
-
             assert_eq!(result, input[1].0);
         }
     }
@@ -182,27 +185,30 @@ mod pg_vector {
         let row: RowData = query_row(pool, id, table_name).await;
         assert_eq!(row.id, id);
         assert_eq!(row.content, text);
-        assert_eq!(row.embedding, embeddings);
+        assert_eq!(row.embedding.to_vec(), embeddings);
+        assert_eq!(row.metadata, *METADATA)
     }
 
     async fn query_row(pool: &Pool<Postgres>, id: i32, table_name: &str) -> RowData {
         let query: String = format!(
-            "SELECT id, content, embedding FROM {} WHERE id = $1",
+            "SELECT id, content, embedding, metadata FROM {} WHERE id = $1",
             table_name
         );
 
-        let query: PgRow = sqlx::query(&query).bind(id).fetch_one(pool).await.unwrap();
-        RowData {
-            id: query.get::<i32, _>("id"),
-            content: query.get::<String, _>("content"),
-            embedding: query.get::<Vector, _>("embedding").to_vec(),
-        }
+        sqlx::query_as::<_, RowData>(&query)
+            .bind(id)
+            .fetch_one(pool)
+            .await
+            .unwrap()
     }
 
+    #[derive(FromRow)]
     struct RowData {
         id: i32,
         content: String,
-        embedding: Vec<f32>,
+        embedding: Vector,
+        #[sqlx(json)]
+        metadata: Value,
     }
 
     fn read_test_data() -> Vec<(Chunk, Embedding)> {
@@ -219,7 +225,10 @@ mod pg_vector {
                 .into_iter()
                 .map(|x| x.as_f64().unwrap() as f32)
                 .collect();
-            input_data.push((Chunk::from(chunk), Embedding::from(embedding)))
+            input_data.push((
+                Chunk::new(chunk.into(), serde_json::json!({"test": "metadata"})),
+                Embedding::from(embedding),
+            ))
         }
         input_data
     }

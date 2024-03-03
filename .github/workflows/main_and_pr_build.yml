@@ -1,0 +1,100 @@
+name: Rust Build / Unit Test / Lint 
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Build project
+      run: cargo build --verbose 
+
+  unit-test:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Run tests
+      run: cargo test --lib --verbose
+
+  integration-test:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1   
+      with:
+        toolchain: stable
+
+    - name: Run integration tests
+      run: cargo test --test mod --verbose
+
+  lint:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Run linter
+      run: |
+        cargo fmt -- --check
+        cargo clippy -- -D warnings
+
+  doc-test:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rag-toolchain
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v2
+
+    - name: set up rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - name: Run doc tests
+      run: cargo test --doc --verbose

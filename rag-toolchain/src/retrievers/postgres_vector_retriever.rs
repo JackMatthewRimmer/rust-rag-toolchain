@@ -1,9 +1,9 @@
 use crate::clients::AsyncEmbeddingClient;
-use crate::common::{Chunk, Embedding};
+use crate::common::{Chunk, Chunks, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
-use sqlx::postgres::PgRow;
+use pgvector::Vector;
 use sqlx::Error as SqlxError;
-use sqlx::{Pool, Postgres, Row};
+use sqlx::{Pool, Postgres};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
@@ -47,6 +47,14 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
             distance_function,
         }
     }
+
+    fn select_row_sql(table_name: &str, distance_function: DistanceFunction) -> String {
+        format!(
+            "SELECT id, content, embedding, metadata FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
+            table_name,
+            distance_function.to_sql_string()
+        )
+    }
 }
 
 impl<T> AsyncRetriever for PostgresVectorRetriever<T>
@@ -72,34 +80,28 @@ where
     /// * [`PostgresRetrieverError::QueryError`] - If there is an error querying the database.
     ///
     /// # Returns
-    /// * A [`Vec<Chunk>`] which are the most similar to the input text.
-    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Vec<Chunk>, Self::ErrorType> {
-        let k: u32 = top_k.get();
+    /// * A [`Chunks`] which are the most similar to the input text.
+    async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Chunks, Self::ErrorType> {
+        let k: i32 = top_k.get() as i32;
         let (_, embedding): (_, Embedding) = self
             .embedding_client
             .generate_embedding(text.into())
             .await
             .map_err(PostgresRetrieverError::EmbeddingClientError)?;
 
-        let query: String = format!(
-            "SELECT content FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
-            &self.table_name,
-            self.distance_function.to_sql_string()
-        );
+        let query: String = Self::select_row_sql(&self.table_name, self.distance_function.clone());
 
-        let similar_text: Vec<PgRow> = sqlx::query(&query)
+        let similar_text: Vec<PostgresRow> = sqlx::query_as::<_, PostgresRow>(&query)
             .bind(embedding.embedding().to_vec())
-            .bind(k as i32)
+            .bind(k)
             .fetch_all(&self.pool)
             .await
             .map_err(PostgresRetrieverError::QueryError)?;
 
-        let n_rows: Vec<Chunk> = similar_text
-            .iter()
-            .take(k as usize)
-            .map(|row| Chunk::from(row.get::<String, _>("content")))
-            .collect();
-        Ok(n_rows)
+        Ok(similar_text
+            .into_iter()
+            .map(|row| Chunk::new(row.content.into(), row.metadata))
+            .collect())
     }
 }
 
@@ -108,6 +110,17 @@ pub enum DistanceFunction {
     L2,
     Cosine,
     InnerProduct,
+}
+
+/// # [`PostgresRow`]
+/// Type that represents a row in our defined structure
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
+pub struct PostgresRow {
+    pub id: i32,
+    pub content: String,
+    pub embedding: Vector,
+    #[sqlx(json)]
+    pub metadata: serde_json::Value,
 }
 
 impl DistanceFunction {
