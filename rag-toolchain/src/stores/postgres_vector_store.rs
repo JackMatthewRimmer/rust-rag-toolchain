@@ -3,7 +3,6 @@ use crate::common::{Chunk, Embedding, EmbeddingModel};
 use crate::retrievers::{DistanceFunction, PostgresVectorRetriever};
 use crate::stores::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
-use sqlx::Error as SqlxError;
 use sqlx::{postgres::PgArguments, Pool, Postgres};
 use std::env::{self, VarError};
 use std::error::Error;
@@ -27,7 +26,7 @@ use dotenv::dotenv;
 /// * POSTGRES_DATABASE: The database to connect with
 ///
 /// # Output table format
-/// Columns: | id (int) | content (text) | embedding (vector) |
+/// Columns: | id (int) | content (text) | embedding (vector) | metadata (jsonb) |
 ///
 /// # Examples
 /// ```
@@ -41,32 +40,34 @@ use dotenv::dotenv;
 ///         .await.unwrap();
 ///     store.store_batch(embeddings).await.unwrap();
 /// }
-///
-///
-///
-///
 /// ```
 #[derive(Debug, Clone)]
 pub struct PostgresVectorStore {
-    /// We make the pool public incase users want to
-    /// do extra operations on the database
+    /// We hold a connection pool to the database
     pool: Pool<Postgres>,
+    /// The name of the table we are operating on
     table_name: String,
 }
 
 impl PostgresVectorStore {
     /// # [`PostgresVectorStore::try_new`]
     ///
+    /// This constructor is used to create a new PostgresVectorStore. It will read the required
+    /// environment variables in. Try and connect to your postgres database and then create a table
+    /// with the given name and the expected columns. If the table already exists with the same name
+    /// it will not be re-created.
+    ///
     /// # Arguments
-    /// * `db_name` - The name of the table to store the embeddings in.
+    /// * `table_name`: &[`str`] - The name of the table to store the embeddings in.
+    /// * `embedding_model`: impl [`EmbeddingModel`] - The embedding model to use to store the embeddings
     ///
     /// # Errors
-    /// * [`PostgresVectorError::EnvVarError`] if the required environment variables are not set
-    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established
-    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
+    /// * [`PostgresVectorError::EnvVarError`] if the required environment variables are not set.
+    /// * [`PostgresVectorError::ConnectionError`] if the connection to the database could not be established.
+    /// * [`PostgresVectorError::TableCreationError`] if the table could not be created.
     ///
     /// # Returns
-    /// [`PostgresVectorStore`] if the connection and table creation is successful
+    /// * [`PostgresVectorStore`] if the connection and table creation is successful
     pub async fn try_new(
         table_name: &str,
         embedding_model: impl EmbeddingModel,
@@ -99,20 +100,20 @@ impl PostgresVectorStore {
 
     /// # [`PostgresVectorStore::try_new_with_pool`]
     ///
-    /// This function allows us to create a new PostgresVectorStore with a pre-existing connection pool
-    /// this is more useful in cases where we want to have multiple stores for different tables all sharing
-    /// the same connection pool.
+    /// This is an alternative constructor that allows you to pass in a connection pool.
+    /// This was added as it may be the case people want to establish one connection pool
+    /// and then shared it across multiple [`PostgresVectorStore`]s managing different tables.
     ///
     /// # Arguments
-    /// * `pool` - The connection pool to use to connect to the database
-    /// * `table_name` - The name of the table to store the embeddings in
-    /// * `embedding_model` - The embedding model to use to store the embeddings
+    /// * `pool`: [`sqlx::Pool<Postgres>`] - a pre established connection pool.
+    /// * `table_name`: &[`str`] - The name of the table to store the embeddings in.
+    /// * `embedding_model`: impl[`EmbeddingModel`] - The embedding model used for the genrated embeddings.
     ///
     /// # Errors
     /// * [`PostgresVectorError::TableCreationError`] if the table could not be created
     ///
     /// # Returns
-    /// [`PostgresVectorStore`] if the table creation is successful
+    /// * [`PostgresVectorStore`] if the table creation is successful.
     pub async fn try_new_with_pool(
         pool: Pool<Postgres>,
         table_name: &str,
@@ -133,10 +134,12 @@ impl PostgresVectorStore {
 
     /// # [`PostgresVectorStore::get_pool`]
     ///
-    /// Getter for the internal connection pool
+    /// Getter for the internal connection pool.
+    /// This is useful if you want to do any further operations on the database
+    /// such as enabling an index on the table.
     ///
     /// # Returns
-    /// [`Pool`] - The connection pool
+    /// * [`Pool`] - The connection pool
     pub fn get_pool(&self) -> Pool<Postgres> {
         self.pool.clone()
     }
@@ -147,12 +150,13 @@ impl PostgresVectorStore {
     /// Note that the returned retriever is bound to the same table as the store.
     ///
     /// # Arguments
-    /// * `embedding_client` - The client we use to embed income text before the
-    ///                        similarity search
-    /// * `distance_function` - The distance function to use to compare the embeddings
+    /// * `embedding_client`: [`AsyncEmbeddingClient`] - The client we use to embed
+    ///     `                  income text before the similarity search.
+    /// * `distance_function`: [`DistanceFunction`] - The distance function to use to
+    ///                        compare the embeddings
     ///
     /// # Returns
-    /// [`PostgresVectorRetriever`] - The retriever that can be used to search for similar text
+    /// [`PostgresVectorRetriever`] - The retriever that can be used to search for similar text.
     pub fn as_retriever<T: AsyncEmbeddingClient>(
         &self,
         embedding_client: T,
@@ -167,19 +171,17 @@ impl PostgresVectorStore {
     }
 
     /// # [`PostgresVectorStore::connect`]
-    /// Allows us to check the connection to a database and store the connection pool
+    /// Allows us to establish a connection to a database and store the connection pool
     ///
     /// # Arguments
-    /// * `connection_string` - The connection string to use to connect to the database
-    /// * `rt` - The runtime to use to connect to the database
+    /// * `connection_string`: &[`str`] - The connection string to use to connect to the database
     ///
     /// # Errors
-    /// * [`Error`] if the connection could not be established
+    /// * [`sqlx::Error`] if the connection could not be established.
     ///
     /// # Returns
     /// * [`Pool`] which can be used to query the database
-    /// * [`SqlxError`] if the connection could not be established
-    async fn connect(connection_string: &str) -> Result<Pool<Postgres>, SqlxError> {
+    async fn connect(connection_string: &str) -> Result<Pool<Postgres>, sqlx::Error> {
         let pool: Pool<Postgres> = PgPoolOptions::new()
             .max_connections(5)
             .connect(connection_string)
@@ -191,21 +193,20 @@ impl PostgresVectorStore {
     /// We call the create table automatically when the struct is created
     ///
     /// # Arguments
-    /// * `table_name` - The name of the table to create
-    /// * `pool` - The connection pool to use to create the table
-    /// * `rt` - The runtime to use to create the table
+    /// * `pool`: [`sqlx::Pool<Postgres>`] - The connection pool to use to create the table
+    /// * `table_name`: &[`str`] - The name of the table to create
+    /// * `vector_dimension`: [`usize`] - The dimension of the vector to store
     ///
     /// # Errors
-    /// * [`Error`] if the table could not be created
+    /// * [`sqlx::Error`] if the table could not be created.
     ///
     /// # Returns
     /// * [`PgQueryResult`] which can be used to check if the table was created successfully
-    /// * [`SqlxError`] if the table could not be created
     async fn create_table(
         pool: &Pool<Postgres>,
         table_name: &str,
         vector_dimension: usize,
-    ) -> Result<PgQueryResult, SqlxError> {
+    ) -> Result<PgQueryResult, sqlx::Error> {
         let statement = format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 id SERIAL PRIMARY KEY,
@@ -218,6 +219,14 @@ impl PostgresVectorStore {
         sqlx::query(&statement).execute(pool).await
     }
 
+    /// # [`PostgresVectorStore::insert_row_sql`]
+    /// Helper function to generate the sql query for inserting a new row
+    ///
+    /// # Arguments
+    /// * `table_name`: &[`str`] - The name of the table to insert into
+    ///
+    /// # Returns
+    /// * [`String`] - The sql query
     fn insert_row_sql(table_name: &str) -> String {
         format!(
             "INSERT INTO {} (content, embedding, metadata) VALUES ($1, $2, $3)",
@@ -225,6 +234,10 @@ impl PostgresVectorStore {
         )
     }
 
+    /// # [`PostgresVectorStore::bind_to_query`]
+    /// Helper function to bind an [`Embedding`] to an [`sqlx::query::Query`]
+    /// the retuned query can then have [`sqlx::query::Query::execute`] called on it to
+    /// insert the row.
     fn bind_to_query(
         query: &str,
         embedding: Embedding,
@@ -240,9 +253,10 @@ impl PostgresVectorStore {
 impl EmbeddingStore for PostgresVectorStore {
     type ErrorType = PostgresVectorError;
     /// # [`PostgresVectorStore::store`]
+    /// This is done as a single insert statement.
     ///
     /// # Arguments
-    /// * `embeddings` - A tuple containing the content and the embedding to store
+    /// * `embedding`: [`Embedding`] - to insert
     ///
     /// # Errors
     /// * [`PostgresVectorError::InsertError`] if the insert fails
@@ -259,9 +273,10 @@ impl EmbeddingStore for PostgresVectorStore {
     }
 
     /// # [`PostgresVectorStore::store_batch`]
+    /// This is done as a single transaction with multiple insert statements.
     ///
     /// # Arguments
-    /// * `embeddings` - A vector of tuples containing the content and the embedding to store
+    /// * `embeddings`: [`Vec<Embedding>`] - A vector of embeddings to insert
     ///
     /// # Errors
     /// * [`PostgresVectorError::TransactionError`] if the transaction fails
@@ -293,19 +308,19 @@ impl EmbeddingStore for PostgresVectorStore {
 
 /// # [`PostgresVectorError`]
 /// This Error enum wraps all the errors that can occur when using
-/// the PgVector struct with contextual meaning
+/// the PgVector struct with contextual meaning.
 #[derive(Debug)]
 pub enum PostgresVectorError {
     /// Error when an environment variable is not set
     EnvVarError(VarError),
     /// Error when the connection to the database could not be established
-    ConnectionError(SqlxError),
+    ConnectionError(sqlx::Error),
     /// Error when the table could not be created
-    TableCreationError(SqlxError),
+    TableCreationError(sqlx::Error),
     /// Error when calling [`PostgresVectorStore::store()`] fails
-    InsertError(SqlxError),
+    InsertError(sqlx::Error),
     /// Error when calling [`PostgresVectorStore::store_batch()`] fails
-    TransactionError(SqlxError),
+    TransactionError(sqlx::Error),
 }
 impl Error for PostgresVectorError {}
 impl From<VarError> for PostgresVectorError {
