@@ -13,12 +13,11 @@ use dotenv::dotenv;
 
 /// # [`PostgresVectorStore`]
 ///
-/// This struct is used to store and as a retriever information needed to connect to a Postgres database
-/// and should be passed to an embedding task as a destination for the data to be stored. If a user
-/// wants to do additional operations such as setting an index on the create table they can use the connection
-/// pool which is accesible and work with that directly.
-///
-/// If a table already exists with the same name, the table will be dropped and recreated.
+/// This is the implementation of [`EmbeddingStore`] for a Postgres database with the
+/// pgvector extension enabled. This store takes a table name and an embedding model.
+/// If a table already exists with the same name an does the have the expected columns
+/// any calls to [`PostgresVectorStore::store`] or [`PostgresVectorStore::store_batch`]
+/// will fail.
 ///
 /// # Required Environment Variables
 ///
@@ -27,10 +26,26 @@ use dotenv::dotenv;
 /// * POSTGRES_HOST: The host to connect to the database with
 /// * POSTGRES_DATABASE: The database to connect with
 ///
-/// Place these variables in a .env file in the root of your project.
-///
 /// # Output table format
 /// Columns: | id (int) | content (text) | embedding (vector) |
+///
+/// # Examples
+/// ```
+/// use rag_toolchain::stores::*;
+/// use rag_toolchain::common::*;
+///
+/// async fn store(embeddings: Vec<Embedding>) {
+///     let embedding_model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbedding3Small;
+///     let table_name: &str = "table_name";
+///     let store: PostgresVectorStore = PostgresVectorStore::try_new(table_name, embedding_model)
+///         .await.unwrap();
+///     store.store_batch(embeddings).await.unwrap();
+/// }
+///
+///
+///
+///
+/// ```
 #[derive(Debug, Clone)]
 pub struct PostgresVectorStore {
     /// We make the pool public incase users want to

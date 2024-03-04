@@ -2,20 +2,12 @@ use crate::common::Chunks;
 use std::future::Future;
 use std::{error::Error, num::NonZeroU32};
 
-/*
-
-There ideally needs to be a way to set similarity thresholds
-Easily search for one without having to index and array
-and search for multiple
-
-Also would like to ensure
-
-Probably best to just offer all of these as separate methods
-
- */
-
 /// # [`AsyncRetriever`]
-/// Trait for stores that allow for similar text to be retrieved using embeddings
+///
+/// This trait is used to define structs that allow for searching of similar text.
+/// The common workflow is to instaniate a store and then call .as_retriever()
+/// to get a retriever for that vector database. Then you can call the methods
+/// described by this trait to retrieve similar text.
 pub trait AsyncRetriever {
     type ErrorType: Error;
     fn retrieve(
