@@ -1,4 +1,4 @@
-use crate::common::{Chunk, Embedding};
+use crate::common::Embedding;
 use std::error::Error;
 use std::future::Future;
 
@@ -11,11 +11,11 @@ pub trait EmbeddingStore {
     /// Takes an embedding and writes it to an external source
     fn store(
         &self,
-        embedding: (Chunk, Embedding),
+        embedding: Embedding,
     ) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
     fn store_batch(
         &self,
-        embeddings: Vec<(Chunk, Embedding)>,
+        embeddings: Vec<Embedding>,
     ) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
 }
 
@@ -26,8 +26,8 @@ mock! {
     pub EmbeddingStore {}
     impl EmbeddingStore for EmbeddingStore {
         type ErrorType = std::io::Error;
-        async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), <Self as EmbeddingStore>::ErrorType>;
-        async fn store_batch(&self, embeddings: Vec<(Chunk, Embedding)>)
+        async fn store(&self, embedding: Embedding) -> Result<(), <Self as EmbeddingStore>::ErrorType>;
+        async fn store_batch(&self, embeddings: Vec<Embedding>)
             -> Result<(), <Self as EmbeddingStore>::ErrorType>;
     }
 }

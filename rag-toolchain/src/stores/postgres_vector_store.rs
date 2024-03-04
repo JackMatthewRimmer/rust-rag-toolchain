@@ -212,12 +212,12 @@ impl PostgresVectorStore {
 
     fn bind_to_query(
         query: &str,
-        embedding: (Chunk, Embedding),
+        embedding: Embedding,
     ) -> sqlx::query::Query<'_, Postgres, PgArguments> {
-        let (content, embedding) = embedding;
-        let text: String = content.clone().into();
-        let vector: Vec<f32> = embedding.clone().into();
-        let metadata = content.metadata();
+        let chunk: &Chunk = embedding.chunk();
+        let text: String = chunk.content().to_string();
+        let metadata = chunk.metadata().clone();
+        let vector: Vec<f32> = embedding.vector();
         sqlx::query(query).bind(text).bind(vector).bind(metadata)
     }
 }
@@ -234,7 +234,7 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the insert succeeds
-    async fn store(&self, embedding: (Chunk, Embedding)) -> Result<(), PostgresVectorError> {
+    async fn store(&self, embedding: Embedding) -> Result<(), PostgresVectorError> {
         let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
         Self::bind_to_query(&query, embedding)
             .execute(&self.pool)
@@ -253,10 +253,7 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the transaction succeeds
-    async fn store_batch(
-        &self,
-        embeddings: Vec<(Chunk, Embedding)>,
-    ) -> Result<(), PostgresVectorError> {
+    async fn store_batch(&self, embeddings: Vec<Embedding>) -> Result<(), PostgresVectorError> {
         let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
         let mut transaction = self
             .pool

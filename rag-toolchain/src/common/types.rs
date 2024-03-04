@@ -7,86 +7,32 @@ use std::sync::Arc;
 /// It is immutable and thread safe
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Embedding {
-    embedding: Arc<[f32]>,
+    chunk: Chunk,
+    vector: Arc<[f32]>,
 }
 
 impl Embedding {
     /// # [`Embedding::new`]
     ///
     /// # Arguments
-    /// * `Arc<[f32]>` - pointer to the embedding
+    /// * `Chunk` - the chunk associated with the embedding
+    /// * `impl Into<Arc<[f32]>>` - pointer to the embedding
     ///
     /// # Returns
     /// * [`Embedding`] - a new Embedding
-    pub fn new(embedding: Arc<[f32]>) -> Self {
-        Self { embedding }
-    }
-
-    /// # [`Embedding::embedding`]
-    ///
-    /// # Returns
-    /// * [`Arc<[f32]>`] - pointer to the embedding
-    pub fn embedding(&self) -> Arc<[f32]> {
-        Arc::clone(&self.embedding)
-    }
-
-    /// # [`Embedding::iter_to_vec`]
-    ///
-    /// Helper function to generate a vector given an iterator of items
-    /// that can be converted into an Embedding
-    ///
-    /// # Arguments
-    /// * `Iterator<Item = T>` - iterator of items where T: `Into<Embedding>`
-    ///
-    /// # Returns
-    /// * [`Vec<Embedding>`] - vector of Embeddings
-    pub fn iter_to_vec<T>(iter: impl Iterator<Item = T>) -> Vec<Self>
-    where
-        T: Into<Self>,
-    {
-        let mut embedding: Vec<Self> = Vec::new();
-        for item in iter {
-            embedding.push(item.into());
-        }
-        embedding
-    }
-
-    /// # [`Embedding::from_vec`]
-    ///
-    /// Helper function to convert a vector of items into a vector
-    /// of embeddings
-    ///
-    /// # Arguments
-    /// * `Vec<T>` - vector of items where T: `Into<Embedding>`
-    ///
-    /// # Returns
-    /// * [`Vec<Embedding>`] - vector of Embeddings
-    pub fn from_vec<T>(vec: Vec<T>) -> Vec<Self>
-    where
-        T: Into<Self>,
-    {
-        let mut embedding: Vec<Self> = Vec::new();
-        for item in vec.into_iter() {
-            embedding.push(item.into());
-        }
-        embedding
-    }
-}
-
-impl<T> From<T> for Embedding
-where
-    T: Into<Arc<[f32]>>,
-{
-    fn from(embedding: T) -> Self {
+    pub fn new(chunk: Chunk, vector: impl Into<Arc<[f32]>>) -> Self {
         Self {
-            embedding: embedding.into(),
+            chunk,
+            vector: vector.into(),
         }
     }
-}
 
-impl From<Embedding> for Vec<f32> {
-    fn from(embedding: Embedding) -> Self {
-        embedding.embedding().to_vec()
+    pub fn chunk(&self) -> &Chunk {
+        &self.chunk
+    }
+
+    pub fn vector(&self) -> Vec<f32> {
+        self.vector.as_ref().to_vec()
     }
 }
 // ---------------------------------------------
@@ -95,57 +41,54 @@ impl From<Embedding> for Vec<f32> {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 /// # [`Chunk`]
 /// Custom type that wraps a pointer to a piece of text.
-/// It is immutable and thread safe
+/// and also some metadata associated with the text.
 pub struct Chunk {
-    chunk: Arc<str>,
-    metadata: serde_json::Value,
+    content: Arc<str>,
+    metadata: Arc<serde_json::Value>,
 }
 
 impl Chunk {
     /// # [`Chunk::new`]
-    ///
-    /// # Arguments
-    /// * `Arc<str>` - pointer to the chunk str
+    /// * `impl Into<Arc<str>>` - this is the text content of the chunk
     ///
     /// # Returns
     /// * [`Chunk`] - a new Chunk
-    pub fn new(chunk: Arc<str>, metadata: serde_json::Value) -> Self {
-        Self { chunk, metadata }
+    pub fn new(chunk: impl Into<Arc<str>>) -> Self {
+        Self {
+            content: chunk.into(),
+            metadata: Arc::new(serde_json::Value::Null),
+        }
     }
 
-    /// # [`Chunk::chunk`]
+    /// # [`Chunk::new_with_metadata`]
+    ///
+    /// # Arguments
+    /// * `Arc<str>` - pointer to the chunk str
+    /// * `serde_json::Value` - metadata associated with the chunk
     ///
     /// # Returns
-    /// * [`Arc<str>`] - pointer to the chunk str
-    pub fn chunk(&self) -> Arc<str> {
-        Arc::clone(&self.chunk)
+    /// * [`Chunk`] - a new Chunk
+    pub fn new_with_metadata(content: impl Into<Arc<str>>, metadata: serde_json::Value) -> Self {
+        Self {
+            content: content.into(),
+            metadata: Arc::new(metadata),
+        }
+    }
+
+    /// # [`Chunk::content`]
+    ///
+    /// # Returns
+    /// * [`&str`] - pointer to the chunk str
+    pub fn content(&self) -> &str {
+        &self.content
     }
 
     /// # [`Chunk::metadata`]
     ///
     /// # Returns
-    /// * [`Option<serde_json::Value>`] - metadata associated with the chunk
-    pub fn metadata(&self) -> serde_json::Value {
-        self.metadata.clone()
-    }
-}
-
-impl<T> From<T> for Chunk
-where
-    T: Into<Arc<str>>,
-{
-    fn from(chunk: T) -> Self {
-        Self {
-            chunk: chunk.into(),
-            metadata: serde_json::Value::Null,
-        }
-    }
-}
-
-/// This will not include metadata
-impl From<Chunk> for String {
-    fn from(chunk: Chunk) -> Self {
-        chunk.chunk().to_string()
+    /// * [`&serde_json::Value`] - metadata associated with the chunk
+    pub fn metadata(&self) -> &serde_json::Value {
+        &self.metadata
     }
 }
 // ------------------------------------------
