@@ -123,7 +123,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     /// * [`OpenAIError`] - If the request to OpenAI fails.
     ///  
     /// # Returns
-    /// * [`Embedding`] - the generated embedding 
+    /// * [`Embedding`] - the generated embedding
     async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, Self::ErrorType> {
         let request_body = EmbeddingRequest::builder()
             .input(text.content().to_string())
