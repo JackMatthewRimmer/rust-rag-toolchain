@@ -9,7 +9,24 @@ use std::{error::Error, num::NonZeroU32};
 /// to get a retriever for that vector database. Then you can call the methods
 /// described by this trait to retrieve similar text.
 pub trait AsyncRetriever {
+    /// Custom error type for the retriever
     type ErrorType: Error;
+    /// # [`AsyncRetriever::retrieve`]
+    ///
+    /// This method is used to retrieve similar text from the store.
+    /// It takes input text which internally should be embedded before the
+    /// vector search. Note this method returns a future so will be used from
+    /// an async context.
+    ///
+    /// # Arguments
+    /// * `text`: &[`str`] - The input text to search for similar text.
+    /// * `top_k`: [`NonZeroU32`] - The number of similar text to return.
+    ///
+    /// # Errors
+    /// * [`Self::ErrorType`] - If the operation failed.
+    ///
+    /// # Returns
+    /// * [`Chunks`] - The most similar text to the input text.
     fn retrieve(
         &self,
         text: &str,
