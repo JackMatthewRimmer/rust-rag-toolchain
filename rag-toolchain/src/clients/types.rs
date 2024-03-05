@@ -16,6 +16,9 @@ impl PromptMessage {
     ///
     /// Given that the clients will return a message that we only care for the message
     /// this function will return the message as a string to avoid pattern matching.
+    ///
+    /// # Returns
+    /// * [`String`] - the message content
     pub fn content(&self) -> String {
         match self {
             PromptMessage::SystemMessage(message) => message.clone(),
