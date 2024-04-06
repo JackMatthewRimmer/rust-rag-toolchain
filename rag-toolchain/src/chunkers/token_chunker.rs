@@ -2,7 +2,34 @@ use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, Token
 use std::num::NonZeroUsize;
 
 /// # [`TokenChunker`]
-/// Allows you to chunk text using token based chunking
+/// This struct allows you to do fixed size chunking based on the number
+/// of tokens in each chunk. We build around specific embedding models and based
+/// on which embedding model is being used we will use the correlating tokenizer.
+///
+/// # Examples
+/// ```
+/// use rag_toolchain::chunkers::*;
+/// use rag_toolchain::common::*;
+/// use std::num::NonZeroUsize;
+///
+/// fn generate_chunks() {
+///     let raw_text: &str = "This is a test string";
+///     let window_size: usize = 1;
+///     let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
+///
+///     const EMBEDDING_MODEL: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbedding3Small;
+///
+///     let chunker: TokenChunker = TokenChunker::try_new(
+///         chunk_size,
+///         window_size,
+///         EMBEDDING_MODEL,
+///     )
+///     .unwrap();
+///
+///     let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
+/// }
+///     
+/// ```
 pub struct TokenChunker {
     /// chunk_size: The size in tokens of each chunk
     chunk_size: NonZeroUsize,
@@ -16,9 +43,10 @@ impl TokenChunker {
     /// # [`TokenChunker::try_new`]
     ///
     /// # Arguments
-    /// * `chunk_size` - The size in tokens of each chunk
-    /// * `chunk_overlap` - The number of tokens that overlap between each chunk
-    /// * `embedding_model` - The embedding model to use
+    /// * `chunk_size`: [`NonZeroUsize`] - The size in tokens of each chunk
+    /// * `chunk_overlap`: [`usize`] - The number of tokens that overlap between each chunk
+    /// * `embedding_model`: impl [`EmbeddingModel`] - The embedding model to use, this tells us what tokenizer
+    ///                      to use
     ///
     /// # Errors
     /// * [`ChunkingError::InvalidChunkSize`] - Chunk size must be smaller than the maximum number of tokens
