@@ -41,8 +41,6 @@ The library is structured into several modules, each responsible for a specific 
 
 - [`stores`](rag-toolchain/src/stores/): This module provides functionalities for storing and managing data.
 
-For examples of how to use these modules, refer to the [`examples`](rag-toolchain/examples/) directory.
-
 ### Code Examples
 
 ```rust
