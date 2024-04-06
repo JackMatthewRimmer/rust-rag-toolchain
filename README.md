@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Retrieval Augmented Generation (RAG):** Enhance your AI applications with better prompt completions based on your own knowledge base. Implemented in [`chains`](rag-toolchain/src/chains/).
+- **Retrieval Augmented Generation (RAG):** Enhance your AI applications with better prompt completions based on your own knowledge base. See BasicRagChain !.
 
 - **PG Vector Support** Able to store and retrieve from a postgres database with pg_vector enabled !
 
@@ -41,8 +41,6 @@ The library is structured into several modules, each responsible for a specific 
 - [`retrievers`](rag-toolchain/src/retrievers/): This module contains implementations for retrieving data from various sources.
 
 - [`stores`](rag-toolchain/src/stores/): This module provides functionalities for storing and managing data.
-
-For examples of how to use these modules, refer to the [`examples`](rag-toolchain/examples/) directory.
 
 ### Code Examples
 
@@ -99,7 +97,7 @@ For examples of how to use these modules, refer to the [`examples`](rag-toolchai
 
 ## Contributing
 
-Contributions are welcome! If you have ideas for improvements or find any issues, please open an [issue](https://github.com/yourusername/rust-rag-toolchain/issues) or submit a pull request.
+Contributions are welcome! If you have ideas for improvements or find any issues, please open an [issue](https://github.com/JackMatthewRimmer/rust-rag-toolchain/issues) or submit a pull request.
 
 ## Support
 

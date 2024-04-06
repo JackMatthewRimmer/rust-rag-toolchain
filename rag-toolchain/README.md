@@ -96,7 +96,7 @@ The library is structured into several modules, each responsible for a specific 
 
 ## Contributing
 
-Contributions are welcome! If you have ideas for improvements or find any issues, please open an [issue](https://github.com/yourusername/rust-rag-toolchain/issues) or submit a pull request.
+Contributions are welcome! If you have ideas for improvements or find any issues, please open an [issue](https://github.com/JackMatthewRimmer/rust-rag-toolchain/issues) or submit a pull request.
 
 ## Support
 
