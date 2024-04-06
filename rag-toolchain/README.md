@@ -6,8 +6,7 @@
 
 ## Features
 
-- **Retrieval Augmented Generation (RAG):** Enhance your AI applications with better prompt completions based on your own knowledge base. Implemented in [`chains`](rag-toolchain/src/chains/).
-
+- **Retrieval Augmented Generation (RAG):** Enhance your AI applications with better prompt completions based on your own knowledge base. See BasicRagChain ! 
 - **PG Vector Support** Able to store and retrieve from a postgres database with pg_vector enabled !
 
 - **OpenAI Support** Able to generate chat completions and embeddings via OpenAI to use an your AI workflows
