@@ -2,13 +2,23 @@ use crate::common::Embedding;
 use std::error::Error;
 use std::future::Future;
 
-/// # EmbeddingStore
-/// Trait for struct that allows embeddings to be wrote to an
-/// external persistent store. Mainly a vector database.
+/// # [`EmbeddingStore`]
+/// This is the trait defined for abstracting storing embeddings
+/// into a vector database.
 pub trait EmbeddingStore {
-    // The custom error type for the store
+    /// The custom error type for the store
     type ErrorType: Error;
-    /// Takes an embedding and writes it to an external source
+    /// # [`EmbeddingStore::store`]
+    /// This method is used to store a single embedding in the store.
+    ///
+    /// # Arguments
+    /// * `embedding`: [`Embedding`] - The embedding to store
+    ///
+    /// # Errors
+    /// * [`Self::ErrorType`] - If the operation failed.
+    ///
+    /// # Returns
+    /// * [`()`] - indicating success
     fn store(
         &self,
         embedding: Embedding,

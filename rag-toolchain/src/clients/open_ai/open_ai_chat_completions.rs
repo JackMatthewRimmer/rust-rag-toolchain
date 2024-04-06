@@ -15,6 +15,32 @@ const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/comple
 /// # [`OpenAIChatCompletionClient`]
 /// Allows for interacting with open ai models
 ///
+/// # Examples
+/// ```
+/// use rag_toolchain::common::*;
+/// use rag_toolchain::clients::*;
+/// use serde_json::Map;
+/// use serde_json::Value;
+/// async fn generate_embedding() {
+///     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
+///     let mut client: OpenAIChatCompletionClient =
+///     OpenAIChatCompletionClient::try_new(model).unwrap();
+///     let mut additional_config: Map<String, Value> = Map::new();
+///     additional_config.insert("temperature".into(), 0.5.into());
+///     client.with_additional_config(additional_config);
+///
+///     let system_message: PromptMessage = PromptMessage::SystemMessage(
+///         "You are a comedian that cant ever reply to someone unless its phrased as a sarcastic joke"
+///         .into());
+///     let user_message: PromptMessage =
+///     PromptMessage::HumanMessage("What is the weather like today ?".into());
+///     let reply = client
+///         .invoke(vec![system_message, user_message])
+///         .await
+///         .unwrap();
+///     println!("{:?}", reply.content());
+/// }
+/// ```
 /// # Required Environment Variables
 /// OPENAI_API_KEY: The API key to use for the OpenAI API
 pub struct OpenAIChatCompletionClient {

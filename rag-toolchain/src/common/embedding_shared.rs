@@ -14,17 +14,17 @@ pub trait EmbeddingModel {
 /// # [`EmbeddingModelMetadata`]
 /// Struct to contain all of the relevant metadata for an embedding model
 pub struct EmbeddingModelMetadata {
-    // The dimension of the vectors produced by the embedding model
+    /// The dimension of the vectors produced by the embedding model
     pub dimensions: usize,
-    // The maximum amount of tokens that can be sent to the embedding model
+    /// The maximum amount of tokens that can be sent to the embedding model
     pub max_tokens: usize,
-    // The tokenizer that the embedding model uses
+    /// The tokenizer that the embedding model uses
     pub tokenizer: Box<dyn TokenizerWrapper>,
 }
 
 /// # [`TokenizerWrapper`]
 /// We wrap the tokenizer for a specific embedding model to allow
-/// for a common interface for tokenization
+/// for a common interface for tokenization.
 pub trait TokenizerWrapper {
     // This should potentially go back to a Result
     fn tokenize(&self, text: &str) -> Option<Vec<String>>;
@@ -33,7 +33,7 @@ pub trait TokenizerWrapper {
 
 // ------------------ OpenAI Embedding Models ------------------
 /// # [`OpenAIEmbeddingModel`]
-/// Top level enum to hold all OpenAI embedding model variants
+/// Top level enum to hold all OpenAI embedding model variants.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenAIEmbeddingModel {
@@ -45,7 +45,10 @@ pub enum OpenAIEmbeddingModel {
     TextEmbedding3Large,
 }
 
-// Match the embedding model to the metadata
+/// Implementation of the EmbeddingModel trait for OpenAIEmbeddingModel
+/// This just sets out the requirements for each of the OpenAI models.
+/// This can then be used by things such as stores to understand what size
+/// vectors it has to store.
 impl EmbeddingModel for OpenAIEmbeddingModel {
     fn metadata(&self) -> EmbeddingModelMetadata {
         match self {
@@ -68,13 +71,15 @@ impl EmbeddingModel for OpenAIEmbeddingModel {
     }
 }
 
-// Wrap tiktoken_rs tokenizer for OpenAI
+/// We use the tiktoken_rs library to handle the tokenization for OpenAI models.
+/// So this is the struct will implement [`TokenizerWrapper`] which we can then
+/// use in the rest of the library to tokenize text.
 struct OpenAITokenizer {
     bpe: CoreBPE,
 }
 
-// Added new function to hide the unwrap
-// The panic here should be fine as this shouldn't fail as we use an enum variant
+/// Added new function to hide the unwrap
+// The panic here should be fine as this shouldn't fail as we use an enum variant.
 impl OpenAITokenizer {
     pub fn new(model: Tokenizer) -> Self {
         OpenAITokenizer {

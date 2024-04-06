@@ -2,7 +2,6 @@ use crate::clients::AsyncEmbeddingClient;
 use crate::common::{Chunk, Chunks, Embedding};
 use crate::retrievers::traits::AsyncRetriever;
 use pgvector::Vector;
-use sqlx::Error as SqlxError;
 use sqlx::{Pool, Postgres};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -13,11 +12,34 @@ use std::num::NonZeroU32;
 /// This struct is a allows for the retrieval of similar text from a postgres database.
 /// It is parameterized over a type T which implements the AsyncEmbeddingClient trait.
 /// This is because text needs to be embeded before it can be compared to other text.
+/// You must connect first create a PostgresVectorStore as this handles connecting to the database.
+/// then you can calle .as_retriever() to convert it to retriever.
+///
+/// # Examples
+/// ```
+/// use rag_toolchain::retrievers::*;
+/// use rag_toolchain::clients::*;
+/// use rag_toolchain::common::*;
+/// use rag_toolchain::stores::*;
+/// use std::num::NonZeroU32;
+///
+/// async fn retrieve() {
+///     let chunk: Chunk = Chunk::new("This is the text you want to retrieve something similar to");
+///     let top_k: NonZeroU32 = NonZeroU32::new(5).unwrap();
+///     let distance_function: DistanceFunction = DistanceFunction::Cosine;
+///     let embedding_model: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbedding3Small;
+///     let client: OpenAIEmbeddingClient = OpenAIEmbeddingClient::try_new(embedding_model).unwrap();
+///     let store: PostgresVectorStore = PostgresVectorStore::try_new("table_name", embedding_model).await.unwrap();
+///     let retriever: PostgresVectorRetriever<OpenAIEmbeddingClient> = store.as_retriever(client, distance_function);
+///     // This will return the top 5 most similar chunks to the input text.
+///     let similar_text: Chunks = retriever.retrieve(chunk.content(), top_k).await.unwrap();
+/// }
+/// ```
 pub struct PostgresVectorRetriever<T>
 where
     T: AsyncEmbeddingClient,
 {
-    pub pool: Pool<Postgres>,
+    pool: Pool<Postgres>,
     table_name: String,
     embedding_client: T,
     distance_function: DistanceFunction,
@@ -25,15 +47,15 @@ where
 
 impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
     /// # [`PostgresVectorRetriever::new`]
-    /// This new function should be called the a vectors stores as_retriver() function.
+    /// This constructor is only used internally to allow .as_retriever methods to create a retriever.
     ///
     /// # Arguments
-    /// * `pool` - A sqlx::Pool<Postgres> which is used to connect to the database.
-    /// * `table_name` - The name of the table which contains the vectors.
-    /// * `embedding_client` - An instance of a type which implements the AsyncEmbeddingClient trait.
+    /// * `pool`: [`sqlx::Pool<Postgres>`] - Which we can use to interact with the database.
+    /// * `table_name`: [`String`] - The name of the table which contains the vectors.
+    /// * `embedding_client`: [`T`] - An instance of a type which implements the AsyncEmbeddingClient trait.
     ///
     /// # Returns
-    /// * A PostgresVectorRetriever
+    /// * [`PostgresVectorRetriever`] the created struct
     pub(crate) fn new(
         pool: Pool<Postgres>,
         table_name: String,
@@ -48,6 +70,16 @@ impl<T: AsyncEmbeddingClient> PostgresVectorRetriever<T> {
         }
     }
 
+    /// # [`PostgresVectorRetriever::select_row_sql`]
+    ///
+    /// Helper function to genrate the sql query for a similarity search.
+    ///
+    /// # Arguments
+    /// * `table_name`: &[`str`] - The name of the table to search.
+    /// * `distance_function`: [`DistanceFunction`] - The distance function to use.
+    ///
+    /// # Returns
+    /// * [`String`] - The sql query.
     fn select_row_sql(table_name: &str, distance_function: DistanceFunction) -> String {
         format!(
             "SELECT id, content, embedding, metadata FROM {} ORDER BY embedding {} $1::vector LIMIT $2",
@@ -67,20 +99,19 @@ where
 
     /// # [`PostgresVectorRetriever::retrieve`]
     ///
-    /// Implementation of the retrieve function for PostgresVectorRetriever.
-    /// This is currently doing a cosine similarity search. We intend to support
-    /// all the similarity functions supported by postgres in the future.
+    /// Implementation of the retrieve function for [`PostgresVectorRetriever`].
+    /// This allows us to retrieve similar text from the vector database.
     ///
     /// # Arguments
-    /// * `text` - The text to find similar text for.
-    /// * `number_of_results` - The number of results to return.
+    /// * `text`: &[`str`] - The text we are searching for similar text against.
+    /// * `top_k`: [`NonZeroU32`] - The number of results to return.
     ///
     /// # Errors
     /// * [`PostgresRetrieverError::EmbeddingClientError`] - If the embedding client returns an error.
     /// * [`PostgresRetrieverError::QueryError`] - If there is an error querying the database.
     ///
     /// # Returns
-    /// * A [`Chunks`] which are the most similar to the input text.
+    /// * [`Chunks`] which are the most similar to the input text.
     async fn retrieve(&self, text: &str, top_k: NonZeroU32) -> Result<Chunks, Self::ErrorType> {
         let k: i32 = top_k.get() as i32;
         let chunk: Chunk = Chunk::new(text);
@@ -107,6 +138,9 @@ where
     }
 }
 
+/// # [`DistanceFunction`]
+/// This is an enum for the types of distance functions
+/// that can be used to compare vectors.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DistanceFunction {
     L2,
@@ -116,6 +150,7 @@ pub enum DistanceFunction {
 
 /// # [`PostgresRow`]
 /// Type that represents a row in our defined structure
+/// which allows us to use [`sqlx::query_as`].
 #[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
 pub struct PostgresRow {
     pub id: i32,
@@ -151,8 +186,11 @@ impl Display for DistanceFunction {
 /// This allows us to avoid dynamic dispatched error types.
 #[derive(Debug)]
 pub enum PostgresRetrieverError<T: Error> {
+    /// If an error occured while trying to embed the text supplied
+    /// as an arguement
     EmbeddingClientError(T),
-    QueryError(SqlxError),
+    /// If an error occured while doing the similarity search
+    QueryError(sqlx::Error),
 }
 impl<T: Error> Error for PostgresRetrieverError<T> {}
 impl<T: Error> Display for PostgresRetrieverError<T> {
