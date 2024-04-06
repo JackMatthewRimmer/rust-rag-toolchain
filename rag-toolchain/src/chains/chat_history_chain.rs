@@ -2,6 +2,7 @@ use crate::{
     chains::ChainError,
     clients::{AsyncChatClient, PromptMessage},
 };
+use std::cell::RefCell;
 use std::iter::once;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,7 +48,7 @@ where
     /// # Returns
     /// * [`PromptMessage::AIMessage`] - the response from the chat client.
     pub async fn invoke_chain(
-        &mut self,
+        &self,
         user_message: PromptMessage,
     ) -> Result<PromptMessage, ChainError<T::ErrorType>> {
         let history: Vec<PromptMessage> = self.chat_history_buffer.get_messages();
@@ -72,7 +73,7 @@ where
 /// Internal buffer we will hide from the user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ChatHistoryBuffer {
-    messages: Vec<PromptMessage>,
+    messages: RefCell<Vec<PromptMessage>>,
 }
 
 impl ChatHistoryBuffer {
@@ -80,18 +81,21 @@ impl ChatHistoryBuffer {
     /// we start a chat history buffer with a system prompt.
     fn new(system_prompt: PromptMessage) -> Self {
         ChatHistoryBuffer {
-            messages: vec![system_prompt],
+            messages: RefCell::new(vec![system_prompt]),
         }
     }
     /// # [`ChatHistoryBuffer::get_messages`]
     /// return a reference to the messages in the buffer.
     fn get_messages(&self) -> Vec<PromptMessage> {
-        self.messages.clone()
+        let reference: &Vec<PromptMessage> = &self.messages.borrow();
+        reference.clone()
     }
 
     /// # [`ChatHistoryBuffer::append`]
-    fn append(&mut self, message: PromptMessage) {
-        self.messages.push(message);
+    fn append(&self, message: PromptMessage) {
+        println!("Appending message: {:?}", message);
+        let reference: &mut Vec<PromptMessage> = &mut self.messages.borrow_mut();
+        reference.push(message);
     }
 }
 
@@ -133,17 +137,17 @@ mod chat_history_chain_tests {
             .times(1)
             .returning(|_| Ok(AI_RESPONSE_2.clone()));
 
-        let mut chat_history_chain = ChatHistoryChain::new(chat_client, SYSTEM_PROMPT.clone());
+        let chat_history_chain = ChatHistoryChain::new(chat_client, SYSTEM_PROMPT.clone());
         let result = chat_history_chain
             .invoke_chain(USER_PROMPT_1.clone())
             .await
             .unwrap();
         assert_eq!(result, AI_RESPONSE.clone());
 
-        chat_history_chain
+        let result2 = chat_history_chain
             .invoke_chain(USER_PROMPT_2.clone())
             .await
             .unwrap();
-        assert_eq!(result, AI_RESPONSE.clone());
+        assert_eq!(result2, AI_RESPONSE_2.clone());
     }
 }
