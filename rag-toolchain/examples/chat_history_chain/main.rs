@@ -9,7 +9,7 @@ const SYSTEM_MESSAGE: &'static str = "You are a chat bot that must answer questi
 async fn main() {
     let system_prompt = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());
     let client = OpenAIChatCompletionClient::try_new(Gpt3Point5).unwrap();
-    let mut chain = ChatHistoryChain::new(client, system_prompt);
+    let chain = ChatHistoryChain::new(client, system_prompt);
     let user_prompt1 = PromptMessage::HumanMessage("Please tell me about the weather".into());
     let response1 = chain.invoke_chain(user_prompt1).await.unwrap();
     let user_prompt2 =
