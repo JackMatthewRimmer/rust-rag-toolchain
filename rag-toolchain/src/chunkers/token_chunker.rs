@@ -73,9 +73,9 @@ impl TokenChunker {
     // function to validate arguments when [`TokenChunker::new`] is called
     //
     // # Arguments
-    // * `chunk_size` - The size in tokens of each chunk
-    // * `chunk_overlap` - The number of tokens that overlap between each chunk
-    // * `max_chunk_size` - The maximum number of tokens allowed which is defined
+    // * `chunk_size`: [`usize`] - The size in tokens of each chunk
+    // * `chunk_overlap`: [`usize`] - The number of tokens that overlap between each chunk
+    // * `max_chunk_size`: [`usize`] - The maximum number of tokens allowed which is defined
     //                      by the embedding model passed to the [`TokenChunker::new`] function
     // # Errors
     // * [`ChunkingError::InvalidChunkSize`] - Chunk size must be smaller than the maximum number of tokens
@@ -107,7 +107,7 @@ impl TokenChunker {
     /// function to generate chunks from raw text
     ///
     /// # Arguments
-    /// * `raw_text` - The raw text to generate chunks from
+    /// * `raw_text`: &[`str`] - The raw text to generate chunks from
     ///
     /// # Errors
     /// * [`ChunkingError::TokenizationError`] - Unable to tokenize text
