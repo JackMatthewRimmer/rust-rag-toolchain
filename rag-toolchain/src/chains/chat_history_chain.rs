@@ -5,6 +5,35 @@ use crate::{
 use std::cell::RefCell;
 use std::iter::once;
 
+/// # [`ChatHistoryChain`]
+///
+/// The chat history chain executes the workflow of saving each message in the conversation history.
+/// that is then resent with each subsequent request to the chat client. So previous messages can be
+//  referenced in prompts and the LLM will be aware of it.
+///
+/// * `T` - The type of the chat client to be used
+///
+/// # Examples
+/// ```
+///
+/// use rag_toolchain::clients::*;
+/// use rag_toolchain::chains::*;
+///
+/// async fn run_chain() {
+///     const SYSTEM_MESSAGE: &'static str = "You are a chat bot that must answer questions accurately";
+///     let system_prompt = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());
+///     let client = OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt3Point5).unwrap();
+///     let chain = ChatHistoryChain::new(client, system_prompt);
+///     let user_prompt1 = PromptMessage::HumanMessage("Please tell me about the weather".into());
+///     let response1 = chain.invoke_chain(user_prompt1).await.unwrap();
+///     let user_prompt2 =
+///     PromptMessage::HumanMessage("What was the last question I just asked ?".into());
+///     let response2 = chain.invoke_chain(user_prompt2).await.unwrap();
+///     println!("Response 1: {}", response1.content());
+///     println!("Response 2: {}", response2.content());
+/// }
+///
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChatHistoryChain<T>
 where
@@ -23,9 +52,8 @@ where
     /// This constructor to create a new ChatHistoryChain.
     ///
     /// # Arguments
-    /// * `chat_client` - The chat client to be used
-    /// * `retriever` - The retriever to be used
-    /// * `system_prompt` - The system prompt, please use [`PromptMessage::SystemMessage`]
+    /// * `chat_client`: [`T`] - The chat client to be used
+    /// * `system_prompt`: [`PromptMessage`] - The system prompt, please use [`PromptMessage::SystemMessage`]
     pub fn new(chat_client: T, system_prompt: PromptMessage) -> Self {
         let chat_history_buffer = ChatHistoryBuffer::new(system_prompt);
         ChatHistoryChain {
@@ -40,7 +68,7 @@ where
     /// Each time this method is invoked, the user message is added to the chat history.
     ///
     /// # Arguments
-    /// * `user_message` - the user prompt that will be sent to the LLM along with the chat history.
+    /// * `user_message`: [`PromptMessage`] - the user prompt that will be sent to the LLM along with the chat history.
     ///
     /// # Errors
     /// * [`ChainError::ChatClientError`] if the chat client invocation fails.
