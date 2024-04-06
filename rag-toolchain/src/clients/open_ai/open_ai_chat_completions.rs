@@ -23,12 +23,11 @@ const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/comple
 /// use serde_json::Value;
 /// async fn generate_embedding() {
 ///     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
-///     let mut client: OpenAIChatCompletionClient =
-///     OpenAIChatCompletionClient::try_new(model).unwrap();
 ///     let mut additional_config: Map<String, Value> = Map::new();
 ///     additional_config.insert("temperature".into(), 0.5.into());
-///     client.with_additional_config(additional_config);
 ///
+///     let client: OpenAIChatCompletionClient =
+///         OpenAIChatCompletionClient::try_new_with_additional_config(model, additional_config).unwrap();
 ///     let system_message: PromptMessage = PromptMessage::SystemMessage(
 ///         "You are a comedian that cant ever reply to someone unless its phrased as a sarcastic joke"
 ///         .into());
@@ -51,6 +50,19 @@ pub struct OpenAIChatCompletionClient {
 }
 
 impl OpenAIChatCompletionClient {
+    /// # [`OpenAIChatCompletionClient::try_new`]
+    ///
+    /// This method creates a new OpenAIChatCompletionClient. All inference parameters used
+    /// will be the default ones provided by the OpenAI API.
+    ///
+    /// # Arguments
+    /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
+    ///
+    /// # Errors
+    /// * [`VarError`] - if the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// * [`OpenAIChatCompletionClient`] - the chat completion client.
     pub fn try_new(model: OpenAIModel) -> Result<OpenAIChatCompletionClient, VarError> {
         let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
         Ok(OpenAIChatCompletionClient {
@@ -61,14 +73,32 @@ impl OpenAIChatCompletionClient {
         })
     }
 
-    /// # [`OpenAIChatCompletionClient::with_additional_config`]
+    /// # [`OpenAIChatCompletionClient::try_new_with_additional_config`]
     ///
-    /// This methods allows users to set additional parameters to be included
-    /// in chat completion requests such as top_p, temperature, seed etc. Note
-    /// that setting 'n' will not yield anything as we only return the first
-    /// message we got back.
-    pub fn with_additional_config(&mut self, config: Map<String, Value>) {
-        self.additional_config = Some(config);
+    /// This method creates a new OpenAIChatCompletionClient. All inference parameters provided
+    /// in the additional_config will be used in the chat completion request. an example of this
+    /// could be 'temperature', 'top_p', 'seed' etc.
+    ///
+    /// # Arguments
+    /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
+    /// * `additional_config`: [`Map<String, Value>`] - The additional configuration to use for the chat completion.
+    ///
+    /// # Errors
+    /// * [`VarError`] - if the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// * [`OpenAIChatCompletionClient`] - the chat completion client.
+    pub fn try_new_with_additional_config(
+        model: OpenAIModel,
+        additional_config: Map<String, Value>,
+    ) -> Result<OpenAIChatCompletionClient, VarError> {
+        let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
+        Ok(OpenAIChatCompletionClient {
+            url: OPENAI_CHAT_COMPLETIONS_URL.into(),
+            client,
+            model,
+            additional_config: Some(additional_config),
+        })
     }
 }
 

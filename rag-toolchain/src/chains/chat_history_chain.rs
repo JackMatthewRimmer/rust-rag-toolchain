@@ -67,31 +67,31 @@ where
     }
 }
 
-/// # [`ChatHistoryBuffer`]
-///
-/// This struct is used to store the chat history of the conversation.
-/// Internal buffer we will hide from the user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct ChatHistoryBuffer {
     messages: RefCell<Vec<PromptMessage>>,
 }
 
 impl ChatHistoryBuffer {
-    /// # [`ChatHistoryBuffer::new`]
-    /// we start a chat history buffer with a system prompt.
+    /// [`ChatHistoryBuffer::new`]
+    ///
+    /// Creates a new chat history buffer with a system prompt.
     fn new(system_prompt: PromptMessage) -> Self {
         ChatHistoryBuffer {
             messages: RefCell::new(vec![system_prompt]),
         }
     }
     /// # [`ChatHistoryBuffer::get_messages`]
-    /// return a reference to the messages in the buffer.
+    ///
+    /// return a clone of the messages in the buffer.
     fn get_messages(&self) -> Vec<PromptMessage> {
         let reference: &Vec<PromptMessage> = &self.messages.borrow();
         reference.clone()
     }
 
     /// # [`ChatHistoryBuffer::append`]
+    ///
+    /// Appends a message to the chat history buffer.
     fn append(&self, message: PromptMessage) {
         println!("Appending message: {:?}", message);
         let reference: &mut Vec<PromptMessage> = &mut self.messages.borrow_mut();

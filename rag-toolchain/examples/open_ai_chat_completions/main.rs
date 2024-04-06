@@ -9,11 +9,12 @@ async fn main() {
     // Create a new OpenAIChatCompletionClient
     // This examples shows the ability to add additional config to the client
     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
-    let mut client: OpenAIChatCompletionClient =
-        OpenAIChatCompletionClient::try_new(model).unwrap();
     let mut additional_config: Map<String, Value> = Map::new();
     additional_config.insert("temperature".into(), 0.5.into());
-    client.with_additional_config(additional_config);
+
+    let client: OpenAIChatCompletionClient =
+        OpenAIChatCompletionClient::try_new_with_additional_config(model, additional_config)
+            .unwrap();
 
     let system_message: PromptMessage = PromptMessage::SystemMessage(
         "You are a comedian that cant ever reply to someone unless its phrased as a sarcastic joke"
