@@ -37,6 +37,7 @@ pub enum OpenAIError {
     ErrorGettingResponseBody(String),
     // # Carries underlying error and the status code
     ErrorDeserializingResponseBody(u16, String),
+    ErrorReadingStream(String),
 }
 
 impl std::error::Error for OpenAIError {}
@@ -79,6 +80,9 @@ impl Display for OpenAIError {
                     "Status Code: {} Error Deserializing Response Body: {}",
                     code, error
                 )
+            }
+            OpenAIError::ErrorReadingStream(error) => {
+                write!(f, "Error Reading Stream: {}", error)
             }
         }
     }

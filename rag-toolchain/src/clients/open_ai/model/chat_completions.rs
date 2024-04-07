@@ -27,7 +27,7 @@ pub struct ChatCompletionResponse {
     pub usage: Usage,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ChatMessageRole {
     System,
@@ -44,7 +44,7 @@ pub enum OpenAIModel {
     Gpt3Point5,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct ChatMessage {
     pub role: ChatMessageRole,
     pub content: String,

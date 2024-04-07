@@ -1,3 +1,5 @@
+use futures::StreamExt;
+use reqwest_eventsource::{Event, EventSource};
 use serde_json::{Map, Value};
 use std::env::VarError;
 
@@ -100,6 +102,26 @@ impl OpenAIChatCompletionClient {
             additional_config: Some(additional_config),
         })
     }
+
+    pub async fn streaming_test(&self) {
+        let body: ChatCompletionRequest = ChatCompletionRequest {
+            model: self.model,
+            messages: vec![PromptMessage::HumanMessage("Hello".into()).into()],
+            additional_config: self.additional_config.clone(),
+        };
+
+        let mut event_source: EventSource = self
+            .client
+            .send_stream_request(body, &self.url)
+            .await
+            .unwrap();
+
+        let mut stream = ChatCompletionStream::new(&mut event_source);
+
+        while let Some(value) = stream.next().await {
+            println!("{:?}", value);
+        }
+    }
 }
 
 impl AsyncChatClient for OpenAIChatCompletionClient {
@@ -138,6 +160,98 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
             .collect();
 
         Ok(messages[0].clone())
+    }
+}
+
+pub struct ChatCompletionStream<'a> {
+    event_source: &'a mut EventSource,
+}
+
+pub enum ChatCompletionStreamValue {
+    Connecting,
+    /// the response parsed as a prompt message
+    Message(PromptMessage),
+    /// any errors that occured reading the next value in the stream
+    Error(OpenAIError),
+    /// This is a signal that the stream has ended.
+    EOS,
+}
+
+impl<'a> ChatCompletionStream<'a> {
+    const STOP_MESSAGE: &'static str = "[DONE]";
+
+    /// # [`ChatCompletionStream::new`]
+    ///
+    /// This struct just wraps the EventSource when from the
+    /// context of streaming chat completions.
+    pub fn new(event_source: &'a mut EventSource) -> Self {
+        Self { event_source }
+    }
+
+    pub async fn next(&mut self) -> Option<String> {
+        self.event_source.next().await.map(|event| match event {
+            Ok(Event::Open) => "Connecting".into(),
+            Ok(Event::Message(msg)) => {
+                if msg.data == Self::STOP_MESSAGE {
+                    self.event_source.close();
+                    "EOS".into()
+                } else {
+                    msg.data
+                }
+            }
+            Err(e) => {
+                self.event_source.close();
+                e.to_string()
+            }
+        })
+
+        // let value: ChatCompletionStreamValue = match self.event_source.next().await {
+        //     Some(event) => match event {
+        //         Ok(Event::Open) => ChatCompletionStreamValue::Connecting,
+        //         Ok(Event::Message(msg)) => {
+        //             println!("{:?}", msg.data);
+        //             if msg.data == Self::STOP_MESSAGE {
+        //                 ChatCompletionStreamValue::EOS
+        //             } else {
+        //                 Self::parse_message(&msg.data)
+        //             }
+        //         }
+        //         Err(e) => {
+        //             ChatCompletionStreamValue::Error(OpenAIError::ErrorReadingStream(e.to_string()))
+        //         }
+        //     },
+        //     None => ChatCompletionStreamValue::Connecting,
+        // };
+
+        // self.event_source.close();
+        // value
+    }
+
+    /// # [`ChatCompletionStream::parse_message`]
+    ///
+    /// Helper method to deserialize the message from the event source.
+    ///
+    /// # Arguments
+    /// * `msg`: &[`str`] - the raw response from the event source.
+    fn parse_message(msg: &str) -> ChatCompletionStreamValue {
+        match serde_json::from_str::<ChatCompletionResponse>(msg) {
+            Ok(deserialized_message) => {
+                return ChatCompletionStreamValue::Message(
+                    deserialized_message
+                        .choices
+                        .get(0)
+                        .unwrap()
+                        .message
+                        .clone()
+                        .into(),
+                );
+            }
+            Err(e) => {
+                return ChatCompletionStreamValue::Error(
+                    OpenAIError::ErrorDeserializingResponseBody(200, e.to_string()),
+                );
+            }
+        }
     }
 }
 
@@ -180,6 +294,19 @@ mod chat_completion_client_test {
         }
     }
     "#;
+
+    #[tokio::test]
+    async fn streaming_test() {
+        let mut additional_config: Map<String, Value> = Map::new();
+        additional_config.insert("stream".into(), true.into());
+        let client: OpenAIChatCompletionClient =
+            OpenAIChatCompletionClient::try_new_with_additional_config(
+                OpenAIModel::Gpt3Point5,
+                additional_config,
+            )
+            .unwrap();
+        client.streaming_test().await;
+    }
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {

@@ -3,7 +3,7 @@ use crate::clients::open_ai::model::errors::{OpenAIError, OpenAIErrorBody};
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
-use reqwest_eventsource::EventSource;
+use reqwest_eventsource::{EventSource, RequestBuilderExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::env;
@@ -95,8 +95,8 @@ impl OpenAIHttpClient {
         T: Serialize,
     {
         let request: RequestBuilder = self.build_requeset(body, url);
-        // Pretty sure the request gets sent when ::new is called
-        let source = EventSource::new(request)
+        let source = request
+            .eventsource()
             .map_err(|e| OpenAIError::ErrorSendingRequest(e.to_string()))?;
         Ok(source)
     }
