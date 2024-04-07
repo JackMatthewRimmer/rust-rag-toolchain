@@ -167,6 +167,7 @@ pub struct ChatCompletionStream<'a> {
     event_source: &'a mut EventSource,
 }
 
+#[derive(Debug)]
 pub enum ChatCompletionStreamValue {
     Connecting,
     /// the response parsed as a prompt message
@@ -188,43 +189,23 @@ impl<'a> ChatCompletionStream<'a> {
         Self { event_source }
     }
 
-    pub async fn next(&mut self) -> Option<String> {
+    pub async fn next(&mut self) -> Option<ChatCompletionStreamValue> {
         self.event_source.next().await.map(|event| match event {
-            Ok(Event::Open) => "Connecting".into(),
+            Ok(Event::Open) => ChatCompletionStreamValue::Connecting,
             Ok(Event::Message(msg)) => {
                 if msg.data == Self::STOP_MESSAGE {
                     self.event_source.close();
-                    "EOS".into()
+                    ChatCompletionStreamValue::EOS
                 } else {
-                    msg.data
+                    println!("{}", serde_json::to_string_pretty(&msg.data).unwrap());
+                    Self::parse_message(&msg.data)
                 }
             }
             Err(e) => {
                 self.event_source.close();
-                e.to_string()
+                ChatCompletionStreamValue::Error(OpenAIError::ErrorReadingStream(e.to_string()))
             }
         })
-
-        // let value: ChatCompletionStreamValue = match self.event_source.next().await {
-        //     Some(event) => match event {
-        //         Ok(Event::Open) => ChatCompletionStreamValue::Connecting,
-        //         Ok(Event::Message(msg)) => {
-        //             println!("{:?}", msg.data);
-        //             if msg.data == Self::STOP_MESSAGE {
-        //                 ChatCompletionStreamValue::EOS
-        //             } else {
-        //                 Self::parse_message(&msg.data)
-        //             }
-        //         }
-        //         Err(e) => {
-        //             ChatCompletionStreamValue::Error(OpenAIError::ErrorReadingStream(e.to_string()))
-        //         }
-        //     },
-        //     None => ChatCompletionStreamValue::Connecting,
-        // };
-
-        // self.event_source.close();
-        // value
     }
 
     /// # [`ChatCompletionStream::parse_message`]
