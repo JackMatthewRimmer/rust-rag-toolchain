@@ -9,7 +9,9 @@ use crate::clients::open_ai::model::chat_completions::{
 use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
 use crate::clients::{AsyncChatClient, PromptMessage};
 
-use super::model::chat_completions::ChatMessage;
+use super::model::chat_completions::{
+    ChatCompletionStreamingResponse, ChatMessage, ChatMessageStreaming,
+};
 use super::model::errors::OpenAIError;
 
 const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
@@ -197,7 +199,7 @@ impl<'a> ChatCompletionStream<'a> {
                     self.event_source.close();
                     ChatCompletionStreamValue::EOS
                 } else {
-                    println!("{}", serde_json::to_string_pretty(&msg.data).unwrap());
+                    println!("{}", &msg.data);
                     Self::parse_message(&msg.data)
                 }
             }
@@ -215,24 +217,19 @@ impl<'a> ChatCompletionStream<'a> {
     /// # Arguments
     /// * `msg`: &[`str`] - the raw response from the event source.
     fn parse_message(msg: &str) -> ChatCompletionStreamValue {
-        match serde_json::from_str::<ChatCompletionResponse>(msg) {
-            Ok(deserialized_message) => {
-                return ChatCompletionStreamValue::Message(
-                    deserialized_message
-                        .choices
-                        .get(0)
-                        .unwrap()
-                        .message
-                        .clone()
-                        .into(),
-                );
-            }
+        let chat_message: ChatMessageStreaming = match serde_json::from_str::<
+            ChatCompletionStreamingResponse,
+        >(msg)
+        {
+            Ok(deserialized_message) => deserialized_message.choices.get(0).unwrap().delta.clone(),
             Err(e) => {
                 return ChatCompletionStreamValue::Error(
                     OpenAIError::ErrorDeserializingResponseBody(200, e.to_string()),
                 );
             }
-        }
+        };
+        let chat_message: PromptMessage = PromptMessage::AIMessage(chat_message.content);
+        ChatCompletionStreamValue::Message(chat_message)
     }
 }
 

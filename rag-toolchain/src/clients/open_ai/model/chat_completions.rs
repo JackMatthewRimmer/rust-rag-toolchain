@@ -95,12 +95,57 @@ pub struct ChatCompletionChoices {
     pub finish_reason: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ChatCompletionStreamingResponse {
+    pub id: String,
+    pub object: String,
+    pub created: u64,
+    pub model: String,
+    pub system_fingerprint: String,
+    pub choices: Vec<ChatCompletionStreamingChoice>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct ChatCompletionStreamingChoice {
+    pub index: usize,
+    pub delta: ChatMessageStreaming,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub logprobs: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub finish_reason: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct ChatMessageStreaming {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<ChatMessageRole>,
+    pub content: String,
+}
+
 #[cfg(test)]
 mod request_model_tests {
 
     use super::*;
     const CHAT_COMPLETION_REQUEST: &str = r#"{"model":"gpt-4","messages":[{"role":"system","content":"Hello,howareyou?"},{"role":"user","content":"I'mdoinggreat.Howaboutyou?"},{"role":"system","content":"I'mdoingwell.I'mgladtohearyou'redoingwell."}],"temerature":0.7}"#;
     const CHAT_COMPLETION_RESPONSE: &str = r#"{"id":"chatcmpl-123","object":"chat.completion","created":1677652288,"model":"gpt-4","system_fingerprint":"fp_44709d6fcb","choices":[{"index":0,"message":{"role":"assistant","content":"\n\nHello there, how may I assist you today?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":12,"total_tokens":21}}"#;
+    const CHAT_COMPLETION_STREAMING_RESPONSE: &str = r#"{
+        "id": "chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0",
+        "object": "chat.completion.chunk",
+        "created": 1712513908,
+        "model": "gpt-3.5-turbo-0125",
+        "system_fingerprint": "fp_b28b39ffa8",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "role": "assistant",
+              "content": ""
+            },
+            "logprobs": null,
+            "finish_reason": null
+          }
+        ]
+    }"#;
 
     #[test]
     fn test_chat_completion_request_serializes() {
@@ -155,6 +200,30 @@ mod request_model_tests {
                 completion_tokens: 12,
                 total_tokens: 21,
             },
+        };
+        assert_eq!(expected_response, response)
+    }
+
+    #[test]
+    fn test_chat_completions_streaming_response_deserializes() {
+        let response: ChatCompletionStreamingResponse =
+            serde_json::from_str(CHAT_COMPLETION_STREAMING_RESPONSE).unwrap();
+
+        let expected_response: ChatCompletionStreamingResponse = ChatCompletionStreamingResponse {
+            id: "chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0".into(),
+            object: "chat.completion.chunk".into(),
+            created: 1712513908,
+            model: "gpt-3.5-turbo-0125".into(),
+            system_fingerprint: "fp_b28b39ffa8".into(),
+            choices: vec![ChatCompletionStreamingChoice {
+                index: 0,
+                delta: ChatMessageStreaming {
+                    role: Some(ChatMessageRole::Assistant),
+                    content: "".into(),
+                },
+                logprobs: None,
+                finish_reason: None,
+            }],
         };
         assert_eq!(expected_response, response)
     }
