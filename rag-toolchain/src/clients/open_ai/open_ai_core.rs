@@ -3,6 +3,7 @@ use crate::clients::open_ai::model::errors::{OpenAIError, OpenAIErrorBody};
 use dotenv::dotenv;
 use reqwest::header::{HeaderValue, CONTENT_TYPE};
 use reqwest::{Client, RequestBuilder, Response, StatusCode};
+use reqwest_eventsource::EventSource;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::env;
@@ -79,6 +80,25 @@ impl OpenAIHttpClient {
         serde_json::from_str(&response_body).map_err(|error| {
             OpenAIError::ErrorDeserializingResponseBody(status_code.as_u16(), error.to_string())
         })
+    }
+
+    /// # [`OpenAIHttpClient::send_stream_request`]
+    ///
+    /// Sends a request to the OpenAI API and returns the response as an EventSource
+    /// this will be used for the streaming implementations that use SSE.
+    pub async fn send_stream_request<T>(
+        &self,
+        body: T,
+        url: &str,
+    ) -> Result<EventSource, OpenAIError>
+    where
+        T: Serialize,
+    {
+        let request: RequestBuilder = self.build_requeset(body, url);
+        // Pretty sure the request gets sent when ::new is called
+        let source = EventSource::new(request)
+            .map_err(|e| OpenAIError::ErrorSendingRequest(e.to_string()))?;
+        Ok(source)
     }
 
     /// # [`OpenAIHttpClient::build_requeset`]
