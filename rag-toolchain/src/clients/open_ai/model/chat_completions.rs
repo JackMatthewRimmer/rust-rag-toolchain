@@ -119,7 +119,7 @@ pub struct ChatCompletionStreamingChoice {
 pub struct ChatMessageStreaming {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<ChatMessageRole>,
-    pub content: String,
+    pub content: Option<String>,
 }
 
 #[cfg(test)]
@@ -219,7 +219,7 @@ mod request_model_tests {
                 index: 0,
                 delta: ChatMessageStreaming {
                     role: Some(ChatMessageRole::Assistant),
-                    content: "".into(),
+                    content: Some("".into()),
                 },
                 logprobs: None,
                 finish_reason: None,

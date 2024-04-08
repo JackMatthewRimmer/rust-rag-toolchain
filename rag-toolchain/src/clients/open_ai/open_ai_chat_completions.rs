@@ -1,6 +1,7 @@
 use futures::StreamExt;
 use reqwest_eventsource::{Event, EventSource};
 use serde_json::{Map, Value};
+use std::cell::RefCell;
 use std::env::VarError;
 
 use crate::clients::open_ai::model::chat_completions::{
@@ -112,13 +113,13 @@ impl OpenAIChatCompletionClient {
             additional_config: self.additional_config.clone(),
         };
 
-        let mut event_source: EventSource = self
+        let event_source: EventSource = self
             .client
             .send_stream_request(body, &self.url)
             .await
             .unwrap();
 
-        let mut stream = ChatCompletionStream::new(&mut event_source);
+        let mut stream = ChatCompletionStream::new(event_source);
 
         while let Some(value) = stream.next().await {
             println!("{:?}", value);
@@ -165,49 +166,54 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
     }
 }
 
-pub struct ChatCompletionStream<'a> {
-    event_source: &'a mut EventSource,
+pub struct ChatCompletionStream {
+    event_source: RefCell<EventSource>,
 }
 
 #[derive(Debug)]
 pub enum ChatCompletionStreamValue {
     Connecting,
-    /// the response parsed as a prompt message
     Message(PromptMessage),
-    /// any errors that occured reading the next value in the stream
-    Error(OpenAIError),
-    /// This is a signal that the stream has ended.
-    EOS,
 }
 
-impl<'a> ChatCompletionStream<'a> {
+impl ChatCompletionStream {
     const STOP_MESSAGE: &'static str = "[DONE]";
 
     /// # [`ChatCompletionStream::new`]
     ///
     /// This struct just wraps the EventSource when from the
     /// context of streaming chat completions.
-    pub fn new(event_source: &'a mut EventSource) -> Self {
-        Self { event_source }
+    pub fn new(event_source: EventSource) -> Self {
+        Self {
+            event_source: RefCell::new(event_source),
+        }
     }
 
-    pub async fn next(&mut self) -> Option<ChatCompletionStreamValue> {
-        self.event_source.next().await.map(|event| match event {
-            Ok(Event::Open) => ChatCompletionStreamValue::Connecting,
-            Ok(Event::Message(msg)) => {
+    pub async fn next(&mut self) -> Option<Result<ChatCompletionStreamValue, OpenAIError>> {
+        let event_source: &mut EventSource = &mut self.event_source.borrow_mut();
+        let event: Result<Event, reqwest_eventsource::Error> = match event_source.next().await {
+            Some(event) => event,
+            None => return None,
+        };
+
+        let event: Event = match event {
+            Ok(event) => event,
+            Err(e) => {
+                return Some(Err(OpenAIError::ErrorReadingStream(e.to_string())));
+            }
+        };
+
+        match event {
+            Event::Message(msg) => {
                 if msg.data == Self::STOP_MESSAGE {
-                    self.event_source.close();
-                    ChatCompletionStreamValue::EOS
+                    event_source.close();
+                    return None;
                 } else {
-                    println!("{}", &msg.data);
                     Self::parse_message(&msg.data)
                 }
             }
-            Err(e) => {
-                self.event_source.close();
-                ChatCompletionStreamValue::Error(OpenAIError::ErrorReadingStream(e.to_string()))
-            }
-        })
+            Event::Open => Some(Ok(ChatCompletionStreamValue::Connecting)),
+        }
     }
 
     /// # [`ChatCompletionStream::parse_message`]
@@ -216,20 +222,24 @@ impl<'a> ChatCompletionStream<'a> {
     ///
     /// # Arguments
     /// * `msg`: &[`str`] - the raw response from the event source.
-    fn parse_message(msg: &str) -> ChatCompletionStreamValue {
-        let chat_message: ChatMessageStreaming = match serde_json::from_str::<
-            ChatCompletionStreamingResponse,
-        >(msg)
-        {
-            Ok(deserialized_message) => deserialized_message.choices.get(0).unwrap().delta.clone(),
+    fn parse_message(msg: &str) -> Option<Result<ChatCompletionStreamValue, OpenAIError>> {
+        let response: ChatCompletionStreamingResponse = match serde_json::from_str(msg) {
+            Ok(response) => response,
             Err(e) => {
-                return ChatCompletionStreamValue::Error(
-                    OpenAIError::ErrorDeserializingResponseBody(200, e.to_string()),
-                );
+                return Some(Err(OpenAIError::ErrorDeserializingResponseBody(
+                    200,
+                    e.to_string(),
+                )));
             }
         };
-        let chat_message: PromptMessage = PromptMessage::AIMessage(chat_message.content);
-        ChatCompletionStreamValue::Message(chat_message)
+        let chat_message: ChatMessageStreaming = response.choices.get(0).unwrap().delta.clone();
+        match chat_message.content {
+            Some(msg) => {
+                let prompt_message: PromptMessage = PromptMessage::AIMessage(msg);
+                Some(Ok(ChatCompletionStreamValue::Message(prompt_message)))
+            }
+            None => None,
+        }
     }
 }
 
