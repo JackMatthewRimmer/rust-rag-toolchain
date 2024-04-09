@@ -28,6 +28,23 @@ pub trait AsyncChatClient {
     ) -> impl Future<Output = Result<PromptMessage, Self::ErrorType>> + Send;
 }
 
+pub trait AsyncStreamedChatClient {
+    type ErrorType: Error;
+    fn invoke_stream(
+        &self,
+        prompt_messages: Vec<PromptMessage>,
+    ) -> impl Future<Output = Result<impl ChatCompletionStream, Self::ErrorType>> + Send;
+}
+
+/// # [`ChatCompletionStream`]
+///
+/// Trait for any stream that generates chat completions
+pub trait ChatCompletionStream {
+    type ErrorType: Error;
+    type Item;
+    fn next(&self) -> impl Future<Output = Option<Result<Self::Item, Self::ErrorType>>>;
+}
+
 #[cfg(test)]
 use mockall::*;
 #[cfg(test)]

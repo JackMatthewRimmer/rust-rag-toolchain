@@ -96,19 +96,19 @@ pub struct ChatCompletionChoices {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ChatCompletionStreamingResponse {
+pub struct ChatCompletionStreamedResponse {
     pub id: String,
     pub object: String,
     pub created: u64,
     pub model: String,
     pub system_fingerprint: String,
-    pub choices: Vec<ChatCompletionStreamingChoice>,
+    pub choices: Vec<ChatCompletionStreamedChoices>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct ChatCompletionStreamingChoice {
+pub struct ChatCompletionStreamedChoices {
     pub index: usize,
-    pub delta: ChatMessageStreaming,
+    pub delta: ChatCompletionDelta,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub logprobs: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -116,7 +116,7 @@ pub struct ChatCompletionStreamingChoice {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct ChatMessageStreaming {
+pub struct ChatCompletionDelta {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub role: Option<ChatMessageRole>,
     pub content: Option<String>,
@@ -206,18 +206,18 @@ mod request_model_tests {
 
     #[test]
     fn test_chat_completions_streaming_response_deserializes() {
-        let response: ChatCompletionStreamingResponse =
+        let response: ChatCompletionStreamedResponse =
             serde_json::from_str(CHAT_COMPLETION_STREAMING_RESPONSE).unwrap();
 
-        let expected_response: ChatCompletionStreamingResponse = ChatCompletionStreamingResponse {
+        let expected_response: ChatCompletionStreamedResponse = ChatCompletionStreamedResponse {
             id: "chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0".into(),
             object: "chat.completion.chunk".into(),
             created: 1712513908,
             model: "gpt-3.5-turbo-0125".into(),
             system_fingerprint: "fp_b28b39ffa8".into(),
-            choices: vec![ChatCompletionStreamingChoice {
+            choices: vec![ChatCompletionStreamedChoices {
                 index: 0,
-                delta: ChatMessageStreaming {
+                delta: ChatCompletionDelta {
                     role: Some(ChatMessageRole::Assistant),
                     content: Some("".into()),
                 },

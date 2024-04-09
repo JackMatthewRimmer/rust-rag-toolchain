@@ -8,10 +8,12 @@ use crate::clients::open_ai::model::chat_completions::{
     ChatCompletionChoices, ChatCompletionRequest, ChatCompletionResponse, OpenAIModel,
 };
 use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
-use crate::clients::{AsyncChatClient, PromptMessage};
+use crate::clients::{
+    AsyncChatClient, AsyncStreamedChatClient, ChatCompletionStream, PromptMessage,
+};
 
 use super::model::chat_completions::{
-    ChatCompletionStreamingResponse, ChatMessage, ChatMessageStreaming,
+    ChatCompletionDelta, ChatCompletionStreamedResponse, ChatMessage,
 };
 use super::model::errors::OpenAIError;
 
@@ -105,26 +107,6 @@ impl OpenAIChatCompletionClient {
             additional_config: Some(additional_config),
         })
     }
-
-    pub async fn streaming_test(&self) {
-        let body: ChatCompletionRequest = ChatCompletionRequest {
-            model: self.model,
-            messages: vec![PromptMessage::HumanMessage("Hello".into()).into()],
-            additional_config: self.additional_config.clone(),
-        };
-
-        let event_source: EventSource = self
-            .client
-            .send_stream_request(body, &self.url)
-            .await
-            .unwrap();
-
-        let mut stream = ChatCompletionStream::new(event_source);
-
-        while let Some(value) = stream.next().await {
-            println!("{:?}", value);
-        }
-    }
 }
 
 impl AsyncChatClient for OpenAIChatCompletionClient {
@@ -166,17 +148,59 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
     }
 }
 
-pub struct ChatCompletionStream {
+impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
+    type ErrorType = OpenAIError;
+
+    /// # [`OpenAIChatCompletionClient::invoke_stream`]
+    ///
+    /// function to execute the ChatCompletion given a list of prompt messages.
+    ///
+    /// # Arguments
+    /// * `prompt_messages`: [`PromptMessage`] - the list of prompt messages that will be sent to the LLM.
+    ///
+    /// # Errors
+    /// * [`OpenAIError`] - if the chat client invocation fails.
+    ///
+    /// # Returns
+    /// impl [`ChatCompletionStream`] - the response from the chat client.
+    async fn invoke_stream(
+        &self,
+        prompt_messages: Vec<PromptMessage>,
+    ) -> Result<impl ChatCompletionStream, Self::ErrorType> {
+        let mapped_messages: Vec<ChatMessage> =
+            prompt_messages.into_iter().map(ChatMessage::from).collect();
+
+        let body: ChatCompletionRequest = ChatCompletionRequest {
+            model: self.model,
+            messages: mapped_messages,
+            additional_config: self.additional_config.clone(),
+        };
+
+        let event_source: EventSource = self.client.send_stream_request(body, &self.url).await?;
+        Ok(OpenAICompletionStream::new(event_source))
+    }
+}
+
+/// [`OpenAICompletionStream`]
+///
+/// This structs wraps the EventSource and parses returned
+/// messages into prompt messages on demand.
+pub struct OpenAICompletionStream {
     event_source: RefCell<EventSource>,
 }
 
+/// [`CompletionStreamValue`]
+///
+/// Value returned from each iteration of the stream.
+/// Given we wanted to represent connecting as a non-failure
+/// state we had to create a new enum to represent this.
 #[derive(Debug)]
-pub enum ChatCompletionStreamValue {
+pub enum CompletionStreamValue {
     Connecting,
     Message(PromptMessage),
 }
 
-impl ChatCompletionStream {
+impl OpenAICompletionStream {
     const STOP_MESSAGE: &'static str = "[DONE]";
 
     /// # [`ChatCompletionStream::new`]
@@ -189,12 +213,82 @@ impl ChatCompletionStream {
         }
     }
 
-    pub async fn next(&mut self) -> Option<Result<ChatCompletionStreamValue, OpenAIError>> {
-        let event_source: &mut EventSource = &mut self.event_source.borrow_mut();
-        let event: Result<Event, reqwest_eventsource::Error> = match event_source.next().await {
-            Some(event) => event,
-            None => return None,
+    /// # [`ChatCompletionStream::parse_message`]
+    ///
+    /// Helper method to deserialize the raw response message from the event source.
+    ///
+    /// # Arguments
+    /// * `msg`: &[`str`] - the raw response from the event source.
+    ///
+    /// # Errors
+    /// * [`OpenAIError`] - if the chat client invocation fails.
+    ///
+    /// # Returns
+    /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
+    ///         None represents the stream is finished. and Some(Err) represents an error.
+    ///
+    fn parse_message(msg: &str) -> Option<Result<CompletionStreamValue, OpenAIError>> {
+        let response: ChatCompletionStreamedResponse = match serde_json::from_str(msg) {
+            Ok(response) => response,
+            Err(e) => {
+                return Some(Err(OpenAIError::ErrorDeserializingResponseBody(
+                    200,
+                    e.to_string(),
+                )));
+            }
         };
+        let chat_message: ChatCompletionDelta = response.choices.get(0).unwrap().delta.clone();
+        match chat_message.content {
+            Some(msg) => {
+                let prompt_message: PromptMessage = PromptMessage::AIMessage(msg);
+                Some(Ok(CompletionStreamValue::Message(prompt_message)))
+            }
+            None => None,
+        }
+    }
+}
+
+impl ChatCompletionStream for OpenAICompletionStream {
+    type ErrorType = OpenAIError;
+    type Item = CompletionStreamValue;
+
+    /// # [`ChatCompletionStream::next`]
+    ///
+    /// Method to iterate over the completion stream. Note it blocks
+    /// until the next message is received. At which point it will
+    /// parse the response into a [`CompletionStreamValue`].
+    ///
+    /// # Examples
+    /// ```
+    /// use rag_toolchain::clients::*;
+    ///
+    /// async fn stream_chat_completions(client: OpenAIChatCompletionClient) {
+    ///     let user_message: PromptMessage = PromptMessage::HumanMessage("Please ask me a question".into());
+    ///     let stream = client.invoke_stream(vec![user_message]).await.unwrap();
+    ///     while let Some(response) = stream.next().await {
+    ///         match response {
+    ///            Ok(CompletionStreamValue::Connecting) => {},
+    ///            Ok(CompletionStreamValue::Message(msg)) => {
+    ///                 println!("{:?}", msg.content());
+    ///            }
+    ///            Err(e) => {
+    ///                 println!("{:?}", e);
+    ///                 break;
+    ///            }
+    ///     }   
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    /// * [`OpenAIError::ErrorReadingStream`] - if there was an error reading from the stream.
+    /// * [`OpenAIError::ErrorDeserializingResponseBody`] - if there was an error deserializing the response body.
+    ///
+    /// # Returns
+    /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
+    ///         None represents the stream is finished..
+    async fn next(&self) -> Option<Result<Self::Item, Self::ErrorType>> {
+        let event_source: &mut EventSource = &mut self.event_source.borrow_mut();
+        let event: Result<Event, reqwest_eventsource::Error> = event_source.next().await?;
 
         let event: Event = match event {
             Ok(event) => event,
@@ -212,33 +306,7 @@ impl ChatCompletionStream {
                     Self::parse_message(&msg.data)
                 }
             }
-            Event::Open => Some(Ok(ChatCompletionStreamValue::Connecting)),
-        }
-    }
-
-    /// # [`ChatCompletionStream::parse_message`]
-    ///
-    /// Helper method to deserialize the message from the event source.
-    ///
-    /// # Arguments
-    /// * `msg`: &[`str`] - the raw response from the event source.
-    fn parse_message(msg: &str) -> Option<Result<ChatCompletionStreamValue, OpenAIError>> {
-        let response: ChatCompletionStreamingResponse = match serde_json::from_str(msg) {
-            Ok(response) => response,
-            Err(e) => {
-                return Some(Err(OpenAIError::ErrorDeserializingResponseBody(
-                    200,
-                    e.to_string(),
-                )));
-            }
-        };
-        let chat_message: ChatMessageStreaming = response.choices.get(0).unwrap().delta.clone();
-        match chat_message.content {
-            Some(msg) => {
-                let prompt_message: PromptMessage = PromptMessage::AIMessage(msg);
-                Some(Ok(ChatCompletionStreamValue::Message(prompt_message)))
-            }
-            None => None,
+            Event::Open => Some(Ok(CompletionStreamValue::Connecting)),
         }
     }
 }
@@ -282,19 +350,6 @@ mod chat_completion_client_test {
         }
     }
     "#;
-
-    #[tokio::test]
-    async fn streaming_test() {
-        let mut additional_config: Map<String, Value> = Map::new();
-        additional_config.insert("stream".into(), true.into());
-        let client: OpenAIChatCompletionClient =
-            OpenAIChatCompletionClient::try_new_with_additional_config(
-                OpenAIModel::Gpt3Point5,
-                additional_config,
-            )
-            .unwrap();
-        client.streaming_test().await;
-    }
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
