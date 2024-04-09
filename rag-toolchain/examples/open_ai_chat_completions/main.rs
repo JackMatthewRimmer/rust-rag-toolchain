@@ -1,7 +1,8 @@
 use serde_json::{Map, Value};
 
 use rag_toolchain::clients::{
-    AsyncChatClient, OpenAIChatCompletionClient, OpenAIModel, PromptMessage,
+    AsyncChatClient, AsyncStreamedChatClient, ChatCompletionStream, OpenAIChatCompletionClient,
+    OpenAICompletionStream, OpenAIModel, PromptMessage,
 };
 
 #[tokio::main]

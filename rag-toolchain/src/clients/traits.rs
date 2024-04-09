@@ -30,10 +30,11 @@ pub trait AsyncChatClient {
 
 pub trait AsyncStreamedChatClient {
     type ErrorType: Error;
+    type Item: ChatCompletionStream;
     fn invoke_stream(
         &self,
         prompt_messages: Vec<PromptMessage>,
-    ) -> impl Future<Output = Result<impl ChatCompletionStream, Self::ErrorType>> + Send;
+    ) -> impl Future<Output = Result<Self::Item, Self::ErrorType>> + Send;
 }
 
 /// # [`ChatCompletionStream`]

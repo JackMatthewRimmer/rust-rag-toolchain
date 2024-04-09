@@ -150,6 +150,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
 
 impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
     type ErrorType = OpenAIError;
+    type Item = OpenAICompletionStream;
 
     /// # [`OpenAIChatCompletionClient::invoke_stream`]
     ///
@@ -166,7 +167,7 @@ impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
     async fn invoke_stream(
         &self,
         prompt_messages: Vec<PromptMessage>,
-    ) -> Result<impl ChatCompletionStream, Self::ErrorType> {
+    ) -> Result<Self::Item, Self::ErrorType> {
         let mapped_messages: Vec<ChatMessage> =
             prompt_messages.into_iter().map(ChatMessage::from).collect();
 
@@ -264,7 +265,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
     ///
     /// async fn stream_chat_completions(client: OpenAIChatCompletionClient) {
     ///     let user_message: PromptMessage = PromptMessage::HumanMessage("Please ask me a question".into());
-    ///     let stream = client.invoke_stream(vec![user_message]).await.unwrap();
+    ///     let stream: OpenAICompletionStream = client.invoke_stream(vec![user_message]).await.unwrap();
     ///     while let Some(response) = stream.next().await {
     ///         match response {
     ///            Ok(CompletionStreamValue::Connecting) => {},
@@ -275,6 +276,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
     ///                 println!("{:?}", e);
     ///                 break;
     ///            }
+    ///         }
     ///     }   
     /// }
     /// ```
