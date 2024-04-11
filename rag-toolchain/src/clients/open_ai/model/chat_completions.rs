@@ -10,6 +10,7 @@ use crate::clients::types::PromptMessage;
 pub struct ChatCompletionRequest {
     pub model: OpenAIModel,
     pub messages: Vec<ChatMessage>,
+    pub stream: bool,
     #[builder(default, setter(strip_option))]
     #[serde(flatten)]
     pub additional_config: Option<Map<String, Value>>,

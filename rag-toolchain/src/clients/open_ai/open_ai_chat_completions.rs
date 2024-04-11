@@ -85,6 +85,11 @@ impl OpenAIChatCompletionClient {
     /// in the additional_config will be used in the chat completion request. an example of this
     /// could be 'temperature', 'top_p', 'seed' etc.
     ///
+    /// # Forbidden Properties
+    /// * "stream": this cannot be set as it is used internally by the client.
+    /// * "n": n can be set but will result in wasted tokens as the client is built for single
+    ///        chat completions. We intend to add support for multiple completions in the future.
+    ///
     /// # Arguments
     /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
     /// * `additional_config`: [`Map<String, Value>`] - The additional configuration to use for the chat completion.
@@ -133,6 +138,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
         let body: ChatCompletionRequest = ChatCompletionRequest {
             model: self.model,
             messages: mapped_messages,
+            stream: false,
             additional_config: self.additional_config.clone(),
         };
 
@@ -173,6 +179,7 @@ impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
         let body: ChatCompletionRequest = ChatCompletionRequest {
             model: self.model,
             messages: mapped_messages,
+            stream: true,
             additional_config: self.additional_config.clone(),
         };
 
