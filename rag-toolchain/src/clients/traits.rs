@@ -43,7 +43,7 @@ pub trait AsyncStreamedChatClient {
 pub trait ChatCompletionStream {
     type ErrorType: Error;
     type Item;
-    fn next(&self) -> impl Future<Output = Option<Result<Self::Item, Self::ErrorType>>>;
+    fn next(&mut self) -> impl Future<Output = Option<Result<Self::Item, Self::ErrorType>>>;
 }
 
 #[cfg(test)]

@@ -1,7 +1,6 @@
 use futures::StreamExt;
 use reqwest_eventsource::{Event, EventSource};
 use serde_json::{Map, Value};
-use std::cell::RefCell;
 use std::env::VarError;
 
 use crate::clients::open_ai::model::chat_completions::{
@@ -187,7 +186,7 @@ impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
 /// This structs wraps the EventSource and parses returned
 /// messages into prompt messages on demand.
 pub struct OpenAICompletionStream {
-    event_source: RefCell<EventSource>,
+    event_source: EventSource,
 }
 
 /// [`CompletionStreamValue`]
@@ -209,9 +208,7 @@ impl OpenAICompletionStream {
     /// This struct just wraps the EventSource when from the
     /// context of streaming chat completions.
     pub fn new(event_source: EventSource) -> Self {
-        Self {
-            event_source: RefCell::new(event_source),
-        }
+        Self { event_source }
     }
 
     /// # [`ChatCompletionStream::parse_message`]
@@ -238,7 +235,7 @@ impl OpenAICompletionStream {
                 )));
             }
         };
-        let chat_message: ChatCompletionDelta = response.choices.get(0).unwrap().delta.clone();
+        let chat_message: ChatCompletionDelta = response.choices.first().unwrap().delta.clone();
         match chat_message.content {
             Some(msg) => {
                 let prompt_message: PromptMessage = PromptMessage::AIMessage(msg);
@@ -265,7 +262,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
     ///
     /// async fn stream_chat_completions(client: OpenAIChatCompletionClient) {
     ///     let user_message: PromptMessage = PromptMessage::HumanMessage("Please ask me a question".into());
-    ///     let stream: OpenAICompletionStream = client.invoke_stream(vec![user_message]).await.unwrap();
+    ///     let mut stream: OpenAICompletionStream = client.invoke_stream(vec![user_message]).await.unwrap();
     ///     while let Some(response) = stream.next().await {
     ///         match response {
     ///            Ok(CompletionStreamValue::Connecting) => {},
@@ -277,7 +274,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
     ///                 break;
     ///            }
     ///         }
-    ///     }   
+    ///     }
     /// }
     /// ```
     ///
@@ -288,13 +285,13 @@ impl ChatCompletionStream for OpenAICompletionStream {
     /// # Returns
     /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
     ///         None represents the stream is finished..
-    async fn next(&self) -> Option<Result<Self::Item, Self::ErrorType>> {
-        let event_source: &mut EventSource = &mut self.event_source.borrow_mut();
-        let event: Result<Event, reqwest_eventsource::Error> = event_source.next().await?;
+    async fn next(&mut self) -> Option<Result<Self::Item, Self::ErrorType>> {
+        let event: Result<Event, reqwest_eventsource::Error> = self.event_source.next().await?;
 
         let event: Event = match event {
             Ok(event) => event,
             Err(e) => {
+                self.event_source.close();
                 return Some(Err(OpenAIError::ErrorReadingStream(e.to_string())));
             }
         };
@@ -302,8 +299,8 @@ impl ChatCompletionStream for OpenAICompletionStream {
         match event {
             Event::Message(msg) => {
                 if msg.data == Self::STOP_MESSAGE {
-                    event_source.close();
-                    return None;
+                    self.event_source.close();
+                    None
                 } else {
                     Self::parse_message(&msg.data)
                 }
