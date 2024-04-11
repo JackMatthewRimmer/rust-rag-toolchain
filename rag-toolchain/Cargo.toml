@@ -54,7 +54,7 @@ tokio = { version = "1.37", features = ["full"] }
 reqwest = { version = "0.12.3", features = ["json"] }
 reqwest-eventsource = "0.6.0"
 eventsource-stream = "0.2.3"
-futures = "0.3.26"
+futures = "0.3.30"
 lazy_static = "1.4.0"
 
 # Postgres Vector
