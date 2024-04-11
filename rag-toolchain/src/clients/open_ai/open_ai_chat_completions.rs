@@ -1,3 +1,5 @@
+use futures::StreamExt;
+use reqwest_eventsource::{Event, EventSource};
 use serde_json::{Map, Value};
 use std::env::VarError;
 
@@ -5,9 +7,13 @@ use crate::clients::open_ai::model::chat_completions::{
     ChatCompletionChoices, ChatCompletionRequest, ChatCompletionResponse, OpenAIModel,
 };
 use crate::clients::open_ai::open_ai_core::OpenAIHttpClient;
-use crate::clients::{AsyncChatClient, PromptMessage};
+use crate::clients::{
+    AsyncChatClient, AsyncStreamedChatClient, ChatCompletionStream, PromptMessage,
+};
 
-use super::model::chat_completions::ChatMessage;
+use super::model::chat_completions::{
+    ChatCompletionDelta, ChatCompletionStreamedResponse, ChatMessage,
+};
 use super::model::errors::OpenAIError;
 
 const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
@@ -79,6 +85,11 @@ impl OpenAIChatCompletionClient {
     /// in the additional_config will be used in the chat completion request. an example of this
     /// could be 'temperature', 'top_p', 'seed' etc.
     ///
+    /// # Forbidden Properties
+    /// * "stream": this cannot be set as it is used internally by the client.
+    /// * "n": n can be set but will result in wasted tokens as the client is built for single
+    ///        chat completions. We intend to add support for multiple completions in the future.
+    ///
     /// # Arguments
     /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
     /// * `additional_config`: [`Map<String, Value>`] - The additional configuration to use for the chat completion.
@@ -127,6 +138,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
         let body: ChatCompletionRequest = ChatCompletionRequest {
             model: self.model,
             messages: mapped_messages,
+            stream: false,
             additional_config: self.additional_config.clone(),
         };
 
@@ -138,6 +150,170 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
             .collect();
 
         Ok(messages[0].clone())
+    }
+}
+
+impl AsyncStreamedChatClient for OpenAIChatCompletionClient {
+    type ErrorType = OpenAIError;
+    type Item = OpenAICompletionStream;
+
+    /// # [`OpenAIChatCompletionClient::invoke_stream`]
+    ///
+    /// function to execute the ChatCompletion given a list of prompt messages.
+    ///
+    /// # Arguments
+    /// * `prompt_messages`: [`PromptMessage`] - the list of prompt messages that will be sent to the LLM.
+    ///
+    /// # Errors
+    /// * [`OpenAIError`] - if the chat client invocation fails.
+    ///
+    /// # Returns
+    /// impl [`ChatCompletionStream`] - the response from the chat client.
+    async fn invoke_stream(
+        &self,
+        prompt_messages: Vec<PromptMessage>,
+    ) -> Result<Self::Item, Self::ErrorType> {
+        let mapped_messages: Vec<ChatMessage> =
+            prompt_messages.into_iter().map(ChatMessage::from).collect();
+
+        let body: ChatCompletionRequest = ChatCompletionRequest {
+            model: self.model,
+            messages: mapped_messages,
+            stream: true,
+            additional_config: self.additional_config.clone(),
+        };
+
+        let event_source: EventSource = self.client.send_stream_request(body, &self.url).await?;
+        Ok(OpenAICompletionStream::new(event_source))
+    }
+}
+
+/// [`OpenAICompletionStream`]
+///
+/// This structs wraps the EventSource and parses returned
+/// messages into prompt messages on demand.
+pub struct OpenAICompletionStream {
+    event_source: EventSource,
+}
+
+/// [`CompletionStreamValue`]
+///
+/// Value returned from each iteration of the stream.
+/// Given we wanted to represent connecting as a non-failure
+/// state we had to create a new enum to represent this.
+#[derive(Debug)]
+pub enum CompletionStreamValue {
+    Connecting,
+    Message(PromptMessage),
+}
+
+impl OpenAICompletionStream {
+    const STOP_MESSAGE: &'static str = "[DONE]";
+
+    /// # [`ChatCompletionStream::new`]
+    ///
+    /// This struct just wraps the EventSource when from the
+    /// context of streaming chat completions.
+    pub fn new(event_source: EventSource) -> Self {
+        Self { event_source }
+    }
+
+    /// # [`ChatCompletionStream::parse_message`]
+    ///
+    /// Helper method to deserialize the raw response message from the event source.
+    ///
+    /// # Arguments
+    /// * `msg`: &[`str`] - the raw response from the event source.
+    ///
+    /// # Errors
+    /// * [`OpenAIError`] - if the chat client invocation fails.
+    ///
+    /// # Returns
+    /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
+    ///         None represents the stream is finished. and Some(Err) represents an error.
+    ///
+    fn parse_message(msg: &str) -> Option<Result<CompletionStreamValue, OpenAIError>> {
+        let response: ChatCompletionStreamedResponse = match serde_json::from_str(msg) {
+            Ok(response) => response,
+            Err(e) => {
+                return Some(Err(OpenAIError::ErrorDeserializingResponseBody(
+                    200,
+                    e.to_string(),
+                )));
+            }
+        };
+        let chat_message: ChatCompletionDelta = response.choices.first().unwrap().delta.clone();
+        match chat_message.content {
+            Some(msg) => {
+                let prompt_message: PromptMessage = PromptMessage::AIMessage(msg);
+                Some(Ok(CompletionStreamValue::Message(prompt_message)))
+            }
+            None => None,
+        }
+    }
+}
+
+impl ChatCompletionStream for OpenAICompletionStream {
+    type ErrorType = OpenAIError;
+    type Item = CompletionStreamValue;
+
+    /// # [`ChatCompletionStream::next`]
+    ///
+    /// Method to iterate over the completion stream. Note it blocks
+    /// until the next message is received. At which point it will
+    /// parse the response into a [`CompletionStreamValue`].
+    ///
+    /// # Examples
+    /// ```
+    /// use rag_toolchain::clients::*;
+    ///
+    /// async fn stream_chat_completions(client: OpenAIChatCompletionClient) {
+    ///     let user_message: PromptMessage = PromptMessage::HumanMessage("Please ask me a question".into());
+    ///     let mut stream: OpenAICompletionStream = client.invoke_stream(vec![user_message]).await.unwrap();
+    ///     while let Some(response) = stream.next().await {
+    ///         match response {
+    ///            Ok(CompletionStreamValue::Connecting) => {},
+    ///            Ok(CompletionStreamValue::Message(msg)) => {
+    ///                 println!("{:?}", msg.content());
+    ///            }
+    ///            Err(e) => {
+    ///                 println!("{:?}", e);
+    ///                 break;
+    ///            }
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    /// * [`OpenAIError::ErrorReadingStream`] - if there was an error reading from the stream.
+    /// * [`OpenAIError::ErrorDeserializingResponseBody`] - if there was an error deserializing the response body.
+    ///
+    /// # Returns
+    /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
+    ///         None represents the stream is finished..
+    async fn next(&mut self) -> Option<Result<Self::Item, Self::ErrorType>> {
+        let event: Result<Event, reqwest_eventsource::Error> = self.event_source.next().await?;
+
+        let event: Event = match event {
+            Ok(event) => event,
+            Err(e) => {
+                self.event_source.close();
+                return Some(Err(OpenAIError::ErrorReadingStream(e.to_string())));
+            }
+        };
+
+        match event {
+            Event::Message(msg) => {
+                if msg.data == Self::STOP_MESSAGE {
+                    self.event_source.close();
+                    None
+                } else {
+                    Self::parse_message(&msg.data)
+                }
+            }
+            Event::Open => Some(Ok(CompletionStreamValue::Connecting)),
+        }
     }
 }
 
