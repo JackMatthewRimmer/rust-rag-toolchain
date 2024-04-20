@@ -52,7 +52,7 @@ where
     /// This constructor to create a new ChatHistoryChain.
     ///
     /// # Arguments
-    /// * `chat_client`: [`T`] - The chat client to be used
+    /// * `chat_client`: `T` - The chat client to be used
     /// * `system_prompt`: [`PromptMessage`] - The system prompt, please use [`PromptMessage::SystemMessage`]
     pub fn new(chat_client: T, system_prompt: PromptMessage) -> Self {
         let chat_history_buffer = ChatHistoryBuffer::new(system_prompt);
