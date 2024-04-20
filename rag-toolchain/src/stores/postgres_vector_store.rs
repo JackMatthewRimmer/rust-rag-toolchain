@@ -14,7 +14,7 @@ use dotenv::dotenv;
 ///
 /// This is the implementation of [`EmbeddingStore`] for a Postgres database with the
 /// pgvector extension enabled. This store takes a table name and an embedding model.
-/// If a table already exists with the same name an does the have the expected columns
+/// If a table already exists with the same name and does not have the expected columns
 /// any calls to [`PostgresVectorStore::store`] or [`PostgresVectorStore::store_batch`]
 /// will fail.
 ///
