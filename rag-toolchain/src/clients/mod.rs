@@ -16,4 +16,7 @@ pub use self::types::PromptMessage;
 
 // Export the trait mocks for use in testing
 #[cfg(test)]
-pub use traits::{MockAsyncChatClient, MockAsyncEmbeddingClient};
+pub use traits::{
+    MockAsyncChatClient, MockAsyncEmbeddingClient, MockAsyncStreamedChatClient,
+    MockChatCompletionStream,
+};
