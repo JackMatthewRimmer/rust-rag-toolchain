@@ -28,6 +28,8 @@ pub trait AsyncChatClient {
     ) -> impl Future<Output = Result<PromptMessage, Self::ErrorType>> + Send;
 }
 
+/// # [`AsyncStreamedChatClient`]
+/// Trait for any client that generates streamed chat completions asynchronously
 pub trait AsyncStreamedChatClient {
     type ErrorType: Error;
     type Item: ChatCompletionStream;
@@ -69,6 +71,30 @@ mock! {
             &self,
             prompt_messages: Vec<PromptMessage>,
         ) -> Result<PromptMessage, <Self as AsyncChatClient>::ErrorType>;
+    }
+}
+
+#[cfg(test)]
+mock! {
+    #[derive(Copy)]
+    pub AsyncStreamedChatClient {}
+    impl AsyncStreamedChatClient for AsyncStreamedChatClient {
+        type ErrorType = std::io::Error;
+        type Item = MockChatCompletionStream;
+        async fn invoke_stream(
+            &self,
+            prompt_messages: Vec<PromptMessage>,
+        ) -> Result<MockChatCompletionStream, <Self as AsyncStreamedChatClient>::ErrorType>;
+    }
+}
+
+#[cfg(test)]
+mock! {
+    pub ChatCompletionStream {}
+    impl ChatCompletionStream for ChatCompletionStream {
+        type ErrorType = std::io::Error;
+        type Item = PromptMessage;
+        async fn next(&mut self) -> Option<Result<PromptMessage, <Self as ChatCompletionStream>::ErrorType>>;
     }
 }
 
