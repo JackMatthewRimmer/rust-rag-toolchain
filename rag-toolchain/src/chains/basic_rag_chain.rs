@@ -203,7 +203,7 @@ where
 impl<T, U> BasicStreamedRAGChain<T, U>
 where
     T: AsyncStreamedChatClient,
-    U: AsyncRetriever,
+    U: AsyncRetriever, 
 {
     pub async fn invoke_chain(
         &self,

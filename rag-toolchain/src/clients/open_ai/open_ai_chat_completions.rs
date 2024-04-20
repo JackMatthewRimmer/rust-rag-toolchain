@@ -210,7 +210,7 @@ pub enum CompletionStreamValue {
 impl OpenAICompletionStream {
     const STOP_MESSAGE: &'static str = "[DONE]";
 
-    /// # [`ChatCompletionStream::new`]
+    /// # [`OpenAICompletionStream::new`]
     ///
     /// This struct just wraps the EventSource when from the
     /// context of streaming chat completions.
@@ -290,7 +290,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
     /// * [`OpenAIError::ErrorDeserializingResponseBody`] - if there was an error deserializing the response body.
     ///
     /// # Returns
-    /// * [`Option<Result<CompletionStreamValue, OpenAIError>`] - the response from the chat client.
+    /// * [`Option<Result<CompletionStreamValue, OpenAIError>>`] - the response from the chat client.
     ///         None represents the stream is finished..
     async fn next(&mut self) -> Option<Result<Self::Item, Self::ErrorType>> {
         let event: Result<Event, reqwest_eventsource::Error> = self.event_source.next().await?;
