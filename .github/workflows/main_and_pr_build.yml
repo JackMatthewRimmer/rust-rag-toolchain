@@ -103,6 +103,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
+    defaults:
+      run:
+        working-directory: rag-toolchain
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
