@@ -103,6 +103,9 @@ jobs:
         run: cargo test --doc --verbose
 
   coverage:
+    needs:
+      - unit-test
+      - integration-test
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
