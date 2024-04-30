@@ -23,14 +23,12 @@ mod pg_vector {
     use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
+    use sqlx::postgres::PgPoolOptions;
     use sqlx::prelude::FromRow;
     use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
-    use testcontainers::{
-        clients::Cli,
-        core::{ExecCommand, WaitFor},
-        GenericImage,
-    };
+    use std::time::Duration;
+    use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage};
 
     const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
         DistanceFunction::Cosine,
@@ -47,9 +45,9 @@ mod pg_vector {
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
-            .with_wait_for(WaitFor::message_on_stdout(
-                "database system is ready to accept connections",
-            ))
+            .with_wait_for(WaitFor::Duration {
+                length: Duration::from_secs(5),
+            })
             .with_env_var("POSTGRES_USER", "postgres")
             .with_env_var("POSTGRES_PASSWORD", "postgres")
             .with_env_var("POSTGRES_DB", "test_db")
@@ -66,18 +64,29 @@ mod pg_vector {
 
     #[tokio::test]
     async fn run_integration_tests() {
-        let docker = Cli::default();
         let image = get_image();
-        let container = docker.run(image);
-        set_env_vars(container.get_host_port_ipv4(5432));
+        let container = image.start().await;
+        set_env_vars(container.get_host_port_ipv4(5432).await);
 
-        let command_string =
-            format!(r#"psql -U postgres -d test_db -c "CREATE EXTENSION IF NOT EXISTS vector;""#);
-        let mut command: ExecCommand = ExecCommand::default();
-        command.cmd = command_string;
+        let connection_string = format!(
+            "postgres://{}:{}@{}:{}/{}",
+            "postgres",
+            "postgres",
+            "localhost",
+            container.get_host_port_ipv4(5432).await,
+            "test_db"
+        );
 
-        // Execute custom SQL commands to enable the extension
-        let _output = container.exec(command);
+        let pool: Pool<Postgres> = PgPoolOptions::new()
+            .max_connections(1)
+            .connect(&connection_string)
+            .await
+            .unwrap();
+
+        sqlx::query("CREATE EXTENSION vector;")
+            .execute(&pool)
+            .await
+            .unwrap();
 
         let case1 = test_store_persists();
         let case2 = test_batch_store_persists();
