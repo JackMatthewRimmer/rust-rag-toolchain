@@ -27,7 +27,6 @@ mod pg_vector {
     use sqlx::prelude::FromRow;
     use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
-    use std::time::Duration;
     use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage};
 
     const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
@@ -45,9 +44,10 @@ mod pg_vector {
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
-            .with_wait_for(WaitFor::Duration {
-                length: Duration::from_secs(5),
-            })
+            .with_wait_for(WaitFor::seconds(1))
+            .with_wait_for(WaitFor::message_on_stdout(
+                "database system is ready to accept connections",
+            ))
             .with_env_var("POSTGRES_USER", "postgres")
             .with_env_var("POSTGRES_PASSWORD", "postgres")
             .with_env_var("POSTGRES_DB", "test_db")
