@@ -37,7 +37,7 @@ pg_vector = ["dep:pgvector"]
 [dev-dependencies]
 mockall = "0.12.1"
 mockito = "1.4.0"
-testcontainers = "0.16.5"
+testcontainers = "0.16.6"
 
 [lib]
 name = "rag_toolchain"
