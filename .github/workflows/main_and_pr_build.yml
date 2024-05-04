@@ -61,9 +61,6 @@ jobs:
             rag-toolchain/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: List compiled binaries
-        run: ls -l target/debug/ 
-
       - name: set up rust
         uses: actions-rs/toolchain@v1
         with:
