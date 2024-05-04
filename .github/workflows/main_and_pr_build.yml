@@ -24,7 +24,7 @@ jobs:
           toolchain: stable
 
       - name: Set up cargo cache
-        uses: actions/cache@v3
+        uses: actions/cache/restore@v3
         continue-on-error: false
         with:
           path: |
@@ -33,12 +33,23 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Build project
         run: cargo build
+
+      - name: Set up cargo cache
+        uses: actions/cache/save@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
   unit-test:
     needs: build
@@ -60,7 +71,6 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
@@ -99,7 +109,6 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       
       - name: set up rust
@@ -138,7 +147,6 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
@@ -171,7 +179,6 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-            target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
