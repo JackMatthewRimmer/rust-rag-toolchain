@@ -1,4 +1,4 @@
-name: Rust Build / Unit Test / Lint 
+name: Rust Build / Unit Test / Lint
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-    - main
+      - main
 
 jobs:
   build:
@@ -15,15 +15,15 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
 
-    - name: set up rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: Build project
-      run: cargo build --verbose 
+      - name: set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build project
+        run: cargo build
 
   unit-test:
     needs: build
@@ -32,16 +32,24 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
 
-    - name: set up rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+      - name: set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
-    - name: Run tests
-      run: cargo test --lib --verbose
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unitlcov
+          path: rag-toolchain/*.info
 
   integration-test:
     needs: build
@@ -50,16 +58,24 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
+      
+      - name: set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
-    - name: set up rust
-      uses: actions-rs/toolchain@v1   
-      with:
-        toolchain: stable
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
 
-    - name: Run integration tests
-      run: cargo test --test mod --verbose
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrationlcov
+          path: rag-toolchain/*.info
 
   lint:
     needs: build
@@ -68,18 +84,18 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
 
-    - name: set up rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+      - name: set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
-    - name: Run linter
-      run: |
-        cargo fmt -- --check
-        cargo clippy -- -D warnings
+      - name: Run linter
+        run: |
+          cargo fmt -- --check
+          cargo clippy -- -D warnings
 
   doc-test:
     needs: build
@@ -88,13 +104,41 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
+      
+      - name: set up rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
-    - name: set up rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+      - name: Run doc tests
+        run: cargo test --doc
 
-    - name: Run doc tests
-      run: cargo test --doc --verbose
+  coverage:
+    needs:
+      - unit-test
+      - integration-test
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Download unit test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: unitlcov
+
+      - name: Download integration coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: integrationlcov
+
+      - name: Cat cov file
+        run: cat unitlcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: unitlcov.info,integrationlcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
