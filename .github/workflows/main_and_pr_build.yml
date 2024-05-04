@@ -39,6 +39,17 @@ jobs:
       - name: Build project
         run: cargo build --all-targets --all-features --workspace
 
+      - name: Save cargo cache
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ github.run_id }} 
+
   unit-test:
     needs: build
     runs-on: ubuntu-latest
@@ -59,7 +70,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }} 
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -97,7 +108,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }} 
       
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -135,7 +146,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }} 
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -167,7 +178,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }} 
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
