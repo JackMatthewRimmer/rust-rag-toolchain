@@ -139,11 +139,8 @@ jobs:
         with:
           name: integrationlcov
 
-      - name: List files
-        run: ls -l
-
-      - name: Display file path tree
-        run: tree .
+      - name: Cat cov file
+        run: cat unitlcov.info
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
