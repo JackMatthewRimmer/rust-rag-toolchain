@@ -18,6 +18,14 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: set up rust
         uses: actions-rs/toolchain@v1
         with:
@@ -34,6 +42,12 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+      
+      - name: Restore Cargo dependencies from cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -52,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unitlcov.info
-          path: coverage/unitlcov.info
+          path: ${{ github.workspace }}/coverage/unitlcov.info
 
   integration-test:
     needs: build
@@ -63,6 +77,12 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+      
+      - name: Restore Cargo dependencies from cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -81,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: integrationlcov.info
-          path: coverage/integrationlcov.info
+          path: ${{ github.workspace }}/coverage/integrationlcov.info
 
   lint:
     needs: build
@@ -92,6 +112,12 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+      
+      - name: Restore Cargo dependencies from cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -112,6 +138,12 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+      
+      - name: Restore Cargo dependencies from cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
