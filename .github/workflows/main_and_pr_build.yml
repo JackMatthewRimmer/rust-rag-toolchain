@@ -142,11 +142,6 @@ jobs:
         with:
           name: integrationlcov
 
-      - name: Display file path tree
-        run: |
-          echo "Current directory: $(pwd)"
-          tree .
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
