@@ -123,12 +123,6 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - name: Make rag-toolchain dir
-        run: mkdir rag-toolchain
-
-      - name: CD to root
-        run: cd rag-toolchain
-
       - name: Download unit test artifacts
         uses: actions/download-artifact@v4
         with:
