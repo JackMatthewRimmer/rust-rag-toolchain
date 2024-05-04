@@ -128,9 +128,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CARGO_TERM_COLOR: always
-    defaults:
-      run:
-        working-directory: rag-toolchain
     steps:
       - name: Download unit test artifacts
         uses: actions/download-artifact@v4
