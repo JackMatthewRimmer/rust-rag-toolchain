@@ -133,9 +133,6 @@ jobs:
         with:
           name: integrationlcov
 
-      - name: Cat cov file
-        run: cat unitlcov.info
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:

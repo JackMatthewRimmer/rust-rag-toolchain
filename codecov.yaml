@@ -1,0 +1,15 @@
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
+  branch: main
+
+coverage:
+  status:
+    project:
+      default:
+        target: 95%    # the required coverage value
+        threshold: 1%  # the leniency in hitting the target
+
+fixes:
+  - "/home/runner/work/rust-rag-toolchain/rust-rag-toolchain::"
