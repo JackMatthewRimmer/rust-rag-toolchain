@@ -13,3 +13,4 @@ coverage:
 
 fixes:
   - "/home/runner/work/rust-rag-toolchain/::"
+  - "rust-rag-toolchain/::rust-rag-toolchain/rag-toolchain/"
