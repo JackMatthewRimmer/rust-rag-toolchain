@@ -39,6 +39,12 @@ jobs:
       - name: Build project
         run: cargo build --all-targets --all-features --workspace
 
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: run llvm-cov clean 
+        run: cargo llvm-cov clean
+
       - name: Save cargo cache
         uses: actions/cache/save@v3
         with:
@@ -77,8 +83,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
 
@@ -115,8 +119,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
 
