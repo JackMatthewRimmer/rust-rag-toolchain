@@ -12,4 +12,4 @@ coverage:
         threshold: 1%  # the leniency in hitting the target
 
 fixes:
-  - "rust-rag-toolchain/::" 
+  - "/home/runner/work/rust-rag-toolchain/::"
