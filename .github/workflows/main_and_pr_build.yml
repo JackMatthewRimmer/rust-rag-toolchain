@@ -33,11 +33,17 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rag-toolchain/**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Build project
         run: cargo build
+
+      - name: Upload compiled source code 
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-code 
+          path: rag-toolchain
 
   unit-test:
     needs: build
@@ -46,20 +52,10 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore cargo cache
-        uses: actions/cache/restore@v3
-        continue-on-error: false
+      - name: Download source code 
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-            rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rag-toolchain/**/Cargo.lock') }}
+          name: source-code
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -84,20 +80,10 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore cargo cache
-        uses: actions/cache/restore@v3
-        continue-on-error: false
+      - name: Download source code 
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-            rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rag-toolchain/**/Cargo.lock') }}
+          name: source-code 
       
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -122,21 +108,11 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-      
-      - name: Restore cargo cache
-        uses: actions/cache/restore@v3
-        continue-on-error: false
+      - name: Download source code 
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-            rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rag-toolchain/**/Cargo.lock') }}
-
+          name: source-code
+      
       - name: set up rust
         uses: actions-rs/toolchain@v1
         with:
@@ -154,20 +130,10 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: checkout code
-        uses: actions/checkout@v4
-
-      - name: Restore cargo cache
-        uses: actions/cache/restore@v3
-        continue-on-error: false
+      - name: Download source code 
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-            rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rag-toolchain/**/Cargo.lock') }}
+          name: source-code
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
