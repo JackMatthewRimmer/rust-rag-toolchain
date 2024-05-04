@@ -40,16 +40,19 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Create coverage directory
+        run: mkdir -p coverage
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
+        run: cargo llvm-cov --lib --lcov --output-path coverage/unitlcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: unitlcov.info
-          path: unitlcov.info
+          path: coverage/unitlcov.info
 
   integration-test:
     needs: build
@@ -65,16 +68,20 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Create coverage directory
+        run: mkdir -p coverage
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
+        run: cargo llvm-cov --test mod --lcov --output-path coverage/integrationlcov.info
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: integrationlcov.info
-          path: integrationlcov.info
+          path: coverage/integrationlcov.info
 
   lint:
     needs: build
@@ -125,6 +132,16 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
+      - name: Download lcov artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: unitlcov
+
+      - name: Download integration coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: integrationlcov
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
