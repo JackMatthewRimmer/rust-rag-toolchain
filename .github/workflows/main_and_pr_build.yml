@@ -24,7 +24,7 @@ jobs:
           toolchain: stable
 
       - name: Build project
-        run: cargo build
+        run: cargo build --all-targets --all-features --workspace
 
       - name: Set up cargo cache
         uses: actions/cache/save@v3
