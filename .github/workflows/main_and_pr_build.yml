@@ -23,19 +23,6 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Set up cargo cache
-        uses: actions/cache/restore@v3
-        continue-on-error: false
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-            rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
       - name: Build project
         run: cargo build
 
@@ -49,7 +36,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }}
 
   unit-test:
     needs: build
@@ -71,7 +58,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -109,7 +96,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }}
       
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -147,7 +134,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
@@ -179,7 +166,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/
             rag-toolchain/target/            
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ github.run_id }}
 
       - name: set up rust
         uses: actions-rs/toolchain@v1
