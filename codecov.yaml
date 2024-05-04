@@ -3,7 +3,6 @@ codecov:
   notify:
     wait_for_ci: yes
   branch: main
-  disable_default_path_fixes: true
 
 coverage:
   status:
@@ -14,4 +13,3 @@ coverage:
 
 fixes:
   - "/home/runner/work/rust-rag-toolchain/::"
-  - "rust-rag-toolchain/::rust-rag-toolchain/rag-toolchain/"
