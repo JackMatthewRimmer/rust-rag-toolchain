@@ -23,7 +23,7 @@ jobs:
         with:
           toolchain: stable
       - name: Build project
-        run: cargo build --verbose
+        run: cargo build
 
   unit-test:
     needs: build
@@ -100,7 +100,7 @@ jobs:
           toolchain: stable
 
       - name: Run doc tests
-        run: cargo test --doc --verbose
+        run: cargo test --doc
 
   coverage:
     needs:
