@@ -3,6 +3,7 @@ codecov:
   notify:
     wait_for_ci: yes
   branch: main
+  disable_default_path_fixes: true
 
 coverage:
   status:
