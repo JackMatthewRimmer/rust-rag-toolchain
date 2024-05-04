@@ -132,7 +132,7 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: Download lcov artifacts
+      - name: Download unit test artifacts
         uses: actions/download-artifact@v4
         with:
           name: unitlcov
@@ -142,9 +142,14 @@ jobs:
         with:
           name: integrationlcov
 
+      - name: Display file path tree
+        run: |
+          echo "Current directory: $(pwd)"
+          tree .
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          files: coverage/unitlcov.info,coverage/integrationlcov.info
+          files: rag-toolchain/coverage/unitlcov.info,rag-toolchain/coverage/integrationlcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
