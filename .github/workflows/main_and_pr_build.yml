@@ -37,7 +37,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Build project
-        run: cargo build --all-targets --all-features --workspace
+        run: cargo build --profile=test --all-targets --all-features --workspace 
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
