@@ -75,11 +75,6 @@ jobs:
             rag-toolchain/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
 
-      - name: set up rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
       - name: Generate code coverage
         run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
 
@@ -111,11 +106,6 @@ jobs:
             rag-toolchain/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
       
-      - name: set up rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
       - name: Generate code coverage
         run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
 
@@ -147,11 +137,6 @@ jobs:
             rag-toolchain/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
 
-      - name: set up rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
       - name: Run linter
         run: |
           cargo fmt -- --check
@@ -178,11 +163,6 @@ jobs:
             ~/.cargo/git/
             rag-toolchain/target/            
           key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
-
-      - name: set up rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
 
       - name: Run doc tests
         run: cargo test --doc
