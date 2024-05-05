@@ -15,15 +15,43 @@ jobs:
       run:
         working-directory: rag-toolchain
     steps:
-      - name: checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: set up rust
+      - name: Set up rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Try restore cache
+        uses: actions/cache/restore@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
       - name: Build project
-        run: cargo build
+        run: cargo build --profile=test --all-targets --all-features --workspace 
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      
+      - name: Save cargo cache
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
   unit-test:
     needs: build
@@ -35,13 +63,23 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
 
-      - name: set up rust
+      - name: Restore cargo cache
+        uses: actions/cache/restore@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
+
+      - name: Set up rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
 
@@ -60,14 +98,24 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+
+      - name: Restore cargo cache
+        uses: actions/cache/restore@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
       
-      - name: set up rust
+      - name: Set up rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
 
@@ -86,8 +134,20 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
+      
+      - name: Restore cargo cache
+        uses: actions/cache/restore@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
 
-      - name: set up rust
+      - name: Set up rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -106,7 +166,19 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
-      
+
+      - name: Restore cargo cache
+        uses: actions/cache/restore@v3
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+            rag-toolchain/target/            
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**Cargo.lock') }} 
+
       - name: set up rust
         uses: actions-rs/toolchain@v1
         with:
