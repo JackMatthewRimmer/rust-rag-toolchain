@@ -90,7 +90,7 @@ mod pg_vector {
             .await
             .unwrap();
 
-        let case1 = test_store_persists();
+        let case1 = test_store_persists_with_pool(pool);
         let case2 = test_batch_store_persists();
         let case3 = test_retriever_returns_correct_data();
         let case4 = test_retriever_with_embedding_client_error();
@@ -98,10 +98,10 @@ mod pg_vector {
         let _ = tokio::join!(case1, case2, case3, case4);
     }
 
-    async fn test_store_persists() {
+    async fn test_store_persists_with_pool(pool: Pool<Postgres>) {
         const TABLE_NAME: &str = "test_db_1";
         let embedding: Embedding = read_test_data()[0].clone();
-        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+        let pg_vector = PostgresVectorStore::try_new_with_pool(pool, TABLE_NAME, TextEmbeddingAda002)
             .await
             .unwrap();
         let _result = pg_vector
