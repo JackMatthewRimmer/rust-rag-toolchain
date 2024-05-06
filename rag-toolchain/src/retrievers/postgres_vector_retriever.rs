@@ -170,16 +170,6 @@ impl DistanceFunction {
     }
 }
 
-impl Display for DistanceFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DistanceFunction::L2 => write!(f, "L2"),
-            DistanceFunction::Cosine => write!(f, "Cosine"),
-            DistanceFunction::InnerProduct => write!(f, "InnerProduct"),
-        }
-    }
-}
-
 /// # [`PostgresRetrieverError`]
 ///
 /// This error is generic as it is parameterized over the error type of the embedding client.
@@ -204,4 +194,11 @@ impl<T: Error> Display for PostgresRetrieverError<T> {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn retrieve_with_embedding_client_error() {}
 }
