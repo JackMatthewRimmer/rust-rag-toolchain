@@ -22,3 +22,15 @@ impl LoadSource for SingleFileSource {
         Ok(vec![file_contents])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_when_file_doesnt_exist() {
+        let sut: SingleFileSource = SingleFileSource::new("fake_file.txt");
+        let err: std::io::Error = sut.load().unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::NotFound)
+    }
+}
