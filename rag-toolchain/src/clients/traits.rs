@@ -86,10 +86,3 @@ mock! {
         async fn next(&mut self) -> Option<Result<PromptMessage, <Self as ChatCompletionStream>::ErrorType>>;
     }
 }
-
-#[cfg(test)]
-impl Clone for MockAsyncChatClient {
-    fn clone(&self) -> Self {
-        MockAsyncChatClient::new()
-    }
-}
