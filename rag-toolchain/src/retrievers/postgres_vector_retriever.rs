@@ -205,9 +205,14 @@ mod tests {
     fn postgres_retriever_error_display_fmt() {
         let openai_err: OpenAIError = OpenAIError::ErrorReadingStream("error".into()); 
         let openai_err_message = openai_err.to_string();
-        let retriever_err = PostgresRetrieverError::EmbeddingClientError(openai_err);
-        let retriever_err_message = retriever_err.to_string();
-        assert_eq!(retriever_err_message, format!("Embedding Client Error: {}", openai_err_message));
+        let embedding_client_error = PostgresRetrieverError::EmbeddingClientError(openai_err);
+        let embedding_client_error_message = embedding_client_error.to_string();
+        assert_eq!(embedding_client_error_message, format!("Embedding Client Error: {}", openai_err_message));
+
+        let sqlx_error: sqlx::Error = sqlx::Error::RowNotFound;
+        let sqlx_error_message = sqlx_error.to_string();
+        let query_error: PostgresRetrieverError<OpenAIError> = PostgresRetrieverError::QueryError(sqlx_error);
+        let query_error_message = query_error.to_string();
+        assert_eq!(query_error_message, format!("Error retrieving similar text: {}", sqlx_error_message));
     }
-    
 }
