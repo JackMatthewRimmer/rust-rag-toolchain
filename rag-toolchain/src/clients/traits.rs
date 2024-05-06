@@ -50,6 +50,18 @@ pub trait ChatCompletionStream {
 
 #[cfg(test)]
 use mockall::*;
+#[cfg(test)]
+mock! {
+    pub AsyncEmbeddingClient {}
+    impl AsyncEmbeddingClient for AsyncEmbeddingClient {
+        type ErrorType = std::io::Error;
+        async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, <Self as AsyncEmbeddingClient>::ErrorType>;
+        async fn generate_embeddings(
+            &self,
+            text: Chunks,
+        ) -> Result<Vec<Embedding>, <Self as AsyncEmbeddingClient>::ErrorType>;
+    }
+}
 
 #[cfg(test)]
 mock! {

@@ -113,14 +113,14 @@ mod tests {
 
     #[test]
     fn openai_3_small_metadata() {
-        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbeddingAda002.metadata();
+        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbedding3Small.metadata();
         assert_eq!(metadata.dimensions, 1536);
         assert_eq!(metadata.max_tokens, 8192);
     }
 
     #[test]
     fn openai_3_large_metadata() {
-        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbeddingAda002.metadata();
+        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbedding3Large.metadata();
         assert_eq!(metadata.dimensions, 1536);
         assert_eq!(metadata.max_tokens, 8192);
     }
