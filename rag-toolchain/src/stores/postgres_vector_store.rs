@@ -387,4 +387,44 @@ mod tests {
             .unwrap_err();
         assert!(matches!(result, PostgresVectorError::ConnectionError(_)));
     }
+
+    #[test]
+    fn postgres_vector_error_display() {
+        let sqlx_error = sqlx::Error::RowNotFound;
+        let sqlx_error_message = sqlx_error.to_string();
+
+        let var_error: VarError = VarError::NotPresent;
+        let var_error_message = var_error.to_string();
+
+        let env_var_error = PostgresVectorError::EnvVarError(var_error);
+        assert_eq!(
+            env_var_error.to_string(),
+            format!("Environment variable error: {}", var_error_message)
+        );
+
+        let connection_error = PostgresVectorError::ConnectionError(sqlx::Error::RowNotFound);
+        assert_eq!(
+            connection_error.to_string(),
+            format!("Connection error: {}", sqlx_error_message)
+        );
+
+        let table_creation_error =
+            PostgresVectorError::TableCreationError(sqlx::Error::RowNotFound);
+        assert_eq!(
+            table_creation_error.to_string(),
+            format!("Table creation error: {}", sqlx_error_message)
+        );
+
+        let insert_error = PostgresVectorError::InsertError(sqlx::Error::RowNotFound);
+        assert_eq!(
+            insert_error.to_string(),
+            format!("Upsert error: {}", sqlx_error_message)
+        );
+
+        let transaction_error = PostgresVectorError::TransactionError(sqlx::Error::RowNotFound);
+        assert_eq!(
+            transaction_error.to_string(),
+            format!("Transaction error: {}", sqlx_error_message)
+        );
+    }
 }
