@@ -16,11 +16,11 @@ mod pg_vector {
     use mockall::predicate::always;
     use mockall::*;
     use pgvector::Vector;
-    use rag_toolchain::clients::AsyncEmbeddingClient;
+    use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIError};
     use rag_toolchain::common::{
         Chunk, Chunks, Embedding, OpenAIEmbeddingModel::TextEmbeddingAda002,
     };
-    use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever};
+    use rag_toolchain::retrievers::{AsyncRetriever, DistanceFunction, PostgresVectorRetriever, PostgresRetrieverError};
     use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
     use serde_json::Value;
     use sqlx::postgres::PgPoolOptions;
@@ -91,8 +91,9 @@ mod pg_vector {
         let case1 = test_store_persists();
         let case2 = test_batch_store_persists();
         let case3 = test_retriever_returns_correct_data();
+        let case4 = test_retriever_with_embedding_client_error();
 
-        let _ = tokio::join!(case1, case2, case3);
+        let _ = tokio::join!(case1, case2, case3, case4);
     }
 
     async fn test_store_persists() {
@@ -175,6 +176,31 @@ mod pg_vector {
         }
     }
 
+    async fn test_retriever_with_embedding_client_error() {
+        const TABLE_NAME: &str = "test_db_4";
+        let pg_vector = PostgresVectorStore::try_new(TABLE_NAME, TextEmbeddingAda002)
+            .await
+            .unwrap();
+
+        let mut mock_client: MockAsyncEmbeddingClient = MockAsyncEmbeddingClient::new();
+        mock_client
+            .expect_generate_embedding()
+            .with(always())
+            .returning(move |_| Err(OpenAIError::ErrorSendingRequest("error".to_string())));
+
+        let retriever: PostgresVectorRetriever<MockAsyncEmbeddingClient> =
+            pg_vector.as_retriever(mock_client, DistanceFunction::Cosine);
+
+        let result = retriever
+            .retrieve(
+                "This sentence is similar to a foo bar sentence .",
+                NonZeroU32::new(1).unwrap(),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(result, PostgresRetrieverError::EmbeddingClientError(_)));
+        }
+
     async fn assert_row(
         pool: &Pool<Postgres>,
         id: i32,
@@ -233,7 +259,7 @@ mod pg_vector {
     mock! {
         pub AsyncEmbeddingClient {}
         impl AsyncEmbeddingClient for AsyncEmbeddingClient {
-            type ErrorType = std::io::Error;
+            type ErrorType = OpenAIError;
             async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, <Self as AsyncEmbeddingClient>::ErrorType>;
             async fn generate_embeddings(
                 &self,

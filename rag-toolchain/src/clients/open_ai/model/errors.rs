@@ -3,12 +3,12 @@ use std::fmt::Display;
 
 // This is what is returned from OpenAI
 // when an error occurs
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct OpenAIErrorBody {
     pub error: OpenAIErrorData,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Clone)]
 pub struct OpenAIErrorData {
     pub message: String,
     #[serde(rename = "type")]
@@ -18,7 +18,7 @@ pub struct OpenAIErrorData {
 }
 // --------------------------------------------------------------------------------
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum OpenAIError {
     /// # Invalid Authentication or Incorrect API Key provided
     CODE400(OpenAIErrorBody),
