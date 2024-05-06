@@ -99,3 +99,29 @@ impl TokenizerWrapper for OpenAITokenizer {
     }
 }
 // ------------------ OpenAI Embedding Models ------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn openai_ada002_metadata() {
+        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbeddingAda002.metadata();
+        assert_eq!(metadata.dimensions, 1536);
+        assert_eq!(metadata.max_tokens, 8192);
+    }
+
+    #[test]
+    fn openai_3_small_metadata() {
+        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbeddingAda002.metadata();
+        assert_eq!(metadata.dimensions, 1536);
+        assert_eq!(metadata.max_tokens, 8192);
+    }
+
+    #[test]
+    fn openai_3_large_metadata() {
+        let metadata: EmbeddingModelMetadata = OpenAIEmbeddingModel::TextEmbeddingAda002.metadata();
+        assert_eq!(metadata.dimensions, 1536);
+        assert_eq!(metadata.max_tokens, 8192);
+    }
+}
