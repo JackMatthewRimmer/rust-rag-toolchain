@@ -101,9 +101,10 @@ mod pg_vector {
     async fn test_store_persists_with_pool(pool: Pool<Postgres>) {
         const TABLE_NAME: &str = "test_db_1";
         let embedding: Embedding = read_test_data()[0].clone();
-        let pg_vector = PostgresVectorStore::try_new_with_pool(pool, TABLE_NAME, TextEmbeddingAda002)
-            .await
-            .unwrap();
+        let pg_vector =
+            PostgresVectorStore::try_new_with_pool(pool, TABLE_NAME, TextEmbeddingAda002)
+                .await
+                .unwrap();
         let _result = pg_vector
             .store(embedding.clone())
             .await
