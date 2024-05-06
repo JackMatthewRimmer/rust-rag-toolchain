@@ -195,10 +195,3 @@ impl<T: Error> Display for PostgresRetrieverError<T> {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn retrieve_with_embedding_client_error() {}
-}
