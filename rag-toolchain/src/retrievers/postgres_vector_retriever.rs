@@ -195,3 +195,19 @@ impl<T: Error> Display for PostgresRetrieverError<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clients::OpenAIError;
+
+    #[test]
+    fn postgres_retriever_error_display_fmt() {
+        let openai_err: OpenAIError = OpenAIError::ErrorReadingStream("error".into()); 
+        let openai_err_message = openai_err.to_string();
+        let retriever_err = PostgresRetrieverError::EmbeddingClientError(openai_err);
+        let retriever_err_message = retriever_err.to_string();
+        assert_eq!(retriever_err_message, format!("Embedding Client Error: {}", openai_err_message));
+    }
+    
+}
