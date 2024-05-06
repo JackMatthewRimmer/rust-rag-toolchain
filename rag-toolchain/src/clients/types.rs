@@ -35,8 +35,17 @@ mod tests {
     #[test]
     fn prompt_message_content() {
         let test_string = String::from("Test String");
-        assert_eq!(&test_string, &PromptMessage::HumanMessage(test_string.clone()).content());
-        assert_eq!(&test_string, &PromptMessage::AIMessage(test_string.clone()).content());
-        assert_eq!(&test_string, &PromptMessage::SystemMessage(test_string.clone()).content());
+        assert_eq!(
+            &test_string,
+            &PromptMessage::HumanMessage(test_string.clone()).content()
+        );
+        assert_eq!(
+            &test_string,
+            &PromptMessage::AIMessage(test_string.clone()).content()
+        );
+        assert_eq!(
+            &test_string,
+            &PromptMessage::SystemMessage(test_string.clone()).content()
+        );
     }
 }
