@@ -318,7 +318,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
 }
 
 #[cfg(test)]
-mod chat_completion_client_test {
+mod tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
 
