@@ -359,7 +359,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
-        let (client, mut server) = with_mocked_client().await;
+        let (client, mut server) = with_mocked_client(None).await;
         let mock = with_mocked_request(&mut server, 200, CHAT_COMPLETION_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap();
@@ -371,7 +371,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_error_response_maps_correctly() {
-        let (client, mut server) = with_mocked_client().await;
+        let (client, mut server) = with_mocked_client(Some(Map::new())).await;
         let mock = with_mocked_request(&mut server, 401, ERROR_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap_err();
@@ -398,12 +398,19 @@ mod tests {
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    async fn with_mocked_client() -> (OpenAIChatCompletionClient, ServerGuard) {
+    async fn with_mocked_client(
+        config: Option<Map<String, Value>>,
+    ) -> (OpenAIChatCompletionClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIModel::Gpt3Point5;
-        let mut client = OpenAIChatCompletionClient::try_new(model).unwrap();
+        let mut client = match config {
+            Some(config) => {
+                OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()
+            }
+            None => OpenAIChatCompletionClient::try_new(model).unwrap(),
+        };
         client.url = url;
         (client, server)
     }
