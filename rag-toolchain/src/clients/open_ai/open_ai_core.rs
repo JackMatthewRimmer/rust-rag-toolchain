@@ -94,12 +94,7 @@ impl OpenAIHttpClient {
     where
         T: Serialize,
     {
-        let request = self
-            .client
-            .post(url)
-            .bearer_auth(self.api_key.clone())
-            .json(&body);
-
+        let request = self.build_requeset(body, url);
         let source = request
             .eventsource()
             .map_err(|e| OpenAIError::ErrorSendingRequest(e.to_string()))?;

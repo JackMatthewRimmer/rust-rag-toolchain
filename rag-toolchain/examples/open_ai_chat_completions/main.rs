@@ -1,7 +1,8 @@
 use serde_json::{Map, Value};
 
 use rag_toolchain::clients::{
-    AsyncChatClient, OpenAIChatCompletionClient, OpenAIModel, PromptMessage,
+    AsyncChatClient, AsyncStreamedChatClient, ChatCompletionStream, CompletionStreamValue,
+    OpenAIChatCompletionClient, OpenAICompletionStream, OpenAIModel, PromptMessage,
 };
 
 #[tokio::main]
@@ -25,9 +26,22 @@ async fn main() {
 
     // We invoke the chat client with a list of messages
     let reply = client
-        .invoke(vec![system_message, user_message])
+        .invoke(vec![system_message.clone(), user_message.clone()])
         .await
         .unwrap();
 
     println!("{:?}", reply.content());
+
+    // We can also stream the response back to
+    let mut stream: OpenAICompletionStream = client
+        .invoke_stream(vec![system_message, user_message])
+        .await
+        .unwrap();
+
+    while let Some(stream_value) = stream.next().await {
+        match stream_value.unwrap() {
+            CompletionStreamValue::Message(msg) => println!("{}", msg.content()),
+            _ => (),
+        }
+    }
 }

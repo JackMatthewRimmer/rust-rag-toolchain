@@ -102,7 +102,8 @@ pub struct ChatCompletionStreamedResponse {
     pub object: String,
     pub created: u64,
     pub model: String,
-    pub system_fingerprint: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_fingerprint: Option<String>,
     pub choices: Vec<ChatCompletionStreamedChoices>,
 }
 
