@@ -357,8 +357,7 @@ mod tests {
     }
     "#;
 
-    const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:id1\nevent:event1\ndata:data1\n\n";
-
+    const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:1\ndata:{\"id\":\"chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0\",\"object\":\"chat.completion.chunk\",\"created\":1712513908,\"model\":\"gpt-3.5-turbo-0125\",\"system_fingerprint\":\"fp_b28b39ffa8\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata:[DONE]\n\n";
 
     #[tokio::test]
     async fn test_correct_response_succeeds() {
