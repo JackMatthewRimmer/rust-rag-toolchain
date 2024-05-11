@@ -357,6 +357,9 @@ mod tests {
     }
     "#;
 
+    const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:id1\nevent:event1\ndata:data1\n\n";
+
+
     #[tokio::test]
     async fn test_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client(None).await;
@@ -381,6 +384,27 @@ mod tests {
         assert_eq!(expected_response, response);
     }
 
+    #[tokio::test]
+    async fn test_streaming_gives_correct_response() {
+        let (client, mut server) = with_mocked_client(None).await; 
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("Content-Type", "text/event-stream")
+            .with_body(STREAMED_CHAT_COMPLETION_RESPONSE)
+            .create();
+        let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
+        let mut stream = client.invoke_stream(vec![prompt]).await.unwrap();
+        let result = stream.next().await.unwrap();
+        println!("ree {:?}", result);
+        let result = stream.next().await.unwrap();
+        println!("ree {:?}", result);
+        let result = stream.next().await.unwrap();
+        println!("ree {:?}", result);
+        mock.assert();
+        assert!(false);
+    }
+
     // Method which mocks the response the server will give. this
     // allows us to stub the requests instead of sending them to OpenAI
     fn with_mocked_request(
@@ -391,7 +415,7 @@ mod tests {
         server
             .mock("POST", "/")
             .with_status(status_code)
-            .with_header("content-type", "application/json")
+            .with_header("content-type", "text/event-stream")
             .with_body(response_body)
             .create()
     }
