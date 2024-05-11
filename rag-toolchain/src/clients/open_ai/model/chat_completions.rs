@@ -102,7 +102,8 @@ pub struct ChatCompletionStreamedResponse {
     pub object: String,
     pub created: u64,
     pub model: String,
-    pub system_fingerprint: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub system_fingerprint: Option<String>,
     pub choices: Vec<ChatCompletionStreamedChoices>,
 }
 
@@ -216,7 +217,7 @@ mod request_model_tests {
             object: "chat.completion.chunk".into(),
             created: 1712513908,
             model: "gpt-3.5-turbo-0125".into(),
-            system_fingerprint: "fp_b28b39ffa8".into(),
+            system_fingerprint: Some("fp_b28b39ffa8".into()),
             choices: vec![ChatCompletionStreamedChoices {
                 index: 0,
                 delta: ChatCompletionDelta {

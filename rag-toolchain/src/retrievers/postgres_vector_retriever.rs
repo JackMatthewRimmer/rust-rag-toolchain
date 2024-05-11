@@ -170,16 +170,6 @@ impl DistanceFunction {
     }
 }
 
-impl Display for DistanceFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DistanceFunction::L2 => write!(f, "L2"),
-            DistanceFunction::Cosine => write!(f, "Cosine"),
-            DistanceFunction::InnerProduct => write!(f, "InnerProduct"),
-        }
-    }
-}
-
 /// # [`PostgresRetrieverError`]
 ///
 /// This error is generic as it is parameterized over the error type of the embedding client.
@@ -203,5 +193,33 @@ impl<T: Error> Display for PostgresRetrieverError<T> {
                 write!(f, "Error retrieving similar text: {}", error)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::clients::OpenAIError;
+
+    #[test]
+    fn postgres_retriever_error_display_fmt() {
+        let openai_err: OpenAIError = OpenAIError::ErrorReadingStream("error".into());
+        let openai_err_message = openai_err.to_string();
+        let embedding_client_error = PostgresRetrieverError::EmbeddingClientError(openai_err);
+        let embedding_client_error_message = embedding_client_error.to_string();
+        assert_eq!(
+            embedding_client_error_message,
+            format!("Embedding Client Error: {}", openai_err_message)
+        );
+
+        let sqlx_error: sqlx::Error = sqlx::Error::RowNotFound;
+        let sqlx_error_message = sqlx_error.to_string();
+        let query_error: PostgresRetrieverError<OpenAIError> =
+            PostgresRetrieverError::QueryError(sqlx_error);
+        let query_error_message = query_error.to_string();
+        assert_eq!(
+            query_error_message,
+            format!("Error retrieving similar text: {}", sqlx_error_message)
+        );
     }
 }

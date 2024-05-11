@@ -201,7 +201,7 @@ pub struct OpenAICompletionStream {
 /// Value returned from each iteration of the stream.
 /// Given we wanted to represent connecting as a non-failure
 /// state we had to create a new enum to represent this.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompletionStreamValue {
     Connecting,
     Message(PromptMessage),
@@ -318,7 +318,7 @@ impl ChatCompletionStream for OpenAICompletionStream {
 }
 
 #[cfg(test)]
-mod chat_completion_client_test {
+mod tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
 
@@ -357,9 +357,11 @@ mod chat_completion_client_test {
     }
     "#;
 
+    const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:1\ndata:{\"id\":\"chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0\",\"object\":\"chat.completion.chunk\",\"created\":1712513908,\"model\":\"gpt-3.5-turbo-0125\",\"system_fingerprint\":\"fp_b28b39ffa8\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata:[DONE]\n\n";
+
     #[tokio::test]
-    async fn test_correct_response_succeeds() {
-        let (client, mut server) = with_mocked_client().await;
+    async fn invoke_correct_response_succeeds() {
+        let (client, mut server) = with_mocked_client(None).await;
         let mock = with_mocked_request(&mut server, 200, CHAT_COMPLETION_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap();
@@ -370,8 +372,8 @@ mod chat_completion_client_test {
     }
 
     #[tokio::test]
-    async fn test_error_response_maps_correctly() {
-        let (client, mut server) = with_mocked_client().await;
+    async fn invoke_error_response_maps_correctly() {
+        let (client, mut server) = with_mocked_client(Some(Map::new())).await;
         let mock = with_mocked_request(&mut server, 401, ERROR_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let response = client.invoke(vec![prompt]).await.unwrap_err();
@@ -379,6 +381,29 @@ mod chat_completion_client_test {
         let expected_response = OpenAIError::CODE401(error_body);
         mock.assert();
         assert_eq!(expected_response, response);
+    }
+
+    #[tokio::test]
+    async fn invoke_stream_correct_response_succeeds() {
+        let (client, mut server) = with_mocked_client(None).await;
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("Content-Type", "text/event-stream")
+            .with_body(STREAMED_CHAT_COMPLETION_RESPONSE)
+            .create();
+        let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
+        let mut stream = client.invoke_stream(vec![prompt]).await.unwrap();
+        let value1 = stream.next().await.unwrap().unwrap();
+        assert_eq!(value1, CompletionStreamValue::Connecting);
+        let value2 = stream.next().await.unwrap().unwrap();
+        assert_eq!(
+            value2,
+            CompletionStreamValue::Message(PromptMessage::AIMessage("Hello".into()))
+        );
+        let value3 = stream.next().await;
+        assert_eq!(value3, None);
+        mock.assert();
     }
 
     // Method which mocks the response the server will give. this
@@ -391,19 +416,26 @@ mod chat_completion_client_test {
         server
             .mock("POST", "/")
             .with_status(status_code)
-            .with_header("content-type", "application/json")
+            .with_header("Content-Type", "application/json")
             .with_body(response_body)
             .create()
     }
 
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
-    async fn with_mocked_client() -> (OpenAIChatCompletionClient, ServerGuard) {
+    async fn with_mocked_client(
+        config: Option<Map<String, Value>>,
+    ) -> (OpenAIChatCompletionClient, ServerGuard) {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIModel::Gpt3Point5;
-        let mut client = OpenAIChatCompletionClient::try_new(model).unwrap();
+        let mut client = match config {
+            Some(config) => {
+                OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()
+            }
+            None => OpenAIChatCompletionClient::try_new(model).unwrap(),
+        };
         client.url = url;
         (client, server)
     }

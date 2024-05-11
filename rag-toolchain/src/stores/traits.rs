@@ -28,16 +28,3 @@ pub trait EmbeddingStore {
         embeddings: Vec<Embedding>,
     ) -> impl Future<Output = Result<(), Self::ErrorType>> + Send;
 }
-
-#[cfg(test)]
-use mockall::*;
-#[cfg(test)]
-mock! {
-    pub EmbeddingStore {}
-    impl EmbeddingStore for EmbeddingStore {
-        type ErrorType = std::io::Error;
-        async fn store(&self, embedding: Embedding) -> Result<(), <Self as EmbeddingStore>::ErrorType>;
-        async fn store_batch(&self, embeddings: Vec<Embedding>)
-            -> Result<(), <Self as EmbeddingStore>::ErrorType>;
-    }
-}

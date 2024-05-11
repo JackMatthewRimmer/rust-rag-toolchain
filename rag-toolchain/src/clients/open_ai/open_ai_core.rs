@@ -94,7 +94,7 @@ impl OpenAIHttpClient {
     where
         T: Serialize,
     {
-        let request: RequestBuilder = self.build_requeset(body, url);
+        let request = self.build_requeset(body, url);
         let source = request
             .eventsource()
             .map_err(|e| OpenAIError::ErrorSendingRequest(e.to_string()))?;
@@ -151,7 +151,7 @@ impl OpenAIHttpClient {
 }
 
 #[cfg(test)]
-mod open_ai_core_tests {
+mod tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
     use serde::{Deserialize, Serialize};
