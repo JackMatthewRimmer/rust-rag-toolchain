@@ -94,7 +94,8 @@ impl OpenAIHttpClient {
     where
         T: Serialize,
     {
-        let request = self.client
+        let request = self
+            .client
             .post(url)
             .bearer_auth(self.api_key.clone())
             .json(&body);

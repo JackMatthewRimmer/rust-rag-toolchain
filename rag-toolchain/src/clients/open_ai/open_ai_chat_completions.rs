@@ -385,7 +385,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_streaming_gives_correct_response() {
-        let (client, mut server) = with_mocked_client(None).await; 
+        let (client, mut server) = with_mocked_client(None).await;
         let mock = server
             .mock("POST", "/")
             .with_status(200)
@@ -397,7 +397,10 @@ mod tests {
         let value1 = stream.next().await.unwrap().unwrap();
         assert_eq!(value1, CompletionStreamValue::Connecting);
         let value2 = stream.next().await.unwrap().unwrap();
-        assert_eq!(value2, CompletionStreamValue::Message(PromptMessage::AIMessage("Hello".into())));
+        assert_eq!(
+            value2,
+            CompletionStreamValue::Message(PromptMessage::AIMessage("Hello".into()))
+        );
         let value3 = stream.next().await;
         assert_eq!(value3, None);
         mock.assert();
