@@ -201,7 +201,7 @@ pub struct OpenAICompletionStream {
 /// Value returned from each iteration of the stream.
 /// Given we wanted to represent connecting as a non-failure
 /// state we had to create a new enum to represent this.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CompletionStreamValue {
     Connecting,
     Message(PromptMessage),
@@ -394,14 +394,13 @@ mod tests {
             .create();
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
         let mut stream = client.invoke_stream(vec![prompt]).await.unwrap();
-        let result = stream.next().await.unwrap();
-        println!("ree {:?}", result);
-        let result = stream.next().await.unwrap();
-        println!("ree {:?}", result);
-        let result = stream.next().await.unwrap();
-        println!("ree {:?}", result);
+        let value1 = stream.next().await.unwrap().unwrap();
+        assert_eq!(value1, CompletionStreamValue::Connecting);
+        let value2 = stream.next().await.unwrap().unwrap();
+        assert_eq!(value2, CompletionStreamValue::Message(PromptMessage::AIMessage("Hello".into())));
+        let value3 = stream.next().await;
+        assert_eq!(value3, None);
         mock.assert();
-        assert!(false);
     }
 
     // Method which mocks the response the server will give. this
