@@ -103,7 +103,6 @@ impl OpenAIHttpClient {
         let source = request
             .eventsource()
             .map_err(|e| OpenAIError::ErrorSendingRequest(e.to_string()))?;
-
         Ok(source)
     }
 
@@ -157,7 +156,7 @@ impl OpenAIHttpClient {
 }
 
 #[cfg(test)]
-mod open_ai_core_tests {
+mod tests {
     use super::*;
     use mockito::{Mock, Server, ServerGuard};
     use serde::{Deserialize, Serialize};

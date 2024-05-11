@@ -360,7 +360,7 @@ mod tests {
     const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:1\ndata:{\"id\":\"chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0\",\"object\":\"chat.completion.chunk\",\"created\":1712513908,\"model\":\"gpt-3.5-turbo-0125\",\"system_fingerprint\":\"fp_b28b39ffa8\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata:[DONE]\n\n";
 
     #[tokio::test]
-    async fn test_correct_response_succeeds() {
+    async fn invoke_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client(None).await;
         let mock = with_mocked_request(&mut server, 200, CHAT_COMPLETION_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
@@ -372,7 +372,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_error_response_maps_correctly() {
+    async fn invoke_error_response_maps_correctly() {
         let (client, mut server) = with_mocked_client(Some(Map::new())).await;
         let mock = with_mocked_request(&mut server, 401, ERROR_RESPONSE);
         let prompt = PromptMessage::HumanMessage("Please ask me a question".into());
@@ -384,7 +384,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_streaming_gives_correct_response() {
+    async fn invoke_stream_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client(None).await;
         let mock = server
             .mock("POST", "/")
@@ -416,7 +416,7 @@ mod tests {
         server
             .mock("POST", "/")
             .with_status(status_code)
-            .with_header("content-type", "text/event-stream")
+            .with_header("Content-Type", "application/json")
             .with_body(response_body)
             .create()
     }
