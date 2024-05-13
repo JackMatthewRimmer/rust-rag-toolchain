@@ -18,3 +18,5 @@ Cargo.lock
 .env
 
 data
+
+.DS_Store

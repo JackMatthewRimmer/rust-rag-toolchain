@@ -1,3 +1,19 @@
+//! # What is rag-toolchain ?
+//! this library aims to be a fast, rust native solution to integrating with GenAI
+//! and abstracting common workflows in a way the can be extended by consumers of the library.
+//! Theres a focus on concrete error types and a simple safe API for building out reliable
+//! programs that use GenAI. This library is still in its infancy, however, the intention is to
+//! grow out integrations and hopefully build some fun and cool stuff. There is some examples
+//! in the [GitHub](https://github.com/JackMatthewRimmer/rust-rag-toolchain) repository and also
+//! throughout the docs. I am open to contributors and suggestions so please get involved in the
+//! project if you wish.
+
+//! # Features:
+//! In this library all features are enabled by default. This is so you can install the library
+//! and have a play around. However, once you have landed on the features you which to be using
+//! make sure to disable "default-features" in you Cargo.toml and select only the ones you are
+//! using in order to keep binary size down and reduce compilation times.
+
 /// # Chains
 ///
 /// The chains module represents a set of abstractions for common GenAI workflows
