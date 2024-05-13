@@ -46,7 +46,7 @@ mod pg_vector {
 
     fn get_image() -> GenericImage {
         GenericImage::new("ankane/pgvector", "latest")
-            .with_wait_for(WaitFor::seconds(1))
+            .with_wait_for(WaitFor::seconds(2))
             .with_wait_for(WaitFor::message_on_stdout(
                 "database system is ready to accept connections",
             ))
