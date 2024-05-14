@@ -67,7 +67,7 @@ The library is structured into several modules, each responsible for a specific 
 
         // Create a new chat client
         let chat_client: OpenAIChatCompletionClient =
-            OpenAIChatCompletionClient::try_new(Gpt3Point5).unwrap();
+            OpenAIChatCompletionClient::try_new(Gpt3Point5Turbo).unwrap();
 
         // Define our system prompt
         let system_prompt: PromptMessage = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());

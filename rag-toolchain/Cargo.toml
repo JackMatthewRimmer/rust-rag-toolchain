@@ -1,6 +1,6 @@
 [package]
 name = "rag-toolchain"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 repository = "https://github.com/JackMatthewRimmer/rust-rag-toolchain"
 description = "is a Rust native library designed to empower developers with seamless access to common Gen AI workflows."
