@@ -429,7 +429,7 @@ mod tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let server = Server::new_async().await;
         let url = server.url();
-        let model = OpenAIModel::Gpt3Point5;
+        let model = OpenAIModel::Gpt3Point5Turbo;
         let mut client = match config {
             Some(config) => {
                 OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()

@@ -9,7 +9,7 @@ use rag_toolchain::clients::{
 async fn main() {
     // Create a new OpenAIChatCompletionClient
     // This examples shows the ability to add additional config to the client
-    let model: OpenAIModel = OpenAIModel::Gpt3Point5;
+    let model: OpenAIModel = OpenAIModel::Gpt4o;
     let mut additional_config: Map<String, Value> = Map::new();
     additional_config.insert("temperature".into(), 0.5.into());
 
