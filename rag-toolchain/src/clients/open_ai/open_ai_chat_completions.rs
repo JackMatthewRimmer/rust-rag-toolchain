@@ -28,7 +28,7 @@ const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/comple
 /// use serde_json::Map;
 /// use serde_json::Value;
 /// async fn generate_embedding() {
-///     let model: OpenAIModel = OpenAIModel::Gpt3Point5;
+///     let model: OpenAIModel = OpenAIModel::Gpt3Point5Turbo;
 ///     let mut additional_config: Map<String, Value> = Map::new();
 ///     additional_config.insert("temperature".into(), 0.5.into());
 ///
@@ -429,7 +429,7 @@ mod tests {
         std::env::set_var("OPENAI_API_KEY", "fake key");
         let server = Server::new_async().await;
         let url = server.url();
-        let model = OpenAIModel::Gpt3Point5;
+        let model = OpenAIModel::Gpt3Point5Turbo;
         let mut client = match config {
             Some(config) => {
                 OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()
