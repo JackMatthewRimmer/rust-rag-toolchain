@@ -42,7 +42,7 @@ use typed_builder::TypedBuilder;
 ///        store.as_retriever(embedding_client, DistanceFunction::Cosine);
 ///
 ///    let chat_client: OpenAIChatCompletionClient =
-///        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt3Point5).unwrap();
+///        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt3Point5Turbo).unwrap();
 ///
 ///    let system_prompt: PromptMessage = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());
 ///
@@ -169,7 +169,7 @@ where
 ///        store.as_retriever(embedding_client, DistanceFunction::Cosine);
 ///
 ///    let chat_client: OpenAIChatCompletionClient =
-///        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt3Point5).unwrap();
+///        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt3Point5Turbo).unwrap();
 ///
 ///    let system_prompt: PromptMessage = PromptMessage::SystemMessage(SYSTEM_MESSAGE.into());
 ///
