@@ -1,7 +1,8 @@
 use rag_toolchain::{
     chains::BasicRAGChain,
     clients::{
-        OpenAIChatCompletionClient, OpenAIEmbeddingClient, OpenAIModel::Gpt3Point5Turbo, PromptMessage,
+        OpenAIChatCompletionClient, OpenAIEmbeddingClient, OpenAIModel::Gpt3Point5Turbo,
+        PromptMessage,
     },
     common::OpenAIEmbeddingModel::TextEmbeddingAda002,
     retrievers::{DistanceFunction, PostgresVectorRetriever},
