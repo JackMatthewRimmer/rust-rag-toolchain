@@ -67,15 +67,15 @@ mod pg_vector {
     #[tokio::test]
     async fn run_integration_tests() {
         let image = get_image();
-        let container = image.start().await;
-        set_env_vars(container.get_host_port_ipv4(5432).await);
+        let container = image.start().await.unwrap();
+        set_env_vars(container.get_host_port_ipv4(5432).await.unwrap());
 
         let connection_string = format!(
             "postgres://{}:{}@{}:{}/{}",
             "postgres",
             "postgres",
             "localhost",
-            container.get_host_port_ipv4(5432).await,
+            container.get_host_port_ipv4(5432).await.unwrap(),
             "test_db"
         );
 
