@@ -29,7 +29,7 @@ mod pg_vector {
     use sqlx::prelude::FromRow;
     use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
-    use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage};
+    use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt, core::ContainerPort, core::ContainerRequest};
 
     const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
         DistanceFunction::Cosine,
@@ -44,8 +44,9 @@ mod pg_vector {
         static ref TEST_DATA: Vec<Embedding> = read_test_data();
     }
 
-    fn get_image() -> GenericImage {
+    fn get_image() -> ContainerRequest<GenericImage> {
         GenericImage::new("ankane/pgvector", "latest")
+            .with_exposed_port(ContainerPort::Tcp(5432))
             .with_wait_for(WaitFor::seconds(2))
             .with_wait_for(WaitFor::message_on_stdout(
                 "database system is ready to accept connections",
@@ -53,7 +54,6 @@ mod pg_vector {
             .with_env_var("POSTGRES_USER", "postgres")
             .with_env_var("POSTGRES_PASSWORD", "postgres")
             .with_env_var("POSTGRES_DB", "test_db")
-            .with_exposed_port(5432)
     }
 
     fn set_env_vars(port: u16) {
