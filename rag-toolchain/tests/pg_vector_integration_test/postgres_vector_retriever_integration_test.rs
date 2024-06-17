@@ -29,7 +29,10 @@ mod pg_vector {
     use sqlx::prelude::FromRow;
     use sqlx::{Pool, Postgres};
     use std::num::NonZeroU32;
-    use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt, core::ContainerPort, core::ContainerRequest};
+    use testcontainers::{
+        core::ContainerPort, core::ContainerRequest, core::WaitFor, runners::AsyncRunner,
+        GenericImage, ImageExt,
+    };
 
     const DISTANCE_FUNCTIONS: &[DistanceFunction] = &[
         DistanceFunction::Cosine,
