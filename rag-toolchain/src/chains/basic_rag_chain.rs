@@ -112,7 +112,7 @@ where
         let content = user_message.content();
         let chunks: Chunks = self
             .retriever
-            .retrieve(&content, top_k)
+            .retrieve(content, top_k)
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 
@@ -212,7 +212,7 @@ where
         let content = user_message.content();
         let chunks: Chunks = self
             .retriever
-            .retrieve(&content, top_k)
+            .retrieve(content, top_k)
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 

@@ -21,9 +21,9 @@ impl PromptMessage {
     /// * &[`str`] - the message content
     pub fn content(&self) -> &str {
         match self {
-            PromptMessage::SystemMessage(message) => &message,
-            PromptMessage::HumanMessage(message) => &message,
-            PromptMessage::AIMessage(message) => &message,
+            PromptMessage::SystemMessage(message) => message,
+            PromptMessage::HumanMessage(message) => message,
+            PromptMessage::AIMessage(message) => message,
         }
     }
 }

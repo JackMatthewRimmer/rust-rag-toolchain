@@ -18,7 +18,7 @@ use crate::{clients::PromptMessage, common::Chunks};
 /// [`PromptMessage`] - the new user prompt
 pub fn build_prompt(base_message: &PromptMessage, chunks: Chunks) -> PromptMessage {
     let mut builder: String = String::new();
-    builder.push_str(&base_message.content());
+    builder.push_str(base_message.content());
     builder.push_str("\nHere is some supporting information:\n");
     for chunk in chunks {
         builder.push_str(&format!("{}\n", chunk.content()))
