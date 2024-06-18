@@ -112,12 +112,11 @@ where
         let content = user_message.content();
         let chunks: Chunks = self
             .retriever
-            .retrieve(&content, top_k)
+            .retrieve(content, top_k)
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 
-        let new_prompt: PromptMessage =
-            PromptMessage::HumanMessage(build_prompt(user_message, chunks));
+        let new_prompt: PromptMessage = build_prompt(&user_message, chunks);
 
         let prompts = match self.system_prompt.clone() {
             None => vec![new_prompt],
@@ -213,12 +212,11 @@ where
         let content = user_message.content();
         let chunks: Chunks = self
             .retriever
-            .retrieve(&content, top_k)
+            .retrieve(content, top_k)
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 
-        let new_prompt: PromptMessage =
-            PromptMessage::HumanMessage(build_prompt(user_message, chunks));
+        let new_prompt: PromptMessage = build_prompt(&user_message, chunks);
 
         let prompts = match self.system_prompt.clone() {
             None => vec![new_prompt],
