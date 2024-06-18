@@ -15,15 +15,15 @@ use crate::{clients::PromptMessage, common::Chunks};
 /// * `chunks` - the supporting chunks retrieved from the retriever
 ///
 /// # Returns
-/// [`String`] - the new user prompt
-pub fn build_prompt(base_message: PromptMessage, chunks: Chunks) -> String {
+/// [`PromptMessage`] - the new user prompt
+pub fn build_prompt(base_message: &PromptMessage, chunks: Chunks) -> PromptMessage {
     let mut builder: String = String::new();
     builder.push_str(&base_message.content());
     builder.push_str("\nHere is some supporting information:\n");
     for chunk in chunks {
         builder.push_str(&format!("{}\n", chunk.content()))
     }
-    builder
+    PromptMessage::HumanMessage(builder)
 }
 
 #[cfg(test)]
@@ -37,9 +37,10 @@ mod chains_utils_tests {
         const USER_MESSAGE: &str = "can you explain the data to me";
         let user_prompt: PromptMessage = PromptMessage::HumanMessage(USER_MESSAGE.into());
         let chunks = vec![Chunk::new("data point 1"), Chunk::new("data point 2")];
-        let response = build_prompt(user_prompt, chunks);
+        let response = build_prompt(&user_prompt, chunks);
         let expected_response: &str = "can you explain the data to me\nHere is some supporting information:\ndata point 1\ndata point 2\n";
         println!("{}", expected_response);
-        assert_eq!(expected_response, response);
+        matches!(response, PromptMessage::HumanMessage(_));
+        assert_eq!(expected_response, response.content());
     }
 }

@@ -116,8 +116,7 @@ where
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 
-        let new_prompt: PromptMessage =
-            PromptMessage::HumanMessage(build_prompt(user_message, chunks));
+        let new_prompt: PromptMessage = build_prompt(&user_message, chunks);
 
         let prompts = match self.system_prompt.clone() {
             None => vec![new_prompt],
@@ -217,8 +216,7 @@ where
             .await
             .map_err(RagChainError::RetrieverError::<T::ErrorType, U::ErrorType>)?;
 
-        let new_prompt: PromptMessage =
-            PromptMessage::HumanMessage(build_prompt(user_message, chunks));
+        let new_prompt: PromptMessage = build_prompt(&user_message, chunks);
 
         let prompts = match self.system_prompt.clone() {
             None => vec![new_prompt],

@@ -18,12 +18,12 @@ impl PromptMessage {
     /// this function will return the message as a string to avoid pattern matching.
     ///
     /// # Returns
-    /// * [`String`] - the message content
-    pub fn content(&self) -> String {
+    /// * &[`str`] - the message content
+    pub fn content(&self) -> &str {
         match self {
-            PromptMessage::SystemMessage(message) => message.clone(),
-            PromptMessage::HumanMessage(message) => message.clone(),
-            PromptMessage::AIMessage(message) => message.clone(),
+            PromptMessage::SystemMessage(message) => &message,
+            PromptMessage::HumanMessage(message) => &message,
+            PromptMessage::AIMessage(message) => &message,
         }
     }
 }
@@ -37,15 +37,15 @@ mod tests {
         let test_string = String::from("Test String");
         assert_eq!(
             &test_string,
-            &PromptMessage::HumanMessage(test_string.clone()).content()
+            PromptMessage::HumanMessage(test_string.clone()).content()
         );
         assert_eq!(
             &test_string,
-            &PromptMessage::AIMessage(test_string.clone()).content()
+            PromptMessage::AIMessage(test_string.clone()).content()
         );
         assert_eq!(
             &test_string,
-            &PromptMessage::SystemMessage(test_string.clone()).content()
+            PromptMessage::SystemMessage(test_string.clone()).content()
         );
     }
 }
