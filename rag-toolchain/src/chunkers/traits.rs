@@ -7,7 +7,7 @@ pub trait Chunker {
     fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, Self::ErrorType>;
 }
 
-pub trait StreamedChunked {
+pub trait StreamedChunker {
     type ErrorType: Error;
     fn generate_chunks(&self, data_stream: impl Read) -> Result<Chunks, Self::ErrorType>;
 }

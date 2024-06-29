@@ -62,7 +62,7 @@ impl TokenChunker {
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
         embedding_model: impl EmbeddingModel,
-    ) -> Result<Self, ChunkingError> {
+    ) -> Result<Self, TokenChunkingError> {
         let metadata: EmbeddingModelMetadata = embedding_model.metadata();
         Self::validate_arguments(chunk_size.into(), chunk_overlap, metadata.max_tokens)?;
         let chunker = TokenChunker {
@@ -91,16 +91,16 @@ impl TokenChunker {
         chunk_size: usize,
         chunk_overlap: usize,
         max_chunk_size: usize,
-    ) -> Result<(), ChunkingError> {
+    ) -> Result<(), TokenChunkingError> {
         if chunk_size > max_chunk_size {
-            Err(ChunkingError::InvalidChunkSize(format!(
+            Err(TokenChunkingError::InvalidChunkSize(format!(
                 "Chunk size must be smaller than {}",
                 max_chunk_size
             )))?
         }
 
         if chunk_overlap >= chunk_size {
-            Err(ChunkingError::ChunkOverlapTooLarge(
+            Err(TokenChunkingError::ChunkOverlapTooLarge(
                 "Window size must be smaller than chunk size".to_string(),
             ))?
         }
@@ -109,7 +109,7 @@ impl TokenChunker {
 }
 
 impl Chunker for TokenChunker {
-    type ErrorType = ChunkingError;
+    type ErrorType = TokenChunkingError;
     /// # [`TokenChunker::generate_chunks`]
     /// function to generate chunks from raw text
     ///
@@ -124,7 +124,7 @@ impl Chunker for TokenChunker {
     fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, Self::ErrorType> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
-            ChunkingError::TokenizationError("Unable to tokenize text".to_string())
+            TokenChunkingError::TokenizationError("Unable to tokenize text".to_string())
         })?;
 
         let chunk_size: usize = self.chunk_size.into();
@@ -145,12 +145,12 @@ impl Chunker for TokenChunker {
 /// # [`ChunkingError`]
 /// Custom error type representing errors that can occur during chunking
 #[derive(Debug, PartialEq, Eq)]
-pub enum ChunkingError {
+pub enum TokenChunkingError {
     ChunkOverlapTooLarge(String),
     TokenizationError(String),
     InvalidChunkSize(String),
 }
-impl Display for ChunkingError {
+impl Display for TokenChunkingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ChunkOverlapTooLarge(e) => std::fmt::Display::fmt(&e, f),
@@ -159,7 +159,7 @@ impl Display for ChunkingError {
         }
     }
 }
-impl Error for ChunkingError {}
+impl Error for TokenChunkingError {}
 
 #[cfg(test)]
 mod tests {
@@ -206,7 +206,7 @@ mod tests {
     fn test_generate_chunks_with_invalid_arguments() {
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let chunker: ChunkingError =
+        let chunker: TokenChunkingError =
             match TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002) {
                 Ok(_) => panic!("Expected error"),
                 Err(e) => e,
@@ -214,7 +214,7 @@ mod tests {
 
         assert_eq!(
             chunker,
-            ChunkingError::ChunkOverlapTooLarge(
+            TokenChunkingError::ChunkOverlapTooLarge(
                 "Window size must be smaller than chunk size".to_string()
             )
         );

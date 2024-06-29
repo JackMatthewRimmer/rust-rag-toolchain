@@ -1,4 +1,4 @@
-use rag_toolchain::chunkers::TokenChunker;
+use rag_toolchain::chunkers::{Chunker, TokenChunker};
 use rag_toolchain::clients::{AsyncEmbeddingClient, OpenAIEmbeddingClient};
 use rag_toolchain::common::{Chunks, Embedding, OpenAIEmbeddingModel};
 use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
