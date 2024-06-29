@@ -1,4 +1,5 @@
 use crate::common::Chunks;
+use futures::StreamExt;
 use std::error::Error;
 use std::io::Read;
 

@@ -59,9 +59,6 @@ impl Chunker for CharacterChunker {
 mod tests {
     use super::*;
 
-    // TODO: will need test cases when the constructor becomes try_new.
-    // This is because we need to validate the arguements
-
     #[test]
     fn test_generate_chunks_with_valid_input() {
         let raw_text: &str = "This is a test string";
