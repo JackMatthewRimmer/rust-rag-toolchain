@@ -1,5 +1,9 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::num::NonZeroUsize;
+
+use super::traits::Chunker;
 
 /// # [`TokenChunker`]
 /// This struct allows you to do fixed size chunking based on the number
@@ -28,7 +32,7 @@ use std::num::NonZeroUsize;
 ///
 ///     let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
 /// }
-///     
+///
 /// ```
 pub struct TokenChunker {
     /// chunk_size: The size in tokens of each chunk
@@ -102,7 +106,10 @@ impl TokenChunker {
         }
         Ok(())
     }
+}
 
+impl Chunker for TokenChunker {
+    type ErrorType = ChunkingError;
     /// # [`TokenChunker::generate_chunks`]
     /// function to generate chunks from raw text
     ///
@@ -114,7 +121,7 @@ impl TokenChunker {
     ///
     /// # Returns
     /// [`Chunks`] - The generated chunks
-    pub fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, ChunkingError> {
+    fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, Self::ErrorType> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
             ChunkingError::TokenizationError("Unable to tokenize text".to_string())
@@ -143,6 +150,16 @@ pub enum ChunkingError {
     TokenizationError(String),
     InvalidChunkSize(String),
 }
+impl Display for ChunkingError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ChunkOverlapTooLarge(e) => std::fmt::Display::fmt(&e, f),
+            Self::TokenizationError(e) => std::fmt::Display::fmt(&e, f),
+            Self::InvalidChunkSize(e) => std::fmt::Display::fmt(&e, f),
+        }
+    }
+}
+impl Error for ChunkingError {}
 
 #[cfg(test)]
 mod tests {
