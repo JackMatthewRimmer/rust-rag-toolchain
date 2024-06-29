@@ -54,4 +54,25 @@ mod tests {
     use super::*;
 
     // TODO: will need test cases when the constructor becomes try_new.
+    // This is because we need to validate the arguements
+
+    #[test]
+    fn test_generate_chunks_with_valid_input() {
+        let raw_text: &str = "This is a test string";
+        let chunk_overlap: usize = 1;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
+        let chunker: CharacterChunker = CharacterChunker::new(chunk_size, chunk_overlap);
+        let chunks = chunker.generate_chunks(raw_text).unwrap();
+        let chunk_strings: Vec<String> = chunks
+            .into_iter()
+            .map(|chunk| chunk.content().to_string())
+            .collect();
+        assert_eq!(
+            chunk_strings,
+            vec![
+                "Th", "hi", "is", "s ", " i", "is", "s ", " a", "a ", " t", "te", "es", "st", "t ",
+                " s", "st", "tr", "ri", "in", "ng", "g"
+            ]
+        );
+    }
 }
