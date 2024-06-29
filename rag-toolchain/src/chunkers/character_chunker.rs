@@ -82,4 +82,30 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn test_generate_chunks_with_empty_string() {
+        let raw_text: &str = "";
+        let chunk_overlap: usize = 1;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
+        let chunker: CharacterChunker =
+            CharacterChunker::try_new(chunk_size, chunk_overlap).unwrap();
+        let chunks = chunker.generate_chunks(raw_text).unwrap();
+        let chunk_strings: Vec<String> = chunks
+            .into_iter()
+            .map(|chunk| chunk.content().to_string())
+            .collect();
+        assert_eq!(chunk_strings, Vec::<String>::new());
+    }
+
+    #[test]
+    fn test_try_new_with_invalid_arguments() {
+        let chunk_overlap: usize = 3;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
+        assert!(CharacterChunker::try_new(chunk_size, chunk_overlap).is_err());
+
+        let chunk_overlap: usize = 2;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
+        assert!(CharacterChunker::try_new(chunk_size, chunk_overlap).is_err())
+    }
 }
