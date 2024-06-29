@@ -1,8 +1,6 @@
 use crate::chunkers::{Chunker, StreamedChunker};
 use crate::common::{Chunk, Chunks};
 use std::convert::Infallible;
-use std::error::Error;
-use std::fmt::Display;
 use std::num::NonZeroUsize;
 
 pub struct CharacterChunker {
@@ -14,20 +12,28 @@ pub struct CharacterChunker {
 }
 
 impl CharacterChunker {
-    /// [`TokenChunker::new`]
+    /// [`TokenChunker::try_new`]
     ///
     /// # Arguements
     /// * `chunk_size`: [`NonZeroUsize`] - The number of characters in each chunk
     /// * `chunk_overlap`: [`usize`] - The number of characters shared between
     ///                   neighbouring chunks
+    ///
+    /// # Errors
+    /// This function will error if you provide a chunk_overlap greater than or equal to
+    /// the chunk_size.
+    ///
     /// # Returns
     /// [`TokenChunker`]
-    // TODO: needs to be try new and validated like the TokenChunker
-    pub fn new(chunk_size: NonZeroUsize, chunk_overlap: usize) -> Self {
-        Self {
+    pub fn try_new(chunk_size: NonZeroUsize, chunk_overlap: usize) -> Result<Self, String> {
+        if chunk_overlap >= chunk_size.into() {
+            return Err("chunk_overlap cannot be greater than or equal to chunk_size".into());
+        }
+
+        Ok(Self {
             chunk_size,
             chunk_overlap,
-        }
+        })
     }
 }
 
@@ -61,7 +67,8 @@ mod tests {
         let raw_text: &str = "This is a test string";
         let chunk_overlap: usize = 1;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let chunker: CharacterChunker = CharacterChunker::new(chunk_size, chunk_overlap);
+        let chunker: CharacterChunker =
+            CharacterChunker::try_new(chunk_size, chunk_overlap).unwrap();
         let chunks = chunker.generate_chunks(raw_text).unwrap();
         let chunk_strings: Vec<String> = chunks
             .into_iter()
