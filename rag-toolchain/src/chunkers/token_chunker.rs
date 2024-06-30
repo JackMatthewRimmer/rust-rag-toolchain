@@ -1,5 +1,4 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
-use std::fmt::{Display, Formatter};
 use std::num::NonZeroUsize;
 use thiserror::Error;
 
