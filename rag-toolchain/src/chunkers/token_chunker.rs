@@ -1,7 +1,7 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
-use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroUsize;
+use thiserror::Error;
 
 use super::traits::Chunker;
 
@@ -144,22 +144,15 @@ impl Chunker for TokenChunker {
 
 /// # [`ChunkingError`]
 /// Custom error type representing errors that can occur during chunking
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum TokenChunkingError {
+    #[error("{0}")]
     ChunkOverlapTooLarge(String),
+    #[error("{0}")]
     TokenizationError(String),
+    #[error("{0}")]
     InvalidChunkSize(String),
 }
-impl Display for TokenChunkingError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ChunkOverlapTooLarge(e) => std::fmt::Display::fmt(&e, f),
-            Self::TokenizationError(e) => std::fmt::Display::fmt(&e, f),
-            Self::InvalidChunkSize(e) => std::fmt::Display::fmt(&e, f),
-        }
-    }
-}
-impl Error for TokenChunkingError {}
 
 #[cfg(test)]
 mod tests {
