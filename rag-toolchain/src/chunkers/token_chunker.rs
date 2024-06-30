@@ -1,5 +1,8 @@
 use crate::common::{Chunk, Chunks, EmbeddingModel, EmbeddingModelMetadata, TokenizerWrapper};
 use std::num::NonZeroUsize;
+use thiserror::Error;
+
+use super::traits::Chunker;
 
 /// # [`TokenChunker`]
 /// This struct allows you to do fixed size chunking based on the number
@@ -28,7 +31,7 @@ use std::num::NonZeroUsize;
 ///
 ///     let chunks: Chunks = chunker.generate_chunks(raw_text).unwrap();
 /// }
-///     
+///
 /// ```
 pub struct TokenChunker {
     /// chunk_size: The size in tokens of each chunk
@@ -58,7 +61,7 @@ impl TokenChunker {
         chunk_size: NonZeroUsize,
         chunk_overlap: usize,
         embedding_model: impl EmbeddingModel,
-    ) -> Result<Self, ChunkingError> {
+    ) -> Result<Self, TokenChunkingError> {
         let metadata: EmbeddingModelMetadata = embedding_model.metadata();
         Self::validate_arguments(chunk_size.into(), chunk_overlap, metadata.max_tokens)?;
         let chunker = TokenChunker {
@@ -87,22 +90,25 @@ impl TokenChunker {
         chunk_size: usize,
         chunk_overlap: usize,
         max_chunk_size: usize,
-    ) -> Result<(), ChunkingError> {
+    ) -> Result<(), TokenChunkingError> {
         if chunk_size > max_chunk_size {
-            Err(ChunkingError::InvalidChunkSize(format!(
+            Err(TokenChunkingError::InvalidChunkSize(format!(
                 "Chunk size must be smaller than {}",
                 max_chunk_size
             )))?
         }
 
         if chunk_overlap >= chunk_size {
-            Err(ChunkingError::ChunkOverlapTooLarge(
+            Err(TokenChunkingError::ChunkOverlapTooLarge(
                 "Window size must be smaller than chunk size".to_string(),
             ))?
         }
         Ok(())
     }
+}
 
+impl Chunker for TokenChunker {
+    type ErrorType = TokenChunkingError;
     /// # [`TokenChunker::generate_chunks`]
     /// function to generate chunks from raw text
     ///
@@ -114,10 +120,10 @@ impl TokenChunker {
     ///
     /// # Returns
     /// [`Chunks`] - The generated chunks
-    pub fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, ChunkingError> {
+    fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, Self::ErrorType> {
         // Generate token array from raw text
         let tokens: Vec<String> = self.tokenizer.tokenize(raw_text).ok_or_else(|| {
-            ChunkingError::TokenizationError("Unable to tokenize text".to_string())
+            TokenChunkingError::TokenizationError("Unable to tokenize text".to_string())
         })?;
 
         let chunk_size: usize = self.chunk_size.into();
@@ -137,10 +143,13 @@ impl TokenChunker {
 
 /// # [`ChunkingError`]
 /// Custom error type representing errors that can occur during chunking
-#[derive(Debug, PartialEq, Eq)]
-pub enum ChunkingError {
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum TokenChunkingError {
+    #[error("{0}")]
     ChunkOverlapTooLarge(String),
+    #[error("{0}")]
     TokenizationError(String),
+    #[error("{0}")]
     InvalidChunkSize(String),
 }
 
@@ -186,20 +195,16 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_chunks_with_invalid_arguments() {
+    fn test_generate_chunks_with_invalid_window_size() {
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let chunker: ChunkingError =
-            match TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002) {
-                Ok(_) => panic!("Expected error"),
-                Err(e) => e,
-            };
+        assert!(TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).is_err());
+    }
 
-        assert_eq!(
-            chunker,
-            ChunkingError::ChunkOverlapTooLarge(
-                "Window size must be smaller than chunk size".to_string()
-            )
-        );
+    #[test]
+    fn test_generate_chunks_with_invalid_chunk_size() {
+        let window_size: usize = 3;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(20000).unwrap();
+        assert!(TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).is_err());
     }
 }
