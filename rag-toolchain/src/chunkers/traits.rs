@@ -1,14 +1,16 @@
-use crate::common::Chunks;
-use futures::StreamExt;
+use crate::common::{Chunk, Chunks};
+use futures::Stream;
 use std::error::Error;
-use std::io::Read;
 
 pub trait Chunker {
     type ErrorType: Error;
     fn generate_chunks(&self, raw_text: &str) -> Result<Chunks, Self::ErrorType>;
 }
 
+#[allow(unused)]
 pub trait StreamedChunker {
     type ErrorType: Error;
-    fn generate_chunks(&self, data_stream: impl Read) -> Result<Chunks, Self::ErrorType>;
+    type CharacterStream: Stream<Item = std::io::Result<char>>;
+    type ChunkStream: Stream<Item = Result<Chunk, Self::ErrorType>>;
+    fn generate_chunks(&self, data_stream: Self::CharacterStream) -> Self::ChunkStream;
 }

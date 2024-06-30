@@ -1,4 +1,4 @@
-use crate::chunkers::{Chunker, StreamedChunker};
+use crate::chunkers::Chunker;
 use crate::common::{Chunk, Chunks};
 use std::convert::Infallible;
 use std::num::NonZeroUsize;

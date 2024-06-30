@@ -6,4 +6,4 @@ pub use character_chunker::CharacterChunker;
 /// Module to contain all the methods of chunking allowing for
 /// prepping text before embedding and storing it.
 pub use token_chunker::{TokenChunker, TokenChunkingError};
-pub use traits::{Chunker, StreamedChunker};
+pub use traits::Chunker;
