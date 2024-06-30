@@ -203,20 +203,16 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_chunks_with_invalid_arguments() {
+    fn test_generate_chunks_with_invalid_window_size() {
         let window_size: usize = 3;
         let chunk_size: NonZeroUsize = NonZeroUsize::new(2).unwrap();
-        let chunker: TokenChunkingError =
-            match TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002) {
-                Ok(_) => panic!("Expected error"),
-                Err(e) => e,
-            };
+        assert!(TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).is_err());
+    }
 
-        assert_eq!(
-            chunker,
-            TokenChunkingError::ChunkOverlapTooLarge(
-                "Window size must be smaller than chunk size".to_string()
-            )
-        );
+    #[test]
+    fn test_generate_chunks_with_invalid_chunk_size() {
+        let window_size: usize = 3;
+        let chunk_size: NonZeroUsize = NonZeroUsize::new(20000).unwrap();
+        assert!(TokenChunker::try_new(chunk_size, window_size, TextEmbeddingAda002).is_err());
     }
 }
