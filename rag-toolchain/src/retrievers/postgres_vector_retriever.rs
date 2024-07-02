@@ -4,7 +4,6 @@ use crate::retrievers::traits::AsyncRetriever;
 use pgvector::Vector;
 use sqlx::{Pool, Postgres};
 use std::error::Error;
-use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
 use thiserror::Error;
 

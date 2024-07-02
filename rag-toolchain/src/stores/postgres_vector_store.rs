@@ -5,8 +5,6 @@ use crate::stores::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::{postgres::PgArguments, Pool, Postgres};
 use std::env::{self, VarError};
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 use thiserror::Error;
 
 use dotenv::dotenv;
