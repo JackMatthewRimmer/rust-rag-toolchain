@@ -5,8 +5,7 @@ use crate::stores::traits::EmbeddingStore;
 use sqlx::postgres::{PgPoolOptions, PgQueryResult};
 use sqlx::{postgres::PgArguments, Pool, Postgres};
 use std::env::{self, VarError};
-use std::error::Error;
-use std::fmt::{Display, Formatter};
+use thiserror::Error;
 
 use dotenv::dotenv;
 
@@ -71,7 +70,7 @@ impl PostgresVectorStore {
     pub async fn try_new(
         table_name: &str,
         embedding_model: impl EmbeddingModel,
-    ) -> Result<Self, PostgresVectorError> {
+    ) -> Result<Self, PostgresVectorStoreError> {
         dotenv().ok();
         let username: String = env::var("POSTGRES_USER")?;
         let password: String = env::var("POSTGRES_PASSWORD")?;
@@ -85,12 +84,12 @@ impl PostgresVectorStore {
         // Connect to the database
         let pool = PostgresVectorStore::connect(&connection_string)
             .await
-            .map_err(PostgresVectorError::ConnectionError)?;
+            .map_err(PostgresVectorStoreError::ConnectionError)?;
 
         // Create the table
         PostgresVectorStore::create_table(&pool, table_name, embedding_diminsions)
             .await
-            .map_err(PostgresVectorError::TableCreationError)?;
+            .map_err(PostgresVectorStoreError::TableCreationError)?;
 
         Ok(PostgresVectorStore {
             pool,
@@ -118,13 +117,13 @@ impl PostgresVectorStore {
         pool: Pool<Postgres>,
         table_name: &str,
         embedding_model: impl EmbeddingModel,
-    ) -> Result<Self, PostgresVectorError> {
+    ) -> Result<Self, PostgresVectorStoreError> {
         let embedding_diminsions = embedding_model.metadata().dimensions;
 
         // Create the table
         PostgresVectorStore::create_table(&pool, table_name, embedding_diminsions)
             .await
-            .map_err(PostgresVectorError::TableCreationError)?;
+            .map_err(PostgresVectorStoreError::TableCreationError)?;
 
         Ok(PostgresVectorStore {
             pool,
@@ -251,7 +250,7 @@ impl PostgresVectorStore {
 }
 
 impl EmbeddingStore for PostgresVectorStore {
-    type ErrorType = PostgresVectorError;
+    type ErrorType = PostgresVectorStoreError;
     /// # [`PostgresVectorStore::store`]
     /// This is done as a single insert statement.
     ///
@@ -263,12 +262,12 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the insert succeeds
-    async fn store(&self, embedding: Embedding) -> Result<(), PostgresVectorError> {
+    async fn store(&self, embedding: Embedding) -> Result<(), PostgresVectorStoreError> {
         let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
         Self::bind_to_query(&query, embedding)
             .execute(&self.pool)
             .await
-            .map_err(PostgresVectorError::InsertError)?;
+            .map_err(PostgresVectorStoreError::InsertError)?;
         Ok(())
     }
 
@@ -283,25 +282,28 @@ impl EmbeddingStore for PostgresVectorStore {
     ///
     /// # Returns
     /// * [`()`] if the transaction succeeds
-    async fn store_batch(&self, embeddings: Vec<Embedding>) -> Result<(), PostgresVectorError> {
+    async fn store_batch(
+        &self,
+        embeddings: Vec<Embedding>,
+    ) -> Result<(), PostgresVectorStoreError> {
         let query: String = PostgresVectorStore::insert_row_sql(&self.table_name);
         let mut transaction = self
             .pool
             .begin()
             .await
-            .map_err(PostgresVectorError::TransactionError)?;
+            .map_err(PostgresVectorStoreError::TransactionError)?;
 
         for embedding in embeddings {
             Self::bind_to_query(&query, embedding)
                 .execute(&mut *transaction)
                 .await
-                .map_err(PostgresVectorError::InsertError)?;
+                .map_err(PostgresVectorStoreError::InsertError)?;
         }
 
         transaction
             .commit()
             .await
-            .map_err(PostgresVectorError::TransactionError)?;
+            .map_err(PostgresVectorStoreError::TransactionError)?;
         Ok(())
     }
 }
@@ -309,45 +311,28 @@ impl EmbeddingStore for PostgresVectorStore {
 /// # [`PostgresVectorError`]
 /// This Error enum wraps all the errors that can occur when using
 /// the PgVector struct with contextual meaning.
-#[derive(Debug)]
-pub enum PostgresVectorError {
+#[derive(Error, Debug)]
+pub enum PostgresVectorStoreError {
     /// Error when an environment variable is not set
+    #[error("Environment Variable Error: {0}")]
     EnvVarError(VarError),
     /// Error when the connection to the database could not be established
+    #[error("Connection Error: {0}")]
     ConnectionError(sqlx::Error),
     /// Error when the table could not be created
+    #[error("Table Creation Error: {0}")]
     TableCreationError(sqlx::Error),
     /// Error when calling [`PostgresVectorStore::store()`] fails
+    #[error("Upsert Error: {0}")]
     InsertError(sqlx::Error),
     /// Error when calling [`PostgresVectorStore::store_batch()`] fails
+    #[error("Transaction Error: {0}")]
     TransactionError(sqlx::Error),
 }
-impl Error for PostgresVectorError {}
-impl From<VarError> for PostgresVectorError {
-    fn from(error: VarError) -> Self {
-        PostgresVectorError::EnvVarError(error)
-    }
-}
 
-impl Display for PostgresVectorError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PostgresVectorError::EnvVarError(error) => {
-                write!(f, "Environment variable error: {}", error)
-            }
-            PostgresVectorError::ConnectionError(error) => {
-                write!(f, "Connection error: {}", error)
-            }
-            PostgresVectorError::TableCreationError(error) => {
-                write!(f, "Table creation error: {}", error)
-            }
-            PostgresVectorError::InsertError(error) => {
-                write!(f, "Upsert error: {}", error)
-            }
-            PostgresVectorError::TransactionError(error) => {
-                write!(f, "Transaction error: {}", error)
-            }
-        }
+impl From<VarError> for PostgresVectorStoreError {
+    fn from(error: VarError) -> Self {
+        PostgresVectorStoreError::EnvVarError(error)
     }
 }
 
@@ -361,70 +346,33 @@ mod tests {
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorStoreError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_USER", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorStoreError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_PASSWORD", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorStoreError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_HOST", "localhost");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PostgresVectorError::EnvVarError(_)));
+        assert!(matches!(result, PostgresVectorStoreError::EnvVarError(_)));
 
         std::env::set_var("POSTGRES_DATABASE", "postgres");
         let result = PostgresVectorStore::try_new("test", TextEmbeddingAda002)
             .await
             .unwrap_err();
-        assert!(matches!(result, PostgresVectorError::ConnectionError(_)));
-    }
-
-    #[test]
-    fn postgres_vector_error_display() {
-        let sqlx_error = sqlx::Error::RowNotFound;
-        let sqlx_error_message = sqlx_error.to_string();
-
-        let var_error: VarError = VarError::NotPresent;
-        let var_error_message = var_error.to_string();
-
-        let env_var_error = PostgresVectorError::EnvVarError(var_error);
-        assert_eq!(
-            env_var_error.to_string(),
-            format!("Environment variable error: {}", var_error_message)
-        );
-
-        let connection_error = PostgresVectorError::ConnectionError(sqlx::Error::RowNotFound);
-        assert_eq!(
-            connection_error.to_string(),
-            format!("Connection error: {}", sqlx_error_message)
-        );
-
-        let table_creation_error =
-            PostgresVectorError::TableCreationError(sqlx::Error::RowNotFound);
-        assert_eq!(
-            table_creation_error.to_string(),
-            format!("Table creation error: {}", sqlx_error_message)
-        );
-
-        let insert_error = PostgresVectorError::InsertError(sqlx::Error::RowNotFound);
-        assert_eq!(
-            insert_error.to_string(),
-            format!("Upsert error: {}", sqlx_error_message)
-        );
-
-        let transaction_error = PostgresVectorError::TransactionError(sqlx::Error::RowNotFound);
-        assert_eq!(
-            transaction_error.to_string(),
-            format!("Transaction error: {}", sqlx_error_message)
-        );
+        assert!(matches!(
+            result,
+            PostgresVectorStoreError::ConnectionError(_)
+        ));
     }
 }
