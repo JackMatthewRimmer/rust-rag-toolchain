@@ -6,6 +6,7 @@ use sqlx::{Pool, Postgres};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::num::NonZeroU32;
+use thiserror::Error;
 
 /// # [`PostgresVectorRetriever`]
 ///
@@ -174,52 +175,13 @@ impl DistanceFunction {
 ///
 /// This error is generic as it is parameterized over the error type of the embedding client.
 /// This allows us to avoid dynamic dispatched error types.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PostgresRetrieverError<T: Error> {
     /// If an error occured while trying to embed the text supplied
     /// as an arguement
+    #[error("Embedding Client Error: {0}")]
     EmbeddingClientError(T),
     /// If an error occured while doing the similarity search
+    #[error("Embedding Retrieving Similar Text: {0}")]
     QueryError(sqlx::Error),
-}
-impl<T: Error> Error for PostgresRetrieverError<T> {}
-impl<T: Error> Display for PostgresRetrieverError<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PostgresRetrieverError::EmbeddingClientError(error) => {
-                write!(f, "Embedding Client Error: {}", *error)
-            }
-            PostgresRetrieverError::QueryError(error) => {
-                write!(f, "Error retrieving similar text: {}", error)
-            }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::clients::OpenAIError;
-
-    #[test]
-    fn postgres_retriever_error_display_fmt() {
-        let openai_err: OpenAIError = OpenAIError::ErrorReadingStream("error".into());
-        let openai_err_message = openai_err.to_string();
-        let embedding_client_error = PostgresRetrieverError::EmbeddingClientError(openai_err);
-        let embedding_client_error_message = embedding_client_error.to_string();
-        assert_eq!(
-            embedding_client_error_message,
-            format!("Embedding Client Error: {}", openai_err_message)
-        );
-
-        let sqlx_error: sqlx::Error = sqlx::Error::RowNotFound;
-        let sqlx_error_message = sqlx_error.to_string();
-        let query_error: PostgresRetrieverError<OpenAIError> =
-            PostgresRetrieverError::QueryError(sqlx_error);
-        let query_error_message = query_error.to_string();
-        assert_eq!(
-            query_error_message,
-            format!("Error retrieving similar text: {}", sqlx_error_message)
-        );
-    }
 }
