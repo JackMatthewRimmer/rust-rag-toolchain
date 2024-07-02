@@ -1,7 +1,4 @@
-use std::{
-    error::Error,
-    fmt::{Display, Formatter},
-};
+use thiserror::Error;
 
 /// # [`RagChainError`]
 ///
@@ -11,33 +8,16 @@ use std::{
 ///
 /// * `T` - The error type of the chat client
 /// * `U` - The error type of the retriever
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum RagChainError<T, U>
 where
-    T: Error + Display,
-    U: Error + Display,
+    T: std::error::Error + std::fmt::Display,
+    U: std::error::Error + std::fmt::Display,
 {
+    #[error("Chat Client Error: {0}")]
     ChatClientError(T),
+    #[error("Retriever Error: {0}")]
     RetrieverError(U),
-}
-
-impl<T, U> Error for RagChainError<T, U>
-where
-    T: Error + Display,
-    U: Error + Display,
-{
-}
-impl<T, U> Display for RagChainError<T, U>
-where
-    T: Error + Display,
-    U: Error + Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ChatClientError(e) => std::fmt::Display::fmt(&e, f),
-            Self::RetrieverError(e) => std::fmt::Display::fmt(&e, f),
-        }
-    }
 }
 
 /// # [`ChainError`]
@@ -45,22 +25,11 @@ where
 /// This enum represents the possible errors that can occur when using the ChatHistoryChain.
 /// It is parametrized over the error type of the chat client. this way concrete error types are
 /// preserved and can be handled accordingly.
-#[derive(Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ChainError<T>
 where
-    T: Error + Display,
+    T: std::error::Error + std::fmt::Display,
 {
+    #[error("Chat Client Error: {0}")]
     ChatClientError(T),
-}
-
-impl<T> Error for ChainError<T> where T: Error + Display {}
-impl<T> Display for ChainError<T>
-where
-    T: Error + Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ChatClientError(e) => std::fmt::Display::fmt(&e, f),
-        }
-    }
 }
