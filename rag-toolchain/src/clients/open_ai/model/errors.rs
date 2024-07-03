@@ -44,7 +44,7 @@ pub enum OpenAIError {
     #[error("Error getting response body: {0}")]
     ErrorGettingResponseBody(String),
     // # Carries underlying error and the status code
-    #[error("Error deserializining response body: status code = {0}, error = {1} ")]
+    #[error("Error deserializining response body: status code = {0}, error = {1}")]
     ErrorDeserializingResponseBody(u16, String),
     #[error("Error reading stream: {0}")]
     ErrorReadingStream(String),
