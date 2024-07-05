@@ -10,7 +10,9 @@ pub trait Chunker {
 #[allow(unused)]
 pub trait StreamedChunker {
     type ErrorType: Error;
-    type CharacterStream: Stream<Item = std::io::Result<char>>;
     type ChunkStream: Stream<Item = Result<Chunk, Self::ErrorType>>;
-    fn generate_chunks(&self, data_stream: Self::CharacterStream) -> Self::ChunkStream;
+    fn generate_chunks(
+        &self,
+        data_stream: dyn Stream<Item = std::io::Result<char>>,
+    ) -> Self::ChunkStream;
 }
