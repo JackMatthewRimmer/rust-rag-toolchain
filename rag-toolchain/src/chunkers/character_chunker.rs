@@ -67,7 +67,7 @@ impl CharacterChunkStream {
     fn handle_ready_poll(
         &mut self,
         poll_result: Option<std::io::Result<u8>>,
-    ) -> std::task::Poll<Option<Chunk>> {
+    ) -> std::task::Poll<Option<Result<Chunk, CharacterChunkStreamError>>> {
         return match poll_result {
             None => std::task::Poll::Ready(None),
             Some(result) => {
@@ -80,32 +80,35 @@ impl CharacterChunkStream {
         };
     }
 
-    // Note here we need to think about what happens when a character read fails
-    // really this breaks the whole operation.
-    // I think we need to change the underlying stream to u8
-    fn handle_result(&mut self, result: std::io::Result<u8>) -> Option<Chunk> {
+    fn handle_result(
+        &mut self,
+        result: std::io::Result<u8>,
+    ) -> Option<Result<Chunk, CharacterChunkStreamError>> {
         return match result {
-            Err(_) => panic!(),
+            Err(error) => Some(Err(CharacterChunkStreamError::IoError(error))),
             Ok(char) => {
                 self.buffer.push(char);
-                if self.buffer.len() >= self.chunk_size {
-                    // Naugty unwrap here for now
-                    let string: &str = std::str::from_utf8(&self.buffer).unwrap();
-                    let chunk = Chunk::new(string);
-                    let len = self.buffer.len();
-                    let window = &self.buffer[len - self.chunk_overlap..len];
-                    self.buffer = Vec::from(window);
-                    Some(chunk)
-                } else {
-                    None // Not enough characters yet, continue reading
-                }
+                return match self.buffer.len() >= self.chunk_size {
+                    true => Some(self.consume_buffer()),
+                    false => None,
+                };
             }
         };
+    }
+
+    fn consume_buffer(&mut self) -> Result<Chunk, CharacterChunkStreamError> {
+        let string: &str = std::str::from_utf8(&self.buffer)
+            .map_err(|error| CharacterChunkStreamError::Utf8Error(error))?;
+        let len = self.buffer.len();
+        let window = &self.buffer[len - self.chunk_overlap..len];
+        let chunk = Chunk::new(string);
+        self.buffer = Vec::from(window);
+        Ok(chunk)
     }
 }
 
 impl Stream for CharacterChunkStream {
-    type Item = Chunk;
+    type Item = Result<Chunk, CharacterChunkStreamError>;
     fn poll_next(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -118,6 +121,11 @@ impl Stream for CharacterChunkStream {
             std::task::Poll::Ready(ready_result) => mut_self.handle_ready_poll(ready_result),
         };
     }
+}
+
+pub enum CharacterChunkStreamError {
+    IoError(std::io::Error),
+    Utf8Error(std::str::Utf8Error),
 }
 
 #[cfg(test)]
