@@ -57,16 +57,16 @@ impl Chunker for CharacterChunker {
 }
 
 pub struct CharacterChunkStream {
-    stream: Box<dyn Stream<Item = std::io::Result<char>> + Unpin>,
-    buffer: Vec<char>,
-    chunk_size: u32,
-    chunk_overlap: u32,
+    stream: Box<dyn Stream<Item = std::io::Result<u8>> + Unpin>,
+    buffer: Vec<u8>,
+    chunk_size: usize,
+    chunk_overlap: usize,
 }
 
 impl CharacterChunkStream {
     fn handle_ready_poll(
         &mut self,
-        poll_result: Option<std::io::Result<char>>,
+        poll_result: Option<std::io::Result<u8>>,
     ) -> std::task::Poll<Option<Chunk>> {
         return match poll_result {
             None => std::task::Poll::Ready(None),
@@ -83,18 +83,18 @@ impl CharacterChunkStream {
     // Note here we need to think about what happens when a character read fails
     // really this breaks the whole operation.
     // I think we need to change the underlying stream to u8
-    fn handle_result(&mut self, result: std::io::Result<char>) -> Option<Chunk> {
+    fn handle_result(&mut self, result: std::io::Result<u8>) -> Option<Chunk> {
         return match result {
             Err(_) => panic!(),
             Ok(char) => {
                 self.buffer.push(char);
-                // Check if we have enough characters to form a chunk
-                if self.buffer.len() >= self.chunk_size as usize {
-                    let string: String = self.buffer.iter().collect();
+                if self.buffer.len() >= self.chunk_size {
+                    // Naugty unwrap here for now
+                    let string: &str = std::str::from_utf8(&self.buffer).unwrap();
                     let chunk = Chunk::new(string);
-
-                    // Need to clear buffer everything before the overlap number
-
+                    let len = self.buffer.len();
+                    let window = &self.buffer[len - self.chunk_overlap..len];
+                    self.buffer = Vec::from(window);
                     Some(chunk)
                 } else {
                     None // Not enough characters yet, continue reading
