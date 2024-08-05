@@ -21,7 +21,7 @@ impl OpenAIHttpClient {
     ///
     /// # Arguments
     /// * `embedding_model` - The type of embedding model you wish to use.
-    /// See <https://platform.openai.com/docs/guides/embeddings/what-are-embeddings>
+    ///     See <https://platform.openai.com/docs/guides/embeddings/what-are-embeddings>
     ///
     /// # Errors
     /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set
