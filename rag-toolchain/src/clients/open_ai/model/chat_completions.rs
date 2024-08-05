@@ -39,6 +39,8 @@ pub enum ChatMessageRole {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenAIModel {
+    #[serde(rename = "gpt-4o-mini")]
+    Gpt4oMini,
     #[serde(rename = "gpt-4o")]
     Gpt4o,
     #[serde(rename = "gpt-4-turbo")]

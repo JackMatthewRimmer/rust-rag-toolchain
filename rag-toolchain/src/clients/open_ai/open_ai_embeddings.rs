@@ -93,10 +93,10 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     ///
     /// # Errors
     /// * [`OpenAIError`] - If the request to OpenAI fails.
-    ///  
+    ///
     /// # Returns
     /// * [`Vec<Embedding>`] - A result containing
-    /// pairs of the original text and the embedding that was generated.
+    ///     pairs of the original text and the embedding that was generated.
     async fn generate_embeddings(&self, text: Chunks) -> Result<Vec<Embedding>, OpenAIError> {
         let input_text: Vec<String> = text
             .iter()
@@ -121,7 +121,7 @@ impl AsyncEmbeddingClient for OpenAIEmbeddingClient {
     ///
     /// # Errors
     /// * [`OpenAIError`] - If the request to OpenAI fails.
-    ///  
+    ///
     /// # Returns
     /// * [`Embedding`] - the generated embedding
     async fn generate_embedding(&self, text: Chunk) -> Result<Embedding, Self::ErrorType> {
