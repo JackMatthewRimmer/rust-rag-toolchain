@@ -38,7 +38,7 @@ openai = ["dep:reqwest-eventsource", "dep:eventsource-stream"]
 [dev-dependencies]
 mockall = "0.13.0"
 mockito = "1.4.0"
-testcontainers = "0.20.0"
+testcontainers = "0.21.0"
 lazy_static = "1.4.0"
 
 [lib]
