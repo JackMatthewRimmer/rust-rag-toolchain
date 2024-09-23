@@ -31,8 +31,9 @@ path = "examples/chat_history_chain/main.rs"
 # cargo test --lib
 
 [features]
-default = ["pg_vector", "openai"]
+default = ["pg_vector", "openai", "sqlite-vec"]
 pg_vector = ["dep:pgvector"]
+sqlite-vec = ["dep:sqlite-vec", "dep:rusqlite"]
 openai = ["dep:reqwest-eventsource", "dep:eventsource-stream"]
 
 [dev-dependencies]
@@ -67,3 +68,7 @@ pgvector = { version = "0.4.0", features = ["sqlx"], optional = true }
 # OpenAI
 reqwest-eventsource = { version = "0.6.0", optional = true }
 eventsource-stream = { version = "0.2.3", optional = true }
+
+# Sqlite Vec
+sqlite-vec = { version = "0.1.2", optional = true }
+rusqlite = { version = "0.32.1", optional = true }

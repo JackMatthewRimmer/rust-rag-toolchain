@@ -14,3 +14,6 @@ mod traits;
 #[cfg(feature = "pg_vector")]
 pub use postgres_vector_store::{PostgresVectorStore, PostgresVectorStoreError};
 pub use traits::EmbeddingStore;
+
+#[cfg(feature = "sqlite-vec")]
+mod sqlite_vector_store;
