@@ -2,6 +2,8 @@ use thiserror::Error;
 
 use crate::common::EmbeddingModel;
 
+use super::EmbeddingStore;
+
 #[derive(Debug)]
 pub struct SqliteVectorStore {
     conn: rusqlite::Connection,
@@ -16,10 +18,12 @@ impl SqliteVectorStore {
     ) -> Result<Self, SqliteVectorStoreError> {
         let vector_dimension = embedding_model.metadata().dimensions;
         SqliteVectorStore::create_table(&conn, table_name, vector_dimension)?;
-        Ok(SqliteVectorStore {
+        let store: SqliteVectorStore = SqliteVectorStore {
             conn,
             table_name: table_name.into(),
-        })
+        };
+
+        Ok(store)
     }
 
     fn create_table(
@@ -40,6 +44,18 @@ impl SqliteVectorStore {
         conn.execute(&stmt, [])
             .map(|_| ())
             .map_err(SqliteVectorStoreError::TableCreationError)
+    }
+}
+
+impl EmbeddingStore for SqliteVectorStore {
+    type ErrorType = SqliteVectorStoreError;
+
+    async fn store(&self, embedding: crate::common::Embedding) -> Result<(), Self::ErrorType> {}
+
+    async fn store_batch(
+        &self,
+        embeddings: Vec<crate::common::Embedding>,
+    ) -> Result<(), Self::ErrorType> {
     }
 }
 
