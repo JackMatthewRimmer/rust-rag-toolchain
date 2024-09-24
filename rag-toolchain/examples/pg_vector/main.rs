@@ -5,7 +5,7 @@ use rag_toolchain::stores::{EmbeddingStore, PostgresVectorStore};
 
 #[tokio::main]
 async fn main() {
-    const EMBEDDING_MODEL: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbedding3Small;
+    const EMBEDDING_MODEL: OpenAIEmbeddingModel = OpenAIEmbeddingModel::TextEmbeddingAda002;
 
     // We read in the text from a file
     let text = std::fs::read_to_string("examples/pg_vector/example_text.txt").unwrap();
