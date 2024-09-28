@@ -40,7 +40,7 @@ pub enum AnthropicError {
     /// # Anthropic’s API is temporarily overloaded.
     #[error("Overloaded Error: {0:?}")]
     CODE503(AnthropicErrorBody),
-    /// # Missed cases for error codes, includes Status Code and Error Body as a string
+    /// # Missed cases for error codes, includes Status Code and Error Body as a string. These can also represent internal logic errors.
     #[error("Undefined Error. This should not happen, if this is a missed error please report it: https://github.com/JackMatthewRimmer/rust-rag-toolchain: status code = {0}, error = {1}")]
     Undefined(u16, String),
     #[error("Error sending request: {0}")]
