@@ -4,6 +4,9 @@
 #[cfg(feature = "openai")]
 mod open_ai;
 
+#[cfg(feature = "anthropic")]
+mod anthropic;
+
 mod traits;
 mod types;
 

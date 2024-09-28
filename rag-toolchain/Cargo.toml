@@ -31,9 +31,10 @@ path = "examples/chat_history_chain/main.rs"
 # cargo test --lib
 
 [features]
-default = ["pg_vector", "openai"]
+default = ["pg_vector", "openai", "anthropic"]
 pg_vector = ["dep:pgvector"]
 openai = ["dep:reqwest-eventsource", "dep:eventsource-stream"]
+anthropic = []
 
 [dev-dependencies]
 mockall = "0.13.0"
