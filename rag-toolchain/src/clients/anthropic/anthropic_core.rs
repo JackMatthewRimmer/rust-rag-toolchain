@@ -161,6 +161,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn status_403_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = AnthropicError::CODE403(expected_error_body);
+        assert_status_mapping(403, expected_error).await;
+    }
+
+    #[tokio::test]
+    async fn status_404_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = AnthropicError::CODE404(expected_error_body);
+        assert_status_mapping(404, expected_error).await;
+    }
+
+    #[tokio::test]
+    async fn status_413_maps_correctly() {
+        let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
+        let expected_error = AnthropicError::CODE413(expected_error_body);
+        assert_status_mapping(413, expected_error).await;
+    }
+
+    #[tokio::test]
     async fn status_429_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
         let expected_error = AnthropicError::CODE429(expected_error_body);
