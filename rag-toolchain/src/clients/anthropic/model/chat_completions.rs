@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use typed_builder::TypedBuilder;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, TypedBuilder)]
@@ -8,15 +9,9 @@ pub struct MessagesRequest {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub system: String,
     pub model: AnthropicModel,
-    pub max_tokens: usize,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub stop_sequences: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub temperature: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub top_p: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub top_k: Option<usize>,
+    #[builder(default, setter(strip_option))]
+    #[serde(flatten)]
+    pub additional_config: Option<Map<String, Value>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -83,6 +78,7 @@ pub enum Role {
 mod request_model_tests {
     use super::*;
 
+    const CHAT_MESSAGE_REQUEST: &str = r#"{"messages":[{"role":"user","content":[{"type":"text","text":"Hello, Claude"}]},{"role":"assistant","content":[{"type":"text","text":"Hello!"}]},{"role":"user","content":[{"type":"text","text":"Can you describe LLMs to me?"}]}],"model":"claude-3-5-sonnet-20240620","max_tokens":1024}"#;
     const CHAT_MESSAGE_RESPONSE: &str = r#"
     {
         "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
@@ -103,6 +99,40 @@ mod request_model_tests {
         }
     }
     "#;
+
+    #[test]
+    fn test_serialize_chat_message_request() {
+        let mut additional_config: Map<String, Value> = Map::new();
+        additional_config.insert("max_tokens".into(), Value::Number(1024.into()));
+        let request = MessagesRequest {
+            messages: vec![
+                Message {
+                    role: Role::User,
+                    content: vec![Content::Text {
+                        text: "Hello, Claude".to_string(),
+                    }],
+                },
+                Message {
+                    role: Role::Assistant,
+                    content: vec![Content::Text {
+                        text: "Hello!".to_string(),
+                    }],
+                },
+                Message {
+                    role: Role::User,
+                    content: vec![Content::Text {
+                        text: "Can you describe LLMs to me?".to_string(),
+                    }],
+                },
+            ],
+            system: "".to_string(),
+            model: AnthropicModel::Claude3Point5Sonnet,
+            additional_config: Some(additional_config),
+        };
+
+        let request_json = serde_json::to_string(&request).unwrap();
+        assert_eq!(request_json, CHAT_MESSAGE_REQUEST);
+    }
 
     #[test]
     fn test_deserialize_chat_message_response() {
