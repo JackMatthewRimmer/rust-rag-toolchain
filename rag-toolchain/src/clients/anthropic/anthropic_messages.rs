@@ -111,3 +111,112 @@ impl AsyncChatClient for AnthropicChatCompletionClient {
         Ok(response_message)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::{Mock, Server, ServerGuard};
+
+    const CHAT_MESSAGE_RESPONSE: &str = r#"
+    {
+        "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+            {
+                "type": "text",
+                "text": "Hello!"
+            }
+        ],
+        "model": "claude-3-5-sonnet-20240620",
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "usage": {
+            "input_tokens": 12,
+            "output_tokens": 6
+        }
+    }
+    "#;
+
+    const ERROR_RESPONSE: &'static str = r#"
+    {
+        "type": "error",
+        "error": {
+            "type": "not_found_error",
+            "message": "The requested resource could not be found."
+        }
+    } 
+    "#;
+
+    #[tokio::test]
+    async fn invoke_correct_response_succeeds() {
+        let (client, mut server) = with_mocked_client(None).await;
+        let mock = with_mocked_request(&mut server, 200, &CHAT_MESSAGE_RESPONSE);
+
+        let response = client
+            .invoke(vec![
+                PromptMessage::SystemMessage("You are a comedian".to_string()),
+                PromptMessage::HumanMessage("Hello, Claude".to_string()),
+            ])
+            .await
+            .unwrap();
+
+        let expected_response = PromptMessage::AIMessage("Hello!".to_string());
+        mock.assert();
+        assert_eq!(response, expected_response);
+    }
+
+    #[tokio::test]
+    async fn invoke_error_response_maps_correctly() {
+        let (client, mut server) = with_mocked_client(None).await;
+        let mock = with_mocked_request(&mut server, 404, &ERROR_RESPONSE);
+
+        let response = client
+            .invoke(vec![
+                PromptMessage::SystemMessage("You are a comedian".to_string()),
+                PromptMessage::HumanMessage("Hello, Claude".to_string()),
+            ])
+            .await
+            .unwrap_err();
+
+        let expected_reponse =
+            AnthropicError::CODE404(serde_json::from_str(ERROR_RESPONSE).unwrap());
+        mock.assert();
+        assert_eq!(response, expected_reponse);
+    }
+
+    // Method which mocks the response the server will give. this
+    // allows us to stub the requests instead of sending them to OpenAI
+    fn with_mocked_request(
+        server: &mut ServerGuard,
+        status_code: usize,
+        response_body: &str,
+    ) -> Mock {
+        server
+            .mock("POST", "/")
+            .with_status(status_code)
+            .with_header("Content-Type", "application/json")
+            .with_body(response_body)
+            .create()
+    }
+
+    // This methods returns a client which is pointing at the mocked url
+    // and the mock server which we can orchestrate the stubbings on.
+    async fn with_mocked_client(
+        config: Option<Map<String, Value>>,
+    ) -> (AnthropicChatCompletionClient, ServerGuard) {
+        std::env::set_var("ANTHROPIC_API_KEY", "fake key");
+        let server = Server::new_async().await;
+        let url = server.url();
+        let model = AnthropicModel::Claude3Point5Sonnet;
+        let mut client = match config {
+            Some(config) => {
+                AnthropicChatCompletionClient::try_new_with_additional_config(model, config)
+                    .unwrap()
+            }
+            None => AnthropicChatCompletionClient::try_new(model).unwrap(),
+        };
+        client.url = url;
+        (client, server)
+    }
+}
