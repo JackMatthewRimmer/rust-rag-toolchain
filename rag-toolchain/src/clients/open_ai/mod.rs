@@ -1,13 +1,19 @@
 #[cfg(feature = "openai")]
 mod model;
 #[cfg(feature = "openai")]
-pub mod open_ai_chat_completions;
+mod open_ai_chat_completions;
 #[cfg(feature = "openai")]
 mod open_ai_core;
 #[cfg(feature = "openai")]
-pub mod open_ai_embeddings;
+mod open_ai_embeddings;
 
 #[cfg(feature = "openai")]
-pub use self::model::chat_completions::OpenAIModel;
+pub use self::model::{chat_completions::OpenAIModel, errors::OpenAIError};
+
 #[cfg(feature = "openai")]
-pub use self::model::errors::OpenAIError;
+pub use self::open_ai_chat_completions::{
+    CompletionStreamValue, OpenAIChatCompletionClient, OpenAICompletionStream,
+};
+
+#[cfg(feature = "openai")]
+pub use self::open_ai_embeddings::OpenAIEmbeddingClient;
