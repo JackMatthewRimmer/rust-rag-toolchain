@@ -268,7 +268,7 @@ mod tests {
     // This methods returns a client which is pointing at the mocked url
     // and the mock server which we can orchestrate the stubbings on.
     async fn with_mocked_client() -> (AnthropicHttpClient, ServerGuard) {
-        std::env::set_var("OPENAI_API_KEY", "fake key");
+        std::env::set_var("ANTHROPIC_API_KEY", "fake key");
         let server = Server::new_async().await;
         let client = AnthropicHttpClient::try_new().unwrap();
         (client, server)
