@@ -20,14 +20,13 @@ pub struct AnthropicHttpClient {
 
 impl AnthropicHttpClient {
     /// # [`AnthropicHttpClient::try_new`]
-    /// Must have the OPENAI_API_KEY environment variable set
-    ///
+    /// Must have the ANTHROPIC_API_KEY environment variable set
     ///
     /// # Errors
-    /// * [`VarError`] - If the OPENAI_API_KEY environment variable is not set
+    /// * [`VarError`] - If the ANTHROPIC_API_KEY environment variable is not set
     ///
     /// # Returns
-    /// * [`OpenAIHttpClient`] - The newly created OpenAIHttpClient
+    /// * [`AnthropicHttpClient`] - The newly created AnthropicHttpClient
     pub fn try_new() -> Result<AnthropicHttpClient, VarError> {
         dotenv().ok();
         let api_key: String = match env::var::<String>("ANTHROPIC_API_KEY".into()) {
@@ -38,8 +37,8 @@ impl AnthropicHttpClient {
         Ok(AnthropicHttpClient { api_key, client })
     }
 
-    /// # [`OpenAIHttpClient::send_request`]
-    /// Sends a request to the OpenAI API and returns the response
+    /// # [`AnthropicHttpClient::send_request`]
+    /// Sends a request to the Anthropic API and returns the response
     ///
     /// # Arguments
     /// * `body` - The body of the request
@@ -53,7 +52,7 @@ impl AnthropicHttpClient {
     ///    code errors or variatn of `AnthropicError::UNDEFINED`
     ///
     /// # Returns
-    /// [`U`] - The deserialized response from OpenAI
+    /// [`U`] - The deserialized response from Anthropic
     pub async fn send_request<T, U>(&self, body: T, url: &str) -> Result<U, AnthropicError>
     where
         T: Serialize,
@@ -82,9 +81,10 @@ impl AnthropicHttpClient {
         })
     }
 
-    /// # [`OpenAIHttpClient::build_requeset`]
+    /// # [`AnthropicHttpClient::build_requeset`]
     ///
     /// Helper method to build a request with the correct headers and body
+    /// We are required to set a speceific API version on each request
     fn build_requeset<T>(&self, request_body: T, url: &str) -> RequestBuilder
     where
         T: Serialize,
@@ -98,12 +98,12 @@ impl AnthropicHttpClient {
             .json(&request_body)
     }
 
-    /// # [`OpenAIHttpClient::handle_error_response`]
+    /// # [`AnthropicHttpClient::handle_error_response`]
     ///
     /// Explicit error mapping between response codes and error types
     ///
     /// # Arguments
-    /// `response` - The reqwest response from OpenAI
+    /// `response` - The reqwest response from Anthropic
     ///
     /// # Returns
     /// [`AnthropicError`] - The error type that maps to the response code

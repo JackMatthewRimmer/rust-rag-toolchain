@@ -20,7 +20,6 @@ const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/comple
 
 /// # [`OpenAIChatCompletionClient`]
 /// Allows for interacting with open ai models
-///
 /// # Examples
 /// ```
 /// use rag_toolchain::common::*;
@@ -121,7 +120,7 @@ impl AsyncChatClient for OpenAIChatCompletionClient {
     /// function to execute the ChatCompletion given a list of prompt messages.
     ///
     /// # Arguments
-    /// * `prompt_messages` - the list of prompt messages that will be sent to the LLM.
+    /// * `prompt_messages`: [`Vec<PromptMessage>`] - the list of prompt messages that will be sent to the LLM.
     ///
     /// # Errors
     /// * [`OpenAIError`] - if the chat client invocation fails.

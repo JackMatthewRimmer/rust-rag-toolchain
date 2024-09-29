@@ -12,16 +12,69 @@ use serde_json::{Map, Value};
 
 const ANTHROPIC_MESSAGES_URL: &str = "https://api.anthropic.com/v1/messages";
 
+/// # [`AnthropicChatCompletionClient`]
+/// Allows for interacting with the Anthropic models via the messages API.
+///
+/// # Examples
+/// ```
+/// use serde_json::{Map, Value};
+/// use rag_toolchain::clients::*;
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let model: AnthropicModel = AnthropicModel::Claude3Sonnet;
+///     let mut additional_config: Map<String, Value> = Map::new();
+///     additional_config.insert("temperature".into(), 0.5.into());
+///
+///     let client: AnthropicChatCompletionClient =
+///         AnthropicChatCompletionClient::try_new_with_additional_config(
+///             model,
+///             4096,
+///             additional_config,
+///         )
+///         .unwrap();
+///
+///     let system_message: PromptMessage =
+///         PromptMessage::SystemMessage("You only reply in a bullet point list".into());
+///     let user_message: PromptMessage = PromptMessage::HumanMessage("How does the water flow".into());
+///
+///     // We invoke the chat client with a list of messages
+///     let reply = client
+///         .invoke(vec![system_message.clone(), user_message.clone()])
+///         .await
+///         .unwrap();
+///
+///     println!("{:?}", reply.content());
+/// }
+/// ```
+/// # Required Environment Variables
+/// ANTHROPIC_API_KEY: The API key for the Anthropic API
 pub struct AnthropicChatCompletionClient {
     url: String,
     client: AnthropicHttpClient,
     model: AnthropicModel,
     additional_config: Option<Map<String, Value>>,
-    // This is a required field on the messages api
+    /// This is a required field on the messages API.
+    /// Please refer to the API documentation for more information.
     max_tokens: u32,
 }
 
 impl AnthropicChatCompletionClient {
+    /// # [`AnthropicChatCompletionClient::try_new`]
+    ///
+    /// This method creates a new instance of the AnthropicChatCompletionClient. All optional
+    /// inference parameters will be set to their default values on Anthropic's end.
+    ///
+    /// # Arguments
+    /// * `model`: [`AnthropicModel`] - The model to use for the chat completion.
+    /// * `max_tokens`: [`u32`] - The maximum number of tokens to generate in the response.
+    ///                           See the API documentation for more information.
+    ///
+    /// # Errors
+    /// [`VarError`] - This error is returned when the ANTHROPIC_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// [`AnthropicChatCompletionClient`] - The client to interact with the Anthropic API.
     pub fn try_new(model: AnthropicModel, max_tokens: u32) -> Result<Self, VarError> {
         let client: AnthropicHttpClient = AnthropicHttpClient::try_new()?;
         Ok(AnthropicChatCompletionClient {
@@ -33,6 +86,23 @@ impl AnthropicChatCompletionClient {
         })
     }
 
+    /// # [`AnthropicChatCompletionClient::try_new_with_additional_config`]
+    ///
+    /// This method creates a new instance of the AnthropicChatCompletionClient. All optional
+    /// inference parameters will be set to their default values on Anthropic's end.
+    ///
+    /// # Arguments
+    /// * `model`: [`AnthropicModel`] - The model to use for the chat completion.
+    /// * `max_tokens`: [`u32`] - The maximum number of tokens to generate in the response.
+    ///                           See the API documentation for more information.
+    /// * `additional_config`: [`Map<String, Value>`] - Additional configuration to pass to the API.
+    ///                        See the API documentation for more information.
+    ///                        Examples of this can be temperature, top_p, etc.  
+    /// # Errors
+    /// [`VarError`] - This error is returned when the ANTHROPIC_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// [`AnthropicChatCompletionClient`] - The client to interact with the Anthropic API.
     pub fn try_new_with_additional_config(
         model: AnthropicModel,
         max_tokens: u32,
@@ -48,6 +118,20 @@ impl AnthropicChatCompletionClient {
         })
     }
 
+    /// # [`AnthropicChatCompletionClient::map_prompt_message_to_anthropic_message`]
+    ///
+    /// Helper method to map the prompt message to the Anthropic message. We work on
+    /// the assumption that the system messages were already pulled out of the list of
+    /// [`PromptMessage`] therefore if any are passed to this function with throw an error.
+    ///
+    /// # Arguments
+    /// * `prompt_message`: [`PromptMessage`] - The message to map to the Anthropic message.
+    ///
+    /// # Errors
+    /// [`AnthropicError`] - This error is returned when a system message is passed to the function.
+    ///
+    /// # Returns
+    /// [`Message`] - The message to send to the Anthropic API.
     fn map_prompt_message_to_anthropic_message(
         prompt_message: PromptMessage,
     ) -> Result<Message, AnthropicError> {
@@ -80,6 +164,18 @@ impl AnthropicChatCompletionClient {
 impl AsyncChatClient for AnthropicChatCompletionClient {
     type ErrorType = AnthropicError;
 
+    /// # [`AnthropicChatCompletionClient::invoke`]
+    ///
+    /// Function to send a list of [`PromptMessage`] to the Anthropic API and receive a response.
+    ///
+    /// # Arguments
+    /// * `prompt_messages`: [`Vec<PromptMessage>`] - The list of messages to send to the API.
+    ///
+    /// # Errors
+    /// * [`AnthropicError`] - This error is returned when the API returns an error.
+    ///
+    /// # Returns
+    /// [`PromptMessage::AIMessage`] - The response from the API.
     async fn invoke(
         &self,
         prompt_messages: Vec<PromptMessage>,
