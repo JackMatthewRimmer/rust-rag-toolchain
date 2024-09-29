@@ -19,6 +19,7 @@ const ANTHROPIC_MESSAGES_URL: &str = "https://api.anthropic.com/v1/messages";
 /// ```
 /// use serde_json::{Map, Value};
 /// use rag_toolchain::clients::*;
+/// use rag_toolchain::common::*;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -147,15 +148,11 @@ impl AnthropicChatCompletionClient {
             )),
             PromptMessage::AIMessage(message) => Ok(Message {
                 role: Role::Assistant,
-                content: vec![Content::Text {
-                    text: message.into(),
-                }],
+                content: vec![Content::Text { text: message }],
             }),
             PromptMessage::HumanMessage(message) => Ok(Message {
                 role: Role::User,
-                content: vec![Content::Text {
-                    text: message.into(),
-                }],
+                content: vec![Content::Text { text: message }],
             }),
         }
     }
