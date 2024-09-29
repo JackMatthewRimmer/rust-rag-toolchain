@@ -151,6 +151,13 @@ mod tests {
     } 
     "#;
 
+    #[test]
+    fn missing_env_var_returns_error() {
+        std::env::remove_var("ANTHROPIC_API_KEY");
+        let error = AnthropicHttpClient::try_new().unwrap_err();
+        assert_eq!(VarError::NotPresent, error);
+    }
+
     #[tokio::test]
     async fn status_400_maps_correctly() {
         let expected_error_body = serde_json::from_str(ERROR_RESPONSE).unwrap();
