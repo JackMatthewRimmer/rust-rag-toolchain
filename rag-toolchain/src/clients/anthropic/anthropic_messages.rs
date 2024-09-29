@@ -282,6 +282,46 @@ mod tests {
         assert_eq!(response, expected_reponse);
     }
 
+    #[test]
+    fn map_prompt_message_to_anthropic_message_with_system_message_returns_error() {
+        let system_message = PromptMessage::SystemMessage("Hello".to_string());
+        let response =
+            AnthropicChatCompletionClient::map_prompt_message_to_anthropic_message(system_message)
+                .unwrap_err();
+        let expected_response = AnthropicError::Undefined(0, "System prompts should be included within the system field of the request. This error means that it was attempted to be included in the messages field.".to_string());
+        assert_eq!(response, expected_response);
+    }
+
+    #[test]
+    fn map_prompt_message_to_anthropic_message_with_human_message_returns_message() {
+        let human_message = PromptMessage::HumanMessage("Hello".to_string());
+        let response =
+            AnthropicChatCompletionClient::map_prompt_message_to_anthropic_message(human_message)
+                .unwrap();
+        let expected_response = Message {
+            role: Role::User,
+            content: vec![Content::Text {
+                text: "Hello".to_string(),
+            }],
+        };
+        assert_eq!(response, expected_response);
+    }
+
+    #[test]
+    fn map_prompt_message_to_anthropic_message_with_ai_message_returns_message() {
+        let ai_message = PromptMessage::AIMessage("Hello".to_string());
+        let response =
+            AnthropicChatCompletionClient::map_prompt_message_to_anthropic_message(ai_message)
+                .unwrap();
+        let expected_response = Message {
+            role: Role::Assistant,
+            content: vec![Content::Text {
+                text: "Hello".to_string(),
+            }],
+        };
+        assert_eq!(response, expected_response);
+    }
+
     // Method which mocks the response the server will give. this
     // allows us to stub the requests instead of sending them to OpenAI
     fn with_mocked_request(
