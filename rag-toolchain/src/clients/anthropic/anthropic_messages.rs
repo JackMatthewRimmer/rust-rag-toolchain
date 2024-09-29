@@ -20,9 +20,7 @@ const ANTHROPIC_MESSAGES_URL: &str = "https://api.anthropic.com/v1/messages";
 /// use serde_json::{Map, Value};
 /// use rag_toolchain::clients::*;
 /// use rag_toolchain::common::*;
-///
-/// #[tokio::main]
-/// async fn main() {
+/// async fn generate_completion() {
 ///     let model: AnthropicModel = AnthropicModel::Claude3Sonnet;
 ///     let mut additional_config: Map<String, Value> = Map::new();
 ///     additional_config.insert("temperature".into(), 0.5.into());
@@ -44,7 +42,6 @@ const ANTHROPIC_MESSAGES_URL: &str = "https://api.anthropic.com/v1/messages";
 ///         .invoke(vec![system_message.clone(), user_message.clone()])
 ///         .await
 ///         .unwrap();
-///
 ///     println!("{:?}", reply.content());
 /// }
 /// ```
