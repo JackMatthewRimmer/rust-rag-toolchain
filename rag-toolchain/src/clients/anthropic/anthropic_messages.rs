@@ -17,21 +17,25 @@ pub struct AnthropicChatCompletionClient {
     client: AnthropicHttpClient,
     model: AnthropicModel,
     additional_config: Option<Map<String, Value>>,
+    // This is a required field on the messages api
+    max_tokens: u32,
 }
 
 impl AnthropicChatCompletionClient {
-    pub fn try_new(model: AnthropicModel) -> Result<Self, VarError> {
+    pub fn try_new(model: AnthropicModel, max_tokens: u32) -> Result<Self, VarError> {
         let client: AnthropicHttpClient = AnthropicHttpClient::try_new()?;
         Ok(AnthropicChatCompletionClient {
             url: ANTHROPIC_MESSAGES_URL.to_string(),
             client,
             model,
             additional_config: None,
+            max_tokens,
         })
     }
 
     pub fn try_new_with_additional_config(
         model: AnthropicModel,
+        max_tokens: u32,
         additional_config: Map<String, Value>,
     ) -> Result<Self, VarError> {
         let client: AnthropicHttpClient = AnthropicHttpClient::try_new()?;
@@ -40,6 +44,7 @@ impl AnthropicChatCompletionClient {
             client,
             model,
             additional_config: Some(additional_config),
+            max_tokens,
         })
     }
 
@@ -100,6 +105,7 @@ impl AsyncChatClient for AnthropicChatCompletionClient {
             messages: anthropic_messages,
             system: system_message_content,
             model: self.model.clone(),
+            max_tokens: self.max_tokens,
             additional_config: self.additional_config.clone(),
         };
 
@@ -211,10 +217,10 @@ mod tests {
         let model = AnthropicModel::Claude3Point5Sonnet;
         let mut client = match config {
             Some(config) => {
-                AnthropicChatCompletionClient::try_new_with_additional_config(model, config)
+                AnthropicChatCompletionClient::try_new_with_additional_config(model, 1024, config)
                     .unwrap()
             }
-            None => AnthropicChatCompletionClient::try_new(model).unwrap(),
+            None => AnthropicChatCompletionClient::try_new(model, 1024).unwrap(),
         };
         client.url = url;
         (client, server)

@@ -9,6 +9,7 @@ pub struct MessagesRequest {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub system: String,
     pub model: AnthropicModel,
+    pub max_tokens: u32,
     #[builder(default, setter(strip_option))]
     #[serde(flatten)]
     pub additional_config: Option<Map<String, Value>>,
@@ -78,7 +79,7 @@ pub enum Role {
 mod request_model_tests {
     use super::*;
 
-    const CHAT_MESSAGE_REQUEST: &str = r#"{"messages":[{"role":"user","content":[{"type":"text","text":"Hello, Claude"}]},{"role":"assistant","content":[{"type":"text","text":"Hello!"}]},{"role":"user","content":[{"type":"text","text":"Can you describe LLMs to me?"}]}],"model":"claude-3-5-sonnet-20240620","max_tokens":1024}"#;
+    const CHAT_MESSAGE_REQUEST: &str = r#"{"messages":[{"role":"user","content":[{"type":"text","text":"Hello, Claude"}]},{"role":"assistant","content":[{"type":"text","text":"Hello!"}]},{"role":"user","content":[{"type":"text","text":"Can you describe LLMs to me?"}]}],"model":"claude-3-5-sonnet-20240620","max_tokens":1024,"temperature":1}"#;
     const CHAT_MESSAGE_RESPONSE: &str = r#"
     {
         "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
@@ -103,7 +104,7 @@ mod request_model_tests {
     #[test]
     fn test_serialize_chat_message_request() {
         let mut additional_config: Map<String, Value> = Map::new();
-        additional_config.insert("max_tokens".into(), Value::Number(1024.into()));
+        additional_config.insert("temperature".into(), Value::Number(1.into()));
         let request = MessagesRequest {
             messages: vec![
                 Message {
@@ -127,6 +128,7 @@ mod request_model_tests {
             ],
             system: "".to_string(),
             model: AnthropicModel::Claude3Point5Sonnet,
+            max_tokens: 1024,
             additional_config: Some(additional_config),
         };
 

@@ -8,6 +8,10 @@ use serde::Serialize;
 use std::env;
 use std::env::VarError;
 
+const API_KEY_HEADER: &str = "x-api-key";
+const API_VERSION_HEADER: &str = "anthropic-version";
+const API_VERSION: &str = "2023-06-01";
+
 #[derive(Debug)]
 pub struct AnthropicHttpClient {
     client: Client,
@@ -88,7 +92,8 @@ impl AnthropicHttpClient {
         let content_type = HeaderValue::from_static("application/json");
         self.client
             .post(url)
-            .bearer_auth(self.api_key.clone())
+            .header(API_KEY_HEADER, self.api_key.clone())
+            .header(API_VERSION_HEADER, API_VERSION)
             .header(CONTENT_TYPE, content_type)
             .json(&request_body)
     }

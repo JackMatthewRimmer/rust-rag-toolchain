@@ -20,6 +20,9 @@ pub use self::open_ai::open_ai_embeddings::OpenAIEmbeddingClient;
 #[cfg(feature = "openai")]
 pub use self::open_ai::{OpenAIError, OpenAIModel};
 
+#[cfg(feature = "anthropic")]
+pub use self::anthropic::{AnthropicChatCompletionClient, AnthropicError, AnthropicModel};
+
 pub use self::traits::{
     AsyncChatClient, AsyncEmbeddingClient, AsyncStreamedChatClient, ChatCompletionStream,
 };
