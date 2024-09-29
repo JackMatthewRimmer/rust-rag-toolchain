@@ -58,6 +58,10 @@ pub struct AnthropicChatCompletionClient {
 }
 
 impl AnthropicChatCompletionClient {
+    const SYSTEM_MESSAGE_ERROR: &'static str = r#"
+        System prompts should be included within the system field of the request.
+        This error means that it was attempted to be included in the messages field.
+    "#;
     /// # [`AnthropicChatCompletionClient::try_new`]
     ///
     /// This method creates a new instance of the AnthropicChatCompletionClient. All optional
@@ -133,15 +137,10 @@ impl AnthropicChatCompletionClient {
     fn map_prompt_message_to_anthropic_message(
         prompt_message: PromptMessage,
     ) -> Result<Message, AnthropicError> {
-        let system_error_message = r#"
-            System prompts should be included within the system field of the request.
-            This error means that it was attempted to be included in the messages field. 
-        "#;
-
         match prompt_message {
             PromptMessage::SystemMessage(_) => Err(AnthropicError::Undefined(
                 0,
-                system_error_message.to_string(),
+                AnthropicChatCompletionClient::SYSTEM_MESSAGE_ERROR.to_string(),
             )),
             PromptMessage::AIMessage(message) => Ok(Message {
                 role: Role::Assistant,
@@ -288,7 +287,10 @@ mod tests {
         let response =
             AnthropicChatCompletionClient::map_prompt_message_to_anthropic_message(system_message)
                 .unwrap_err();
-        let expected_response = AnthropicError::Undefined(0, "System prompts should be included within the system field of the request. This error means that it was attempted to be included in the messages field.".to_string());
+        let expected_response = AnthropicError::Undefined(
+            0,
+            AnthropicChatCompletionClient::SYSTEM_MESSAGE_ERROR.to_string(),
+        );
         assert_eq!(response, expected_response);
     }
 
