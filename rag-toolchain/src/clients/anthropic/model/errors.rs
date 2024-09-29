@@ -16,7 +16,7 @@ pub struct AnthropicErrorDetails {
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum AnthropicError {
     /// # There was an issue with the format or content of your request.
-    /// We may also use this error type for other 4XX status codes not listed below.
+    /// # We may also use this error type for other 4XX status codes not listed below.
     #[error("Invalid Request Error: {0:?}")]
     CODE400(AnthropicErrorBody),
     /// # There’s an issue with your API key
@@ -43,9 +43,10 @@ pub enum AnthropicError {
     /// # Missed cases for error codes, includes Status Code and Error Body as a string. These can also represent internal logic errors.
     #[error("Undefined Error. This should not happen, if this is a missed error please report it: https://github.com/JackMatthewRimmer/rust-rag-toolchain: status code = {0}, error = {1}")]
     Undefined(u16, String),
+    /// # Carries underlying error that may have occurred during sending the request
     #[error("Error sending request: {0}")]
     ErrorSendingRequest(String),
-    /// # Carries underlying error
+    /// # Carries underlying error that may have occured when trying to get the response body
     #[error("Error getting response body: {0}")]
     ErrorGettingResponseBody(String),
     // # Carries underlying error and the status code
