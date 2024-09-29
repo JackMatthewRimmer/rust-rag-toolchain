@@ -13,6 +13,10 @@ pub struct AnthropicErrorDetails {
     pub message: String,
 }
 
+/// # [` AnthropicError`]
+///
+/// This error type largely mirrors the error codes list here
+/// <https://docs.anthropic.com/en/api/errors>.
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum AnthropicError {
     /// # There was an issue with the format or content of your request.

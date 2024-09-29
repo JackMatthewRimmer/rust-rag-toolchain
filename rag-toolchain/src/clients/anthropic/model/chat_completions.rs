@@ -33,6 +33,11 @@ pub struct Usage {
     pub output_tokens: usize,
 }
 
+/// # [`AnthropicModel`]
+///
+/// A list of model's available to use in the Anthropic API.
+/// note these may have effects on what values are available for config
+/// such as max_tokens.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum AnthropicModel {

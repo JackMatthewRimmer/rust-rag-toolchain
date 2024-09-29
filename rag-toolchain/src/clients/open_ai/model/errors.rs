@@ -18,6 +18,10 @@ pub struct OpenAIErrorData {
 }
 // --------------------------------------------------------------------------------
 
+/// # [`OpenAIError`]
+///
+/// This error type largely mirrors the error codes list here
+/// <https://platform.openai.com/docs/guides/error-codes>
 #[derive(Error, Debug, PartialEq, Clone)]
 pub enum OpenAIError {
     /// # Invalid Authentication or Incorrect API Key provided
@@ -43,9 +47,10 @@ pub enum OpenAIError {
     /// # Carries underlying error
     #[error("Error getting response body: {0}")]
     ErrorGettingResponseBody(String),
-    // # Carries underlying error and the status code
+    /// # Carries underlying error and the status code
     #[error("Error deserializining response body: status code = {0}, error = {1}")]
     ErrorDeserializingResponseBody(u16, String),
+    /// # Carries underlying error if something went wrong when reading from a stream
     #[error("Error reading stream: {0}")]
     ErrorReadingStream(String),
 }

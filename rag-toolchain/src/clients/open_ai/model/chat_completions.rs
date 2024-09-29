@@ -36,6 +36,9 @@ pub enum ChatMessageRole {
     Assistant,
 }
 
+/// # [`OpenAIModel`]
+///
+/// A list of model's available to use in the OpenAI API.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenAIModel {
