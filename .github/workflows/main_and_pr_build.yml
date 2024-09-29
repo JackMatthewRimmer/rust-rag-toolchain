@@ -185,7 +185,7 @@ jobs:
           toolchain: stable
 
       - name: Run doc tests
-        run: cargo test --doc
+        run: cargo test --doc --verbose
 
   coverage:
     needs:
