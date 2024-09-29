@@ -11,14 +11,10 @@ mod traits;
 mod types;
 
 #[cfg(feature = "openai")]
-pub use self::open_ai::open_ai_chat_completions::{
+pub use self::open_ai::{
     CompletionStreamValue, OpenAIChatCompletionClient, OpenAICompletionStream,
+    OpenAIEmbeddingClient, OpenAIError, OpenAIModel,
 };
-
-#[cfg(feature = "openai")]
-pub use self::open_ai::open_ai_embeddings::OpenAIEmbeddingClient;
-#[cfg(feature = "openai")]
-pub use self::open_ai::{OpenAIError, OpenAIModel};
 
 #[cfg(feature = "anthropic")]
 pub use self::anthropic::{AnthropicChatCompletionClient, AnthropicError, AnthropicModel};
