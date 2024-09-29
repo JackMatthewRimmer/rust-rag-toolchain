@@ -264,7 +264,8 @@ mod tests {
 
     #[tokio::test]
     async fn invoke_error_response_maps_correctly() {
-        let (client, mut server) = with_mocked_client(None).await;
+        let additonal_config = Map::new();
+        let (client, mut server) = with_mocked_client(Some(additonal_config)).await;
         let mock = with_mocked_request(&mut server, 404, &ERROR_RESPONSE);
 
         let response = client
