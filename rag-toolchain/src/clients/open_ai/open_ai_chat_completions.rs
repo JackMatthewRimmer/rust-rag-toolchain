@@ -420,6 +420,19 @@ mod tests {
 
     const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:1\ndata:{\"id\":\"chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0\",\"object\":\"chat.completion.chunk\",\"created\":1712513908,\"model\":\"gpt-3.5-turbo-0125\",\"system_fingerprint\":\"fp_b28b39ffa8\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata:[DONE]\n\n";
 
+    #[test]
+    fn try_new_with_env_var_succeeds() {
+        std::env::set_var("OPENAI_API_KEY", "test");
+        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt4o)
+            .expect("Failed to create OpenAIChatCompletionClient");
+    }
+
+    #[test]
+    fn try_new_with_additional_config_succeeds() {
+        OpenAIChatCompletionClient::try_new_with_additional_config(OpenAIModel::Gpt4o, Map::new())
+            .expect("Failed to create OpenAIChatCompletionClient");
+    }
+
     #[tokio::test]
     async fn invoke_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client(None).await;
@@ -491,13 +504,13 @@ mod tests {
         let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIModel::Gpt3Point5Turbo;
-        let mut client = match config {
-            Some(config) => {
-                OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()
-            }
-            None => OpenAIChatCompletionClient::try_new(model).unwrap(),
+        let client = match config {
+            Some(config) => OpenAIChatCompletionClient::try_new_with_url_and_additional_config(
+                model, url, config,
+            )
+            .unwrap(),
+            None => OpenAIChatCompletionClient::try_new_with_url(model, url).unwrap(),
         };
-        client.url = url;
         (client, server)
     }
 }
