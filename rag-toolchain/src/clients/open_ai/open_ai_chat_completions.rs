@@ -14,9 +14,8 @@ use crate::clients::{
 use super::model::chat_completions::{
     ChatCompletionDelta, ChatCompletionStreamedResponse, ChatMessage,
 };
-use super::model::errors::OpenAIError;
 
-const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
+use super::model::errors::OpenAIError;
 
 /// # [`OpenAIChatCompletionClient`]
 /// Allows for interacting with open ai models
@@ -55,6 +54,8 @@ pub struct OpenAIChatCompletionClient {
 }
 
 impl OpenAIChatCompletionClient {
+    const OPENAI_CHAT_COMPLETIONS_URL: &str = "https://api.openai.com/v1/chat/completions";
+
     /// # [`OpenAIChatCompletionClient::try_new`]
     ///
     /// This method creates a new OpenAIChatCompletionClient. All inference parameters used
@@ -71,7 +72,7 @@ impl OpenAIChatCompletionClient {
     pub fn try_new(model: OpenAIModel) -> Result<OpenAIChatCompletionClient, VarError> {
         let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
         Ok(OpenAIChatCompletionClient {
-            url: OPENAI_CHAT_COMPLETIONS_URL.into(),
+            url: Self::OPENAI_CHAT_COMPLETIONS_URL.into(),
             client,
             model,
             additional_config: None,
@@ -104,7 +105,68 @@ impl OpenAIChatCompletionClient {
     ) -> Result<OpenAIChatCompletionClient, VarError> {
         let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
         Ok(OpenAIChatCompletionClient {
-            url: OPENAI_CHAT_COMPLETIONS_URL.into(),
+            url: Self::OPENAI_CHAT_COMPLETIONS_URL.into(),
+            client,
+            model,
+            additional_config: Some(additional_config),
+        })
+    }
+
+    /// # [`OpenAIChatCompletionClient::try_new_with_url`]
+    ///
+    /// This method creates a new OpenAIChatCompletionClient. All inference parameters used
+    /// will be the default ones provided by the OpenAI API. You can pass the url in directly
+    /// # Arguments
+    /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
+    /// * `url`: [`String`] - The url to use for the api call.
+    ///
+    /// # Errors
+    /// * [`VarError`] - if the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// * [`OpenAIChatCompletionClient`] - the chat completion client.
+    pub fn try_new_with_url(
+        model: OpenAIModel,
+        url: String,
+    ) -> Result<OpenAIChatCompletionClient, VarError> {
+        let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
+        Ok(OpenAIChatCompletionClient {
+            url,
+            client,
+            model,
+            additional_config: None,
+        })
+    }
+
+    /// # [`OpenAIChatCompletionClient::try_new_with_url_and_additional_config`]
+    ///
+    /// This method creates a new OpenAIChatCompletionClient. All inference parameters provided
+    /// in the additional_config will be used in the chat completion request. an example of this
+    /// could be 'temperature', 'top_p', 'seed' etc. You can pass the url in directly.
+    ///
+    /// # Forbidden Properties
+    /// * "stream": this cannot be set as it is used internally by the client.
+    /// * "n": n can be set but will result in wasted tokens as the client is built for single
+    ///        chat completions. We intend to add support for multiple completions in the future.
+    ///
+    /// # Arguments
+    /// * `model`: [`OpenAIModel`] - The model to use for the chat completion.
+    /// * `url`: [`String`] - The url to use for the api call.
+    /// * `additional_config`: [`Map<String, Value>`] - The additional configuration to use for the chat completion.
+    ///
+    /// # Errors
+    /// * [`VarError`] - if the OPENAI_API_KEY environment variable is not set.
+    ///
+    /// # Returns
+    /// * [`OpenAIChatCompletionClient`] - the chat completion client.
+    pub fn try_new_with_url_and_additional_config(
+        model: OpenAIModel,
+        url: String,
+        additional_config: Map<String, Value>,
+    ) -> Result<OpenAIChatCompletionClient, VarError> {
+        let client: OpenAIHttpClient = OpenAIHttpClient::try_new()?;
+        Ok(OpenAIChatCompletionClient {
+            url,
             client,
             model,
             additional_config: Some(additional_config),
@@ -358,6 +420,19 @@ mod tests {
 
     const STREAMED_CHAT_COMPLETION_RESPONSE: &'static str = "id:1\ndata:{\"id\":\"chatcmpl-9BRO0Nnca1ZtfMkFc5tOpQNSJ2Eo0\",\"object\":\"chat.completion.chunk\",\"created\":1712513908,\"model\":\"gpt-3.5-turbo-0125\",\"system_fingerprint\":\"fp_b28b39ffa8\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"Hello\"},\"logprobs\":null,\"finish_reason\":null}]}\n\ndata:[DONE]\n\n";
 
+    #[test]
+    fn try_new_with_env_var_succeeds() {
+        std::env::set_var("OPENAI_API_KEY", "test");
+        OpenAIChatCompletionClient::try_new(OpenAIModel::Gpt4o)
+            .expect("Failed to create OpenAIChatCompletionClient");
+    }
+
+    #[test]
+    fn try_new_with_additional_config_succeeds() {
+        OpenAIChatCompletionClient::try_new_with_additional_config(OpenAIModel::Gpt4o, Map::new())
+            .expect("Failed to create OpenAIChatCompletionClient");
+    }
+
     #[tokio::test]
     async fn invoke_correct_response_succeeds() {
         let (client, mut server) = with_mocked_client(None).await;
@@ -429,13 +504,13 @@ mod tests {
         let server = Server::new_async().await;
         let url = server.url();
         let model = OpenAIModel::Gpt3Point5Turbo;
-        let mut client = match config {
-            Some(config) => {
-                OpenAIChatCompletionClient::try_new_with_additional_config(model, config).unwrap()
-            }
-            None => OpenAIChatCompletionClient::try_new(model).unwrap(),
+        let client = match config {
+            Some(config) => OpenAIChatCompletionClient::try_new_with_url_and_additional_config(
+                model, url, config,
+            )
+            .unwrap(),
+            None => OpenAIChatCompletionClient::try_new_with_url(model, url).unwrap(),
         };
-        client.url = url;
         (client, server)
     }
 }
