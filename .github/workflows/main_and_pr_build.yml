@@ -84,7 +84,7 @@ jobs:
         run: cargo llvm-cov --lib --lcov --output-path unitlcov.info
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unitlcov
           path: rag-toolchain/*.info
@@ -120,7 +120,7 @@ jobs:
         run: cargo llvm-cov --test mod --lcov --output-path integrationlcov.info
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integrationlcov
           path: rag-toolchain/*.info
@@ -196,12 +196,12 @@ jobs:
       CARGO_TERM_COLOR: always
     steps:
       - name: Download unit test artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: unitlcov
 
       - name: Download integration coverage artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: integrationlcov
 
